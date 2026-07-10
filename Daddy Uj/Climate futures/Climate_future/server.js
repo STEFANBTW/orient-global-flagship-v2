@@ -13,9 +13,46 @@ const MIME_TYPES = {
     '.json': 'application/json'
 };
 
+const clients = [];
+
+// Watch directory for changes to trigger live reload
+let reloadTimeout;
+fs.watch(__dirname, { recursive: true }, (eventType, filename) => {
+    // Ignore hidden files and git directory
+    if (filename && !filename.startsWith('.') && !filename.includes('.git') && !filename.includes('node_modules')) {
+        clearTimeout(reloadTimeout);
+        reloadTimeout = setTimeout(() => {
+            console.log(`File changed: ${filename}. Reloading clients...`);
+            clients.forEach(client => {
+                try {
+                    client.write('data: reload\n\n');
+                } catch (e) {
+                    // Client disconnected or failed
+                }
+            });
+        }, 100);
+    }
+});
+
 const server = http.createServer((req, res) => {
     // Prevent directory traversal
     let safeUrl = req.url.split('?')[0];
+
+    // Live reload EventStream endpoint
+    if (safeUrl === '/live-reload') {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+        });
+        clients.push(res);
+        req.on('close', () => {
+            const index = clients.indexOf(res);
+            if (index !== -1) clients.splice(index, 1);
+        });
+        return;
+    }
+
     if (safeUrl === '/') safeUrl = '/index.html';
     
     const filePath = path.join(__dirname, safeUrl);
