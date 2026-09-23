@@ -500,7 +500,7 @@ export default function UserDashboard() {
       {/* 4. MAIN USER DASHBOARD CARD (ORDERS, TABLE BOOKINGS, NOTIFICATIONS)      */}
       {/* ========================================================================= */}
       <Card className="border-none shadow-xs bg-card rounded-2xl overflow-hidden">
-        <CardHeader className="pb-3 border-b border-[#94a3b8]">
+        <CardHeader className="pb-3 border-b border-[#d4dae3] dark:border-[#3b414a]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             
             {/* Left: Section Header */}
@@ -620,7 +620,7 @@ export default function UserDashboard() {
                         className="p-4 rounded-xl border-none bg-muted/20 hover:bg-muted/40 transition-all flex flex-col justify-between gap-3 group"
                       >
                         <div>
-                          <div className="flex items-center justify-between pb-2 border-b border-border/20 dark:border-[#94a3b8]">
+                          <div className="flex items-center justify-between pb-2 border-b border-[#d4dae3] dark:border-[#3b414a]">
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold text-xs text-foreground">
                                 #{order.id}
@@ -649,7 +649,7 @@ export default function UserDashboard() {
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-border/20 dark:border-[#94a3b8] flex items-center justify-between">
+                        <div className="pt-2 border-t border-[#d4dae3] dark:border-[#3b414a] flex items-center justify-between">
                           <div>
                             <span className="text-[10px] text-muted-foreground block">Total Amount</span>
                             <span className="font-mono font-bold text-sm text-foreground">
