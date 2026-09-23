@@ -215,7 +215,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
             {/* Back to Storefront button directly under Orient CMS */}
             <button
               onClick={() => onCancel ? onCancel() : navigate('/')}
-              className="mt-1 flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+              className="mt-5 flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
               title="Return to public storefront"
             >
               <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />

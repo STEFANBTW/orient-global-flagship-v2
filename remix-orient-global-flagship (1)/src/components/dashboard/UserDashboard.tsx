@@ -311,15 +311,15 @@ export default function UserDashboard() {
         {/* Action 2: Reserve A Table */}
         <button
           onClick={() => setIsReserveModalOpen(true)}
-          className="p-4 rounded-xl bg-[#232323] hover:bg-[#2a2a2a] border-none shadow-xs transition-all text-left group cursor-pointer flex items-center justify-between h-20"
+          className="p-4 rounded-xl bg-[#94a3b8] hover:bg-[#8595a8] dark:bg-[#232323] dark:hover:bg-[#2a2a2a] border-none shadow-xs transition-all text-left group cursor-pointer flex items-center justify-between h-20"
         >
           <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-muted-foreground shrink-0" />
+            <Calendar className="w-5 h-5 text-slate-800 dark:text-muted-foreground shrink-0" />
             <span className="text-sm font-bold text-foreground block">
               Reserve A Table
             </span>
           </div>
-          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-all" />
+          <ArrowRight className="w-4 h-4 text-slate-800 dark:text-muted-foreground group-hover:translate-x-1 transition-all" />
         </button>
 
         {/* Action 3: Track Active Kitchen Order */}
@@ -328,22 +328,22 @@ export default function UserDashboard() {
             setActiveTab('orders');
             setHistoryFilter('active');
           }}
-          className="p-4 rounded-xl bg-[#232323] hover:bg-[#2a2a2a] border-none shadow-xs transition-all text-left group cursor-pointer flex items-center justify-between h-20"
+          className="p-4 rounded-xl bg-[#94a3b8] hover:bg-[#8595a8] dark:bg-[#232323] dark:hover:bg-[#2a2a2a] border-none shadow-xs transition-all text-left group cursor-pointer flex items-center justify-between h-20"
         >
           <div className="flex items-center gap-3">
-            <Timer className="w-5 h-5 text-muted-foreground shrink-0" />
+            <Timer className="w-5 h-5 text-slate-800 dark:text-muted-foreground shrink-0" />
             <div>
               <span className="text-sm font-bold text-foreground block">
                 Track Active Kitchen Order
               </span>
               {activeOrders.length > 0 && (
-                <span className="text-[10px] font-mono font-semibold text-muted-foreground">
+                <span className="text-[10px] font-mono font-semibold text-slate-800 dark:text-muted-foreground">
                   {activeOrders.length} Order Active
                 </span>
               )}
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-all" />
+          <ArrowRight className="w-4 h-4 text-slate-800 dark:text-muted-foreground group-hover:translate-x-1 transition-all" />
         </button>
 
         {/* Action 4: Reorder (Orange BG, White Text, No Border) */}
@@ -500,7 +500,7 @@ export default function UserDashboard() {
       {/* 4. MAIN USER DASHBOARD CARD (ORDERS, TABLE BOOKINGS, NOTIFICATIONS)      */}
       {/* ========================================================================= */}
       <Card className="border-none shadow-xs bg-card rounded-2xl overflow-hidden">
-        <CardHeader className="pb-3 border-b border-[#1a1a1a]">
+        <CardHeader className="pb-3 border-b border-[#94a3b8]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             
             {/* Left: Section Header */}
