@@ -931,7 +931,7 @@ export const Hero: React.FC<{
                 className="font-heading font-black text-5xl sm:text-6xl md:text-8xl lg:text-[8.5rem] tracking-tighter leading-[0.8] uppercase text-transparent bg-clip-text"
                 style={{
                   backgroundImage:
-                    'linear-gradient(to right, rgba(255,120,0,0.45) 0%, rgba(255,120,0,1) 20%, rgba(255,120,0,1) 80%, rgba(255,120,0,0.45) 100%)',
+                    'linear-gradient(to right, rgba(242,158,13,0.45) 0%, rgba(242,158,13,1) 20%, rgba(242,158,13,1) 80%, rgba(242,158,13,0.45) 100%)',
                 }}
               >
                 {accentText}
@@ -2284,7 +2284,7 @@ const ChatBot: React.FC = () => {
             whileHover={{ scale: 1.05 }} 
             whileTap={{ scale: 0.95 }} 
             onClick={() => setIsOpen(true)} 
-            className='w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 overflow-hidden relative shadow-[0_15px_45px_rgba(0,0,0,0.2)] bg-primary text-stone-900'
+            className='w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 overflow-hidden relative shadow-[0_15px_45px_rgba(0,0,0,0.2)] text-stone-900' style={{ backgroundColor: '#f29e0d' }}
           >
             <motion.div key='bot' initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} className='flex flex-col items-center'>
               <span className="material-icons text-xl sm:text-2xl">smart_toy</span>

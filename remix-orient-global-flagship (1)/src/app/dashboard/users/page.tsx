@@ -1,343 +1,373 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  getAllUsers, 
-  saveUser, 
-  deleteUserFromStore, 
-  AppUser,
-  MockConsumerUser 
-} from '@/services/userService';
+import { getAllUsers, saveUser, deleteUserFromStore, AppUser } from '@/services/userService';
 import { orderService, CustomerOrder } from '@/services/orderService';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { 
-  Search, 
-  Trash2, 
-  Edit3, 
-  ShoppingBag, 
-  UserX, 
-  UserCheck, 
-  X, 
-  Check, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  ShieldAlert, 
-  Plus,
-  Ban,
-  RotateCcw,
-  CheckCircle2
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Search, Trash2, Edit3, ShoppingBag, Plus, X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
-export default function UsersManagementPage() {
-  const [users, setUsers] = useState<MockConsumerUser[]>([]);
+type SortField = 'name' | 'createdAt' | 'activity';
+type SortDir = 'asc' | 'desc';
+
+const EMPTY_USER: Partial<AppUser> = {
+  name: '', email: '', phone: '+234 ', deliveryAddress: '', city: 'Lagos', role: 'customer',
+};
+
+export default function UsersPage() {
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // Modals state
-  const [editingUser, setEditingUser] = useState<MockConsumerUser | null>(null);
-  const [viewingOrdersUser, setViewingOrdersUser] = useState<MockConsumerUser | null>(null);
-  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState<Partial<AppUser>>(EMPTY_USER);
+  const [viewingUser, setViewingUser] = useState<AppUser | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // New user form state
-  const [newUserForm, setNewUserForm] = useState<Partial<MockConsumerUser>>({
-    name: '',
-    email: '',
-    phone: '+234 ',
-    deliveryAddress: '',
-    city: 'Lagos (South-West)',
-    role: 'customer'
-  });
-
-  const loadData = async () => {
-    const allUsers = getAllUsers();
-    setUsers(allUsers);
-    const allOrders = await orderService.getOrders();
-    setOrders(allOrders);
+  const load = async () => {
+    setUsers(getAllUsers());
+    setOrders(await orderService.getOrders());
   };
 
   useEffect(() => {
-    loadData();
-
-    const handleUsersChange = () => {
-      setUsers(getAllUsers());
-    };
-    const handleOrdersChange = () => {
-      orderService.getOrders().then(setOrders);
-    };
-
-    window.addEventListener('orient_all_users_changed', handleUsersChange);
-    window.addEventListener('orient_orders_changed', handleOrdersChange);
-
+    load();
+    const onUsers = () => setUsers(getAllUsers());
+    const onOrders = () => orderService.getOrders().then(setOrders);
+    window.addEventListener('orient_all_users_changed', onUsers);
+    window.addEventListener('orient_orders_changed', onOrders);
     return () => {
-      window.removeEventListener('orient_all_users_changed', handleUsersChange);
-      window.removeEventListener('orient_orders_changed', handleOrdersChange);
+      window.removeEventListener('orient_all_users_changed', onUsers);
+      window.removeEventListener('orient_orders_changed', onOrders);
     };
   }, []);
 
-  const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
-    const q = searchQuery.toLowerCase();
-    return users.filter(u => 
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.phone.toLowerCase().includes(q) ||
-      u.deliveryAddress?.toLowerCase().includes(q) ||
-      u.city?.toLowerCase().includes(q)
-    );
-  }, [users, searchQuery]);
+  const orderCountFor = (u: AppUser) =>
+    orders.filter(o =>
+      o.customerId === u.id ||
+      o.customerEmail?.toLowerCase() === u.email?.toLowerCase()
+    ).length;
 
-  // Actions
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (window.confirm(`Are you sure you want to permanently delete user "${userName}"?`)) {
-      const updated = await deleteUserFromStore(userId);
-      setUsers(updated);
+  const sorted = useMemo(() => {
+    let list = [...users];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(u =>
+        u.name.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.toLowerCase().includes(q)
+      );
     }
+    list.sort((a, b) => {
+      let val = 0;
+      if (sortField === 'name') val = a.name.localeCompare(b.name);
+      else if (sortField === 'createdAt') val = (a.createdAt || '').localeCompare(b.createdAt || '');
+      else if (sortField === 'activity') val = orderCountFor(a) - orderCountFor(b);
+      return sortDir === 'asc' ? val : -val;
+    });
+    return list;
+  }, [users, orders, search, sortField, sortDir]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('desc'); }
   };
 
-  const handleSaveEditedUser = async (e: React.FormEvent) => {
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1 opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp className="w-3 h-3 ml-1" /> : <ArrowDown className="w-3 h-3 ml-1" />;
+  };
+
+  // ── Actions ──────────────────────────────────────────────────────────────
+
+  const handleDeleteUser = async (id: string, name: string) => {
+    if (!window.confirm(`Delete "${name}" permanently? This cannot be undone.`)) return;
+    const updated = await deleteUserFromStore(id);
+    setUsers(updated);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
-    const updated = await saveUser(editingUser);
+    setSaving(true);
+    const updated = await saveUser({ ...editingUser, updatedAt: new Date().toISOString() });
     setUsers(updated);
     setEditingUser(null);
+    setSaving(false);
   };
 
-  const handleCreateNewUser = async (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserForm.name || !newUserForm.email) return;
-
-    const id = `usr_custom_${Date.now().toString().slice(-5)}`;
-    const initials = newUserForm.name.trim().split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
-    const created: MockConsumerUser = {
+    if (!newUser.name || !newUser.phone) return;
+    setSaving(true);
+    const id = `usr_${Date.now().toString(36)}`;
+    const initials = newUser.name!.trim().split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+    const created: AppUser = {
       id,
-      name: newUserForm.name.trim(),
-      email: newUserForm.email.trim(),
-      phone: newUserForm.phone?.trim() || '+234 800 000 0000',
-      deliveryAddress: newUserForm.deliveryAddress?.trim() || 'Standard Delivery',
-      city: newUserForm.city || 'Lagos',
-      role: newUserForm.role || 'customer',
+      name: newUser.name!.trim(),
+      email: newUser.email?.trim() || '',
+      phone: newUser.phone!.trim(),
+      deliveryAddress: newUser.deliveryAddress?.trim() || '',
+      city: newUser.city || 'Lagos',
+      role: (newUser.role as AppUser['role']) || 'customer',
       avatar: initials || 'US',
-      hasActiveOrder: false
+      hasActiveOrder: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
-
     const updated = await saveUser(created);
     setUsers(updated);
-    setIsNewUserModalOpen(false);
-    setNewUserForm({
-      name: '',
-      email: '',
-      phone: '+234 ',
-      deliveryAddress: '',
-      city: 'Lagos (South-West)',
-      role: 'customer'
-    });
+    setCreatingUser(false);
+    setNewUser(EMPTY_USER);
+    setSaving(false);
   };
 
-  const handleDeclineOrder = async (orderId: string) => {
-    if (window.confirm(`Are you sure you want to decline / cancel order #${orderId}?`)) {
-      await orderService.updateOrderStatus(orderId, 'cancelled');
-      const refreshed = await orderService.getOrders();
-      setOrders(refreshed);
-    }
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm(`Delete order #${orderId}? This cannot be undone.`)) return;
+    await orderService.deleteOrder(orderId);
+    setOrders(await orderService.getOrders());
   };
 
-  // User's order history
-  const userOrdersList = useMemo(() => {
-    if (!viewingOrdersUser) return [];
-    return orders.filter(o => 
-      o.customerId === viewingOrdersUser.id ||
-      o.customerEmail?.toLowerCase() === viewingOrdersUser.email.toLowerCase() ||
-      o.customerName?.toLowerCase() === viewingOrdersUser.name.toLowerCase()
-    );
-  }, [orders, viewingOrdersUser]);
+  const userOrders = useMemo(() =>
+    viewingUser
+      ? orders.filter(o =>
+          o.customerId === viewingUser.id ||
+          o.customerEmail?.toLowerCase() === viewingUser.email?.toLowerCase()
+        )
+      : [],
+    [orders, viewingUser]
+  );
+
+  // ── Shared form ───────────────────────────────────────────────────────────
+
+  const UserFormFields = ({
+    data,
+    setData,
+  }: {
+    data: Partial<AppUser>;
+    setData: (d: Partial<AppUser>) => void;
+  }) => (
+    <div className="space-y-3">
+      <div>
+        <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Full Name *</label>
+        <Input
+          value={data.name || ''}
+          onChange={e => setData({ ...data, name: e.target.value })}
+          required
+          className="h-9 text-xs"
+          placeholder="e.g. Babatunde Raji"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Phone *</label>
+          <Input
+            value={data.phone || ''}
+            onChange={e => setData({ ...data, phone: e.target.value })}
+            required
+            className="h-9 text-xs font-mono"
+            placeholder="+234 802 000 0000"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Email</label>
+          <Input
+            type="email"
+            value={data.email || ''}
+            onChange={e => setData({ ...data, email: e.target.value })}
+            className="h-9 text-xs"
+            placeholder="email@example.ng"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Delivery Address</label>
+        <Input
+          value={data.deliveryAddress || ''}
+          onChange={e => setData({ ...data, deliveryAddress: e.target.value })}
+          className="h-9 text-xs"
+          placeholder="Plot 12 Admiralty Way..."
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">City</label>
+          <Input
+            value={data.city || ''}
+            onChange={e => setData({ ...data, city: e.target.value })}
+            className="h-9 text-xs"
+            placeholder="Lagos"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Role</label>
+          <select
+            value={data.role || 'customer'}
+            onChange={e => setData({ ...data, role: e.target.value as AppUser['role'] })}
+            className="w-full h-9 rounded-lg border border-border/60 bg-background px-3 text-xs text-foreground"
+          >
+            <option value="customer">Customer</option>
+            <option value="staff">Staff</option>
+            <option value="hod">Head of Department</option>
+            <option value="boss">Boss (Admin)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 max-w-[1700px] mx-auto pb-20">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary font-mono">
-              Admin CMS • Identity & Access Center
-            </span>
-          </div>
-          <h1 className="text-3xl font-extrabold text-foreground tracking-tight font-headline mt-1">
-            User Accounts Management
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            View, edit, or delete customer accounts, monitor personal order history, and manage order dispatches.
-          </p>
-        </div>
+    <div className="space-y-5 max-w-[1600px] mx-auto pb-20">
 
-        <Button 
-          onClick={() => setIsNewUserModalOpen(true)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-10 px-4 rounded-xl gap-2 shadow-sm shrink-0"
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-mono uppercase tracking-widest text-primary">Admin CMS · User Management</p>
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight mt-0.5">Users</h1>
+        </div>
+        <Button
+          onClick={() => setCreatingUser(true)}
+          className="h-9 text-xs font-bold gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-4"
         >
-          <Plus className="w-4 h-4" />
-          Add Customer Account
+          <Plus className="w-4 h-4" /> Add User
         </Button>
       </div>
 
-      {/* Metrics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl border border-border/60 bg-card shadow-sm">
-          <span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground block">Total Accounts</span>
-          <span className="text-2xl font-black text-foreground">{users.length}</span>
-        </div>
-        <div className="p-4 rounded-xl border border-border/60 bg-card shadow-sm">
-          <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-500 block">Active Customers</span>
-          <span className="text-2xl font-black text-emerald-600">{users.filter(u => u.role === 'customer').length}</span>
-        </div>
-        <div className="p-4 rounded-xl border border-border/60 bg-card shadow-sm">
-          <span className="text-[10px] uppercase font-mono tracking-wider text-amber-500 block">Total Orders Recorded</span>
-          <span className="text-2xl font-black text-amber-600">{orders.length}</span>
-        </div>
-        <div className="p-4 rounded-xl border border-border/60 bg-card shadow-sm">
-          <span className="text-[10px] uppercase font-mono tracking-wider text-primary block">CMS Staff / Admins</span>
-          <span className="text-2xl font-black text-primary">{users.filter(u => u.role !== 'customer').length}</span>
-        </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Users', value: users.length, color: 'text-foreground' },
+          { label: 'Customers', value: users.filter(u => u.role === 'customer').length, color: 'text-emerald-500' },
+          { label: 'Total Orders', value: orders.length, color: 'text-amber-500' },
+          { label: 'Staff / Admins', value: users.filter(u => u.role !== 'customer').length, color: 'text-primary' },
+        ].map(s => (
+          <div key={s.label} className="p-4 rounded-xl bg-card border border-border/60">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{s.label}</p>
+            <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Search & Table */}
-      <div className="bg-card border border-border/60 rounded-xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-border/40 bg-muted/20 flex items-center justify-between gap-4">
-          <div className="relative flex items-center max-w-md w-full">
-            <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none z-10 shrink-0" />
-            <Input 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by name, email, phone, city or address..." 
-              className="pl-9 bg-[#f8fafc] dark:bg-[#1a1a1a] border-none h-10 text-xs w-full rounded-lg"
-            />
-          </div>
-          <span className="text-xs text-muted-foreground font-mono">
-            Showing {filteredUsers.length} of {users.length} users
-          </span>
+      {/* Toolbar: search + sort */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search name, email, phone..."
+            className="h-9 pl-9 text-xs border-none bg-muted/50 rounded-lg"
+          />
         </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[11px] text-muted-foreground">Sort:</span>
+          {(['name', 'createdAt', 'activity'] as SortField[]).map(f => (
+            <button
+              key={f}
+              onClick={() => toggleSort(f)}
+              className={`inline-flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                sortField === f
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/60 hover:bg-muted text-foreground'
+              }`}
+            >
+              {f === 'name' ? 'Name' : f === 'createdAt' ? 'Date Added' : 'Activity'}
+              <SortIcon field={f} />
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px] font-mono text-muted-foreground ml-auto">
+          {sorted.length} of {users.length}
+        </span>
+      </div>
 
+      {/* Table */}
+      <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/40 text-[11px] uppercase font-mono tracking-wider">
-            <TableRow>
-              <TableHead className="py-3.5">User Profile</TableHead>
-              <TableHead>Contact Details</TableHead>
-              <TableHead>Delivery Address & Region</TableHead>
-              <TableHead>System Role</TableHead>
-              <TableHead>Total Orders</TableHead>
+          <TableHeader>
+            <TableRow className="bg-muted/40 text-[10px] uppercase font-mono tracking-wider">
+              <TableHead className="py-3">User</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Orders</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.length === 0 ? (
+            {sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-xs">
-                  No matching user accounts found.
+                <TableCell colSpan={5} className="text-center py-12 text-xs text-muted-foreground">
+                  No users found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((u) => {
-                const userOrders = orders.filter(o => 
-                  o.customerId === u.id ||
-                  o.customerEmail?.toLowerCase() === u.email.toLowerCase() ||
-                  o.customerName?.toLowerCase() === u.name.toLowerCase()
-                );
-
+              sorted.map(u => {
+                const count = orderCountFor(u);
                 return (
-                  <TableRow key={u.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell className="py-3.5">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-primary/20 bg-primary/10 text-primary font-bold text-xs shrink-0">
-                          <AvatarFallback>{u.avatar || u.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  <TableRow key={u.id} className="hover:bg-muted/20 transition-colors">
+                    <TableCell className="py-3">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="h-8 w-8 bg-primary/10 text-primary shrink-0">
+                          <AvatarFallback className="text-[11px] font-bold">
+                            {u.avatar || u.name.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="text-xs font-bold text-foreground">{u.name}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono">ID: {u.id}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">{u.id}</p>
                         </div>
                       </div>
                     </TableCell>
-
                     <TableCell>
-                      <div className="space-y-0.5 text-xs">
-                        <div className="flex items-center gap-1 text-foreground">
-                          <Mail className="w-3 h-3 text-muted-foreground" />
-                          <span>{u.email}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-muted-foreground text-[11px]">
-                          <Phone className="w-3 h-3 text-muted-foreground" />
-                          <span>{u.phone}</span>
-                        </div>
-                      </div>
+                      <p className="text-xs text-foreground">{u.email || '—'}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono">{u.phone}</p>
                     </TableCell>
-
                     <TableCell>
-                      <div className="space-y-0.5 text-xs max-w-[240px]">
-                        <p className="font-medium text-foreground truncate">{u.deliveryAddress}</p>
-                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-primary shrink-0" />
-                          {u.city || 'Nigeria'}
-                        </p>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Badge 
-                        className={`text-[9px] font-extrabold uppercase border-none ${
-                          u.role === 'boss' ? 'bg-purple-600 text-white' :
-                          u.role === 'hod' ? 'bg-blue-600 text-white' :
-                          'bg-slate-200 dark:bg-slate-700 text-foreground'
+                      <Badge
+                        className={`text-[10px] font-bold border-none uppercase ${
+                          u.role === 'boss'
+                            ? 'bg-purple-600 text-white'
+                            : u.role === 'hod'
+                            ? 'bg-blue-600 text-white'
+                            : u.role === 'staff'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-muted text-foreground'
                         }`}
                       >
-                        {u.role || 'customer'}
+                        {u.role}
                       </Badge>
                     </TableCell>
-
                     <TableCell>
                       <button
-                        onClick={() => setViewingOrdersUser(u)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs transition-colors cursor-pointer"
+                        onClick={() => setViewingUser(u)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors"
                       >
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        <span>{userOrders.length} Orders</span>
+                        <ShoppingBag className="w-3 h-3" /> {count}
                       </button>
                     </TableCell>
-
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setViewingOrdersUser(u)}
-                          className="h-8 text-xs font-semibold gap-1.5 border-border/60 hover:bg-muted"
-                          title="View order history & decline orders"
-                        >
-                          <ShoppingBag className="w-3.5 h-3.5 text-amber-500" />
-                          Orders ({userOrders.length})
-                        </Button>
-
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => setEditingUser(u)}
                           className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
-                          title="Edit user details"
+                          title="Edit user"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </Button>
-
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleDeleteUser(u.id, u.name)}
                           className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
-                          title="Delete user permanently"
+                          title="Delete user"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -351,347 +381,151 @@ export default function UsersManagementPage() {
         </Table>
       </div>
 
-      {/* EDIT USER MODAL */}
-      <AnimatePresence>
-        {editingUser && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card border border-border/80 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
-            >
-              <div className="p-5 border-b border-border/40 flex items-center justify-between bg-muted/20">
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Edit User Profile</h2>
-                  <p className="text-xs text-muted-foreground">Update customer details, delivery address, or system roles.</p>
-                </div>
-                <button 
-                  onClick={() => setEditingUser(null)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+      {/* ── Edit User Modal ─────────────────────────────────────────────────── */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-border/40 bg-muted/20">
+              <div>
+                <h2 className="text-base font-bold">Edit User</h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Changes persist to Firestore and affect login immediately.
+                </p>
               </div>
-
-              <form onSubmit={handleSaveEditedUser} className="p-5 space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">Full Name</label>
-                  <Input 
-                    value={editingUser.name}
-                    onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Email Address</label>
-                    <Input 
-                      type="email"
-                      value={editingUser.email}
-                      onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
-                      required
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Phone Number</label>
-                    <Input 
-                      value={editingUser.phone}
-                      onChange={e => setEditingUser({ ...editingUser, phone: e.target.value })}
-                      required
-                      className="h-9 text-xs font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">Delivery Address</label>
-                  <Input 
-                    value={editingUser.deliveryAddress}
-                    onChange={e => setEditingUser({ ...editingUser, deliveryAddress: e.target.value })}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">City / State Region</label>
-                    <Input 
-                      value={editingUser.city || ''}
-                      onChange={e => setEditingUser({ ...editingUser, city: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">System Role</label>
-                    <select
-                      value={editingUser.role || 'customer'}
-                      onChange={e => setEditingUser({ ...editingUser, role: e.target.value as any })}
-                      className="w-full h-9 rounded-lg border border-border/80 bg-background px-3 text-xs text-foreground"
-                    >
-                      <option value="customer">Customer</option>
-                      <option value="admin">Admin CMS Boss</option>
-                      <option value="hod">Head of Department (HOD)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="pt-3 flex items-center justify-end gap-2 border-t border-border/40">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setEditingUser(null)}
-                    className="h-9 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
-                  >
-                    Save Changes
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ADD NEW USER MODAL */}
-      <AnimatePresence>
-        {isNewUserModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card border border-border/80 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
-            >
-              <div className="p-5 border-b border-border/40 flex items-center justify-between bg-muted/20">
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Create New Customer Account</h2>
-                  <p className="text-xs text-muted-foreground">Register a new customer for ordering in the system.</p>
-                </div>
-                <button 
-                  onClick={() => setIsNewUserModalOpen(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateNewUser} className="p-5 space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">Full Name</label>
-                  <Input 
-                    placeholder="e.g. Babatunde Raji"
-                    value={newUserForm.name}
-                    onChange={e => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Email Address</label>
-                    <Input 
-                      type="email"
-                      placeholder="babatunde@example.ng"
-                      value={newUserForm.email}
-                      onChange={e => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                      required
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Phone Number</label>
-                    <Input 
-                      placeholder="+234 802 123 4567"
-                      value={newUserForm.phone}
-                      onChange={e => setNewUserForm({ ...newUserForm, phone: e.target.value })}
-                      required
-                      className="h-9 text-xs font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">Delivery Address</label>
-                  <Input 
-                    placeholder="e.g. Plot 12 Admiralty Way, Lekki Phase 1"
-                    value={newUserForm.deliveryAddress}
-                    onChange={e => setNewUserForm({ ...newUserForm, deliveryAddress: e.target.value })}
-                    required
-                    className="h-9 text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">City Region</label>
-                    <Input 
-                      placeholder="Lagos (South-West)"
-                      value={newUserForm.city}
-                      onChange={e => setNewUserForm({ ...newUserForm, city: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground mb-1 block">Role</label>
-                    <select
-                      value={newUserForm.role || 'customer'}
-                      onChange={e => setNewUserForm({ ...newUserForm, role: e.target.value as any })}
-                      className="w-full h-9 rounded-lg border border-border/80 bg-background px-3 text-xs text-foreground"
-                    >
-                      <option value="customer">Customer</option>
-                      <option value="admin">Admin CMS Boss</option>
-                      <option value="hod">HOD</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="pt-3 flex items-center justify-end gap-2 border-t border-border/40">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsNewUserModalOpen(false)}
-                    className="h-9 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
-                  >
-                    Create Account
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* VIEW & DECLINE USER ORDERS MODAL */}
-      <AnimatePresence>
-        {viewingOrdersUser && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-card border border-border/80 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden"
-            >
-              <div className="p-5 border-b border-border/40 flex items-center justify-between bg-muted/20 shrink-0">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border border-primary/20 bg-primary/10 text-primary font-bold text-xs">
-                    <AvatarFallback>{viewingOrdersUser.avatar}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="text-base font-bold text-foreground">Order History for {viewingOrdersUser.name}</h2>
-                    <p className="text-xs text-muted-foreground">{viewingOrdersUser.email} • {viewingOrdersUser.phone}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setViewingOrdersUser(null)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="p-5 overflow-y-auto space-y-4 flex-1">
-                {userOrdersList.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground text-xs space-y-2">
-                    <ShoppingBag className="w-8 h-8 mx-auto text-muted-foreground/40" />
-                    <p>No orders placed by {viewingOrdersUser.name} yet.</p>
-                  </div>
-                ) : (
-                  userOrdersList.map(order => (
-                    <div 
-                      key={order.id} 
-                      className="p-4 rounded-xl border border-border/60 bg-muted/10 space-y-3"
-                    >
-                      <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-foreground">#{order.id}</span>
-                            <Badge className="bg-primary/10 text-primary text-[10px] font-bold border-none uppercase">
-                              {order.division || 'dining'}
-                            </Badge>
-                          </div>
-                          <span className="text-[10px] text-muted-foreground block mt-0.5">
-                            Placed: {new Date(order.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            className={`text-[10px] font-bold uppercase border-none ${
-                              order.status === 'completed' ? 'bg-emerald-600 text-white' :
-                              order.status === 'cancelled' ? 'bg-red-600 text-white' :
-                              order.status === 'ready' ? 'bg-emerald-500 text-white' :
-                              'bg-amber-500 text-white'
-                            }`}
-                          >
-                            {order.status}
-                          </Badge>
-
-                          {order.status !== 'cancelled' && order.status !== 'completed' && (
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeclineOrder(order.id)}
-                              className="h-7 text-[11px] font-bold px-2.5 gap-1"
-                              title="Decline order and mark as cancelled"
-                            >
-                              <Ban className="w-3 h-3" />
-                              Decline Order
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-1 bg-card p-3 rounded-lg border border-border/40 text-xs">
-                        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">
-                          Items Ordered (₦10 fixed rate)
-                        </span>
-                        {order.items.map((it, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-foreground font-medium">
-                            <span>{it.quantity}x {it.name}</span>
-                            <span className="font-mono text-muted-foreground">₦{it.quantity * 10}</span>
-                          </div>
-                        ))}
-                        <div className="border-t border-border/40 pt-1.5 mt-1.5 flex justify-between items-center font-bold text-xs">
-                          <span>Total Amount</span>
-                          <span className="text-emerald-600 font-mono">₦{order.totalAmount}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="p-4 border-t border-border/40 bg-muted/20 flex justify-end shrink-0">
-                <Button 
-                  onClick={() => setViewingOrdersUser(null)}
-                  className="h-9 text-xs"
-                >
-                  Close History
+              <button
+                onClick={() => setEditingUser(null)}
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
+              <UserFormFields data={editingUser} setData={d => setEditingUser(d as AppUser)} />
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+                <Button type="button" variant="outline" onClick={() => setEditingUser(null)} className="h-9 text-xs">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving} className="h-9 text-xs bg-primary hover:bg-primary/90 font-bold">
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
-            </motion.div>
+            </form>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
+
+      {/* ── Create User Modal ───────────────────────────────────────────────── */}
+      {creatingUser && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-border/40 bg-muted/20">
+              <div>
+                <h2 className="text-base font-bold">Create User</h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Saved to Firestore. User can log in immediately.
+                </p>
+              </div>
+              <button
+                onClick={() => setCreatingUser(false)}
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="p-5 space-y-4">
+              <UserFormFields data={newUser} setData={setNewUser} />
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+                <Button type="button" variant="outline" onClick={() => setCreatingUser(false)} className="h-9 text-xs">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving} className="h-9 text-xs bg-primary hover:bg-primary/90 font-bold">
+                  {saving ? 'Creating...' : 'Create User'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Order History Panel ─────────────────────────────────────────────── */}
+      {viewingUser && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-border/40 bg-muted/20 shrink-0">
+              <div>
+                <h2 className="text-base font-bold">Order History — {viewingUser.name}</h2>
+                <p className="text-[11px] text-muted-foreground">
+                  {viewingUser.email} · {viewingUser.phone}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingUser(null)}
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-3">
+              {userOrders.length === 0 ? (
+                <div className="text-center py-10 text-xs text-muted-foreground">
+                  No orders for this user.
+                </div>
+              ) : (
+                userOrders.map(order => (
+                  <div key={order.id} className="p-4 rounded-xl border border-border/60 bg-muted/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold">#{order.id}</span>
+                        <Badge
+                          className={`text-[10px] font-bold border-none uppercase ${
+                            order.status === 'completed'
+                              ? 'bg-emerald-600 text-white'
+                              : order.status === 'cancelled'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-amber-500 text-white'
+                          }`}
+                        >
+                          {order.status}
+                        </Badge>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteOrder(order.id)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                        title="Delete this order"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleString()} · {order.division || 'dining'}
+                    </p>
+                    <div className="bg-card rounded-lg border border-border/40 p-3 space-y-1">
+                      {order.items.map((it, i) => (
+                        <div key={i} className="flex justify-between text-xs text-foreground">
+                          <span>{it.quantity}x {it.name}</span>
+                          <span className="font-mono text-muted-foreground">₦{it.quantity * it.price}</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-border/40 pt-1 mt-1 flex justify-between text-xs font-bold">
+                        <span>Total</span>
+                        <span className="text-emerald-500 font-mono">₦{order.totalAmount}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-4 border-t border-border/40 bg-muted/20 flex justify-end shrink-0">
+              <Button onClick={() => setViewingUser(null)} className="h-9 text-xs">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
