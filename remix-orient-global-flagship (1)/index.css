@@ -1,0 +1,235 @@
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Orient Brand Colors */
+  --color-bg-light: #FDFDFD; /* Very Soft White */
+  --color-bg-dark: #0F0F0F; /* Very Dark */
+  --color-accent-gray: #E2E8F0; /* Very Subtle Gray */
+  --color-accent-orange: #F97316; /* Orange Accent */
+  
+  --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --shadow-elite: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+
+  /* Shadcn Colors - Converted to CSS Colors */
+  --color-background: #FDFDFD; 
+  --color-foreground: #0F172A;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #0F172A;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #0F172A;
+  
+  --color-primary: #F97316; /* Orange Accent */
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #F8FAFC; /* Lighter Gray */
+  --color-secondary-foreground: #0F172A;
+  --color-muted: #F8FAFC; /* Lighter Gray */
+  --color-muted-foreground: #64748B;
+  --color-accent: #FFF7ED; /* Subtle Orange */
+  --color-accent-foreground: #C2410C;
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
+  
+  --color-success: #10B981;
+  --color-success-foreground: #FFFFFF;
+  --color-warning: #F59E0B;
+  --color-warning-foreground: #FFFFFF;
+  --color-info: #0EA5E9;
+  --color-info-foreground: #FFFFFF;
+  
+  --color-border-gate: #E2E8F0;
+  --color-border: #F1F5F9; /* Lighter border */
+  --color-input: #F1F5F9;
+  --color-ring: #F97316; /* Orange Accent */
+  
+  --radius: 0.75rem;
+  
+  --color-sidebar-background: #FDFDFD;
+  --color-sidebar-foreground: #0F172A;
+  --color-sidebar-primary: #F97316;
+  --color-sidebar-primary-foreground: #FFFFFF;
+  --color-sidebar-accent: #FFF7ED;
+  --color-sidebar-accent-foreground: #C2410C;
+  --color-sidebar-border: #E2E8F0;
+  --color-sidebar-ring: #F97316;
+
+  --font-headline: "Montserrat", sans-serif;
+  --font-display: "Manrope", sans-serif;
+  --font-heading: "Montserrat", sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-code: "Source Code Pro", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer utilities {
+  .glass-morph {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+  
+  .glass-morph-dark {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .text-reveal-mask {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  *, ::before, ::after {
+    border-color: var(--color-border);
+  }
+
+  .dark {
+    --color-background: #1a1a1a; 
+    --color-foreground: #FDFDFD;
+    --color-card: #222222;
+    --color-card-foreground: #FDFDFD;
+    --color-popover: #222222;
+    --color-popover-foreground: #FDFDFD;
+    
+    --color-primary: #F97316;
+    --color-primary-foreground: #FFFFFF;
+    --color-secondary: #27272A;
+    --color-secondary-foreground: #FDFDFD;
+    --color-muted: #27272A;
+    --color-muted-foreground: #A1A1AA;
+    --color-accent: #3F1D0B;
+    --color-accent-foreground: #F97316;
+    --color-destructive: #7F1D1D;
+    --color-destructive-foreground: #FDFDFD;
+    
+    --color-success: #059669;
+    --color-success-foreground: #FFFFFF;
+    --color-warning: #D97706;
+    --color-warning-foreground: #FFFFFF;
+    --color-info: #0284C7;
+    --color-info-foreground: #FFFFFF;
+    
+    --color-border-gate: #1a1a1a;
+    --color-border: #1a1a1a;
+    --color-input: #27272A;
+    --color-ring: #F97316;
+    
+    --color-sidebar-background: #1a1a1a;
+    --color-sidebar-foreground: #FDFDFD;
+    --color-sidebar-primary: #F97316;
+    --color-sidebar-primary-foreground: #FFFFFF;
+    --color-sidebar-accent: #3F1D0B;
+    --color-sidebar-accent-foreground: #FDFDFD;
+    --color-sidebar-border: transparent;
+    --color-sidebar-ring: #F97316;
+  }
+
+  .dark * {
+    border-color: transparent;
+  }
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    border-color: var(--color-primary);
+  }
+}
+
+.orange-glow {
+  box-shadow: 0 4px 20px rgba(249, 115, 22, 0.15);
+}
+
+.professional-shadow {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+@keyframes liquid-flow {
+  0% { transform: translate(-10%, -10%) scale(1); }
+  50% { transform: translate(10%, 10%) scale(1.2); }
+  100% { transform: translate(-10%, -10%) scale(1); }
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10vw, 15vh) scale(1.1); }
+  100% { transform: translate(-10vw, 5vh) scale(0.9); }
+}
+
+.animate-liquid {
+  animation: liquid-flow 25s infinite alternate ease-in-out;
+}
+
+.animate-float {
+  animation: float 20s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
+}
+
+@keyframes wave {
+  0%, 100% { height: 10px; }
+  50% { height: 30px; }
+}
+
+.wave-bar {
+  animation: wave 1s ease-in-out infinite;
+}
+
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px circle at var(--mouse-x) var(--mouse-y),
+    rgba(242, 158, 13, 0.06),
+    transparent 40%
+  );
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+html {
+  /* scroll-behavior: smooth; */
+}
+
+/* Hide scrollbars globally */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Soften the scroll behavior */
+#main-scroll-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+.content-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+

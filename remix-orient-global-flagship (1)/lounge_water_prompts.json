@@ -1,0 +1,96 @@
+{
+  "project_identity": {
+    "name": "Orient Global Lounge & Water Command Center",
+    "version": "1.0.0",
+    "aesthetic_profile": "Atmospheric / Glassmorphism / Dark Mode / Fluid UI",
+    "target_platform": "Full-Stack React + Node.js (Express) + WebSocket for real-time approvals"
+  },
+  "user_roles": {
+    "admin_staff": {
+      "permissions": [
+        "Update drink availability (Lounge)",
+        "Draft new Lab experiments (Lounge)",
+        "Update water stock levels (Water)",
+        "Post community impact updates (Water)",
+        "Manage delivery schedules (Water)"
+      ],
+      "constraints": "Cannot publish price changes, hero content, or critical system settings without HOD approval."
+    },
+    "admin_hod": {
+      "permissions": [
+        "All Staff permissions",
+        "Access to 'Lounge & Water Approval Hub'",
+        "Final authority on Lounge Menu pricing and VIP bookings",
+        "Approval for Water quality reports and bulk logistics pricing",
+        "Override authority for all live content"
+      ],
+      "approval_logic": "Must provide a 'Reason for Declination' if a proposal is rejected."
+    }
+  },
+  "division_data_models": {
+    "lounge_experience": {
+      "menu_management": {
+        "categories": ["Signature Cocktails", "The Lab Experiments", "Appetizers", "Premium Spirits"],
+        "items": [
+          {
+            "id": "UUID",
+            "name": "String",
+            "price": "Number",
+            "description": "Text",
+            "is_available": "Boolean",
+            "is_new": "Boolean",
+            "image_url": "URL"
+          }
+        ]
+      },
+      "lab_configurator": {
+        "experimental_drinks": "Array of Objects {name, status, teaser_text}",
+        "visualizer_settings": "Object {theme_color, animation_speed, background_video_url}"
+      },
+      "vip_booking_control": {
+        "table_map": "Array of Objects {table_id, capacity, status}",
+        "event_calendar": "Array of Objects {date, event_name, description}"
+      }
+    },
+    "water_division": {
+      "quality_process": {
+        "steps": "Array of Objects {step_number, title, description, icon}",
+        "lab_reports": "Array of Objects {date, report_url, summary_status}"
+      },
+      "impact_stories": {
+        "stories": [
+          {
+            "id": "UUID",
+            "title": "String",
+            "content": "Text",
+            "image_url": "URL",
+            "date": "Timestamp"
+          }
+        ],
+        "sustainability_metrics": "Object {liters_saved, community_reach, carbon_reduction}"
+      },
+      "logistics_management": {
+        "delivery_zones": "Array of Objects {zone_name, min_order, delivery_fee}",
+        "bulk_pricing_tiers": "Array of Objects {qty_range, price_per_unit}",
+        "home_delivery_schedule": "Array of Objects {day, slots_available}"
+      }
+    }
+  },
+  "approval_workflow_mechanism": {
+    "states": [
+      "DRAFT",
+      "PENDING_REVIEW",
+      "LIVE",
+      "DECLINED"
+    ],
+    "transaction_log": {
+      "timestamp": "DateTime",
+      "staff_id": "UserRef",
+      "division": "Enum [Lounge, Water]",
+      "change_summary": "String",
+      "diff_data": "Object {before, after}",
+      "hod_notes": "String (Required for Rejection)"
+    }
+  },
+  "ai_builder_master_prompt": "Build a high-end, dual-role administrative dashboard for 'Orient Global Lounge' and 'Orient Global Water'. The UI must feature an 'Atmospheric Glassmorphism' aesthetic (deep black backgrounds, gold accents for Lounge, sky blue accents for Water, 30px blur, 1px white/5 borders).\n\n### MODULE 1: THE LOUNGE COMMAND (HOD ONLY)\n- A real-time 'VIP Booking Approval' system for event and table reservations.\n- A 'Lab Tuner' to manage experimental drink teasers and visualizer atmosphere.\n- Action buttons: [Approve & Sync] and [Decline with Reason].\n\n### MODULE 2: THE WATER COMMAND (HOD ONLY)\n- A 'Quality Control' view to publish lab reports and update the 7-step process details.\n- A 'Logistics Hub' to manage bulk pricing tiers and delivery zone settings.\n\n### MODULE 3: OPERATIONAL INPUT (STAFF & HOD)\n- A 'Menu Editor' for the Lounge with real-time availability toggles.\n- An 'Impact CMS' for Water staff to post community stories and sustainability metrics.\n- A 'Delivery Tracker' for managing home delivery slots.\n\n### TECHNICAL REQUIREMENTS:\n- React frontend with Tailwind CSS.\n- Use 'Framer Motion' for fluid transitions between 'Lounge' and 'Water' dashboards.\n- Implement a 'Live Preview' window for both divisions.\n- The 'admin_staff' view must show a clear status of their pending proposals."
+}

@@ -1,0 +1,358 @@
+5-import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, animate } from 'framer-motion';
+6-import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
+7:import { BakeryApp, BakeryNav } from './src/BakeryComponents';
+8:import { SupermarketApp, SupermarketNav, SupermarketPage } from './src/supermarket/SupermarketWrapper';
+9:import { DiningApp, DiningNav, DiningView } from './src/dining/DiningWrapper';
+10:import { GamesApp, GamesNav, Page as GamesPage } from './src/games/GamesWrapper';
+11:import { WaterApp, WaterNav, WaterPage } from './src/water/WaterWrapper';
+12:import { LoungeApp, LoungeNav, LoungePage } from './src/lounge/LoungeWrapper';
+13-import About from './src/components/About';
+14-import { AmbientGlow } from './src/components/AmbientGlow';
+--
+54-}
+55-
+56:// --- Navigation Function Declaration for AI ---
+57:const navigateToSectionTool: FunctionDeclaration = {
+58: name: 'navigateToSection',
+59- parameters: {
+60- type: Type.OBJECT,
+--
+63- sectionId: {
+64- type: Type.STRING,
+65: description: 'The ID of the section to navigate to. Options: hero, services, bakery, market, lounge, standard, voices, location.',
+66- },
+67- },
+--
+170-};
+171-
+172:const Navbar: React.FC<{ 
+173- setCurrentView: (v: any) => void, 
+174- scrolled: boolean, 
+175: navHidden: boolean,
+176- isSubpage?: boolean,
+177- isReady?: boolean,
+--
+181- pageType?: 'hero' | 'market' | 'games' | 'other',
+182- heroId?: string
+183:}> = ({ setCurrentView, scrolled, navHidden, isSubpage = false, isReady = true, skipAnimation = false, setCurrentSectionIndex, currentSectionIndex = 0, pageType = 'other', heroId = 'hero' }) => {
+184- const { theme, toggleTheme } = useTheme();
+185- const [activeTab, setActiveTab] = useState<string | null>(null);
+--
+197- const isTransparent = isHomepage ? isOnHero : (pageType === 'hero' ? !scrolled : !scrolled);
+198-
+199: const getNavBackgroundStyle = () => {
+200- if (isMobile) {
+201- if (isHomepage && isOnHero) return '';
+--
+259- };
+260-
+261: const handleNavigation = (view: string, sectionId: string) => {
+262- if (view === 'home' && setCurrentSectionIndex) {
+263- const sectionMap: Record<string, number> = {
+--
+288- }, []);
+289-
+290: const navLinks = [
+291- { name: 'Bakery', view: 'bakery', icon: 'bakery_dining', 
+292- menu: {
+293: navigation: [
+294- { name: 'Menu', id: 'bakery-deep' },
+295- { name: 'Wholesale', id: 'bakery-deep' },
+--
+305- { name: 'Market', view: 'supermarket', icon: 'storefront',
+306- menu: {
+307: navigation: [
+308- { name: 'Aisles', id: 'market-deep' },
+309- { name: 'Fresh Produce', id: 'market-deep' },
+--
+320- { name: 'Dining', view: 'dining', icon: 'restaurant',
+321- menu: {
+322: navigation: [
+323- { name: 'Traditional', id: 'dining-deep' },
+324- { name: 'Continental', id: 'dining-deep' },
+--
+334- { name: 'Games', view: 'games', icon: 'sports_esports',
+335- menu: {
+336: navigation: [
+337- { name: 'FIFA Arena', id: 'games-deep' },
+338- { name: 'CODM Zone', id: 'games-deep' },
+--
+348- { name: 'Water', view: 'water', icon: 'water_drop',
+349- menu: {
+350: navigation: [
+351- { name: '7-Step Process', id: 'water-deep' },
+352- { name: 'Lab Reports', id: 'water-deep' },
+--
+362- { name: 'Lounge', view: 'lounge', icon: 'nightlife',
+363- menu: {
+364: navigation: [
+365- { name: 'The Lab', id: 'lounge-deep' },
+366- { name: 'Visualizer', id: 'lounge-deep' },
+--
+376- { name: 'About', view: 'about', icon: 'info',
+377- menu: {
+378: navigation: [
+379- { name: 'Our Story', id: 'hero' },
+380- { name: 'Mission', id: 'hero' },
+--
+394- initial={isMobile ? { y: 80, scale: 0.95, opacity: 0 } : { y: -80, opacity: 0 }}
+395- animate={{ 
+396: y: (navHidden && !isHomepage) ? (isMobile ? 128 : -128) : 0,
+397: scale: (navHidden && !isHomepage) && isMobile ? 0.95 : 1,
+398: opacity: (navHidden && !isHomepage) ? 0 : 1
+399- }}
+400- transition={{ 
+--
+403- className={`fixed z-[1000] ${isMobile ? 'bottom-6 left-0 right-0 mx-auto w-[95%]' : 'top-0 left-0 w-full'}`}
+404- >
+405: {/* Main Nav Container */}
+406: <nav className={`relative transition-all duration-300 flex items-center isolation-auto ${getNavBackgroundStyle()} ${isMobile 
+407- ? `rounded-[40px] h-14 sm:h-16 px-4 sm:px-6` 
+408- : `h-14 lg:h-16 px-6 sm:px-12 transition-all duration-300`
+--
+431- onMouseLeave={() => handleMouseLeave()}
+432- >
+433: {navLinks.map((link, i) => (
+434- <motion.button 
+435- initial={skipAnimation ? { clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' } : { clipPath: 'polygon(0% -50%, 100% -150%, 100% -150%, 0% -50%)' }}
+--
+449- {activeTab === link.name && (
+450- <motion.div
+451: layoutId="nav-indicator"
+452- className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary shadow-[0_0_15px_rgba(242,158,13,0.8)] rounded-full"
+453- transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+--
+465- initial={skipAnimation ? { clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' } : { clipPath: 'polygon(0% -50%, 100% -150%, 100% -150%, 0% -50%)' }}
+466- animate={isReady ? { clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' } : { clipPath: 'polygon(0% -50%, 100% -150%, 100% -150%, 0% -50%)' }}
+467: transition={{ duration: 1.5, delay: skipAnimation ? 0 : (isReady ? 2.9 + ((navLinks.length + 1) * 0.1) : 0), ease: [0.76, 0, 0.24, 1] }}
+468- className={`flex items-center gap-1 sm:gap-3 ${isMobile ? 'pl-4 border-l border-transparent' : ''}`}
+469- >
+--
+495- </motion.div>
+496- </div>
+497: </nav>
+498-
+499- {/* Mega Menu & Mobile Menu */}
+--
+511- <div className="lg:max-w-[67vw] mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-32">
+512- {(() => {
+513: const activeLink = navLinks.find(l => l.name === activeTab);
+514- if (!activeLink) return null;
+515- 
+--
+522- className={`font-black text-xs uppercase tracking-[0.4em] border-b border-primary/20 pb-3 ${theme === 'dark' ? 'text-background' : 'text-primary'}`}
+523- >
+524: Strategic Navigation
+525- </motion.h4>
+526- <ul className="space-y-5">
+527: {activeLink.menu.navigation.map((item, i) => (
+528- <motion.li 
+529- key={i}
+--
+531- >
+532- <button 
+533: onClick={() => handleNavigation(activeLink.view, item.id)} 
+534- className={`text-xl sm:text-2xl font-black transition-all hover:translate-x-3 flex items-center gap-4 group uppercase tracking-tight ${theme === 'dark' ? 'text-background/90' : 'text-foreground hover:text-primary'}`}
+535- >
+--
+613- </div>
+614-
+615: {navLinks.map((link, linkIdx) => (
+616- <motion.div 
+617- key={link.name} 
+--
+648- <div className="py-4 space-y-6">
+649- <div className="space-y-4">
+650: <h4 className="text-primary font-black text-[10px] uppercase tracking-[0.2em] border-b border-primary/10 pb-2">Navigation</h4>
+651: {link.menu.navigation.map((item, i) => (
+652- <button 
+653- key={i}
+--
+655- setMobileMenuOpen(false);
+656- setActiveTab(null);
+657: handleNavigation(link.view, item.id);
+658- }}
+659- className="block w-full text-left text-sm font-bold text-foreground/80 uppercase tracking-widest"
+--
+1577-
+1578-const ServicesGrid: React.FC<{ setCurrentView: (v: any) => void; isActive?: boolean }> = ({ setCurrentView, isActive = false }) => {
+1579: const handleNavigate = (view: string) => {
+1580- setCurrentView(view);
+1581- document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+--
+1603- icon="bakery_dining" 
+1604- img="https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=2072&auto=format&fit=crop" 
+1605: onClick={() => handleNavigate('bakery')}
+1606- className="h-full"
+1607- titleSize="text-base lg:text-3xl"
+--
+1615- icon="restaurant" 
+1616- img="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=2070&auto=format&fit=crop" 
+1617: onClick={() => handleNavigate('dining')}
+1618- className="h-full"
+1619- titleSize="text-base lg:text-2xl"
+--
+1627- icon="liquor" 
+1628- img="https://images.unsplash.com/photo-1574096079513-d8259312b785?q=80&w=2070&auto=format&fit=crop" 
+1629: onClick={() => handleNavigate('lounge')}
+1630- className="h-full"
+1631- titleSize="text-base lg:text-2xl"
+--
+1639- icon="shopping_cart" 
+1640- img="https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=2074&auto=format&fit=crop" 
+1641: onClick={() => handleNavigate('supermarket')}
+1642- className="h-full"
+1643- titleSize="text-base lg:text-2xl"
+--
+1651- icon="sports_esports" 
+1652- img="https://images.unsplash.com/photo-1592478411213-6153e4ebc07d?q=80&w=2012&auto=format&fit=crop" 
+1653: onClick={() => handleNavigate('games')}
+1654- className="h-full"
+1655- titleSize="text-base lg:text-2xl"
+--
+1663- icon="water_drop" 
+1664- img="https://images.unsplash.com/photo-1523362628745-0c100150b504?q=80&w=2070&auto=format&fit=crop" 
+1665: onClick={() => handleNavigate('water')}
+1666- className="h-full"
+1667- titleSize="text-base lg:text-2xl"
+--
+1815-
+1816-const Footer: React.FC<{ setCurrentView: (v: any) => void }> = ({ setCurrentView }) => {
+1817: const handleNavigate = (view: string) => {
+1818- setCurrentView(view);
+1819- document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+--
+1857- { name: 'VIP Lounge', view: 'lounge' }
+1858- ].map(li => (
+1859: <li key={li.name}><button onClick={() => handleNavigate(li.view)} className="hover:text-primary transition-colors flex items-center gap-2 uppercase tracking-widest text-[10px]">{li.name}</button></li>
+1860- ))}
+1861- </ul>
+--
+1919- const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+1920- // Strictly defined tools configuration: Only Function calling is enabled to avoid conflicts.
+1921: // Search Grounding is not used here to ensure 'navigateToSectionTool' works reliably as per strict exclusivity rules.
+1922- const response = await ai.models.generateContent({
+1923- model: 'gemini-3-flash-preview',
+1924- contents: userMsg,
+1925- config: {
+1926: systemInstruction: "You are the Orient Global AI Concierge. Your primary goal is to help users navigate this website. If a user asks to see the bakery, market, restaurant, lounge, or standard sections, you MUST use the `navigateToSection` tool. If they ask general questions, answer them as a helpful luxury concierge. Be brief, elite, and polite.",
+1927- tools: [{ 
+1928: functionDeclarations: [navigateToSectionTool]
+1929- }],
+1930- }
+--
+1933- if (response.functionCalls && response.functionCalls.length > 0) {
+1934- for (const fc of response.functionCalls) {
+1935: if (fc.name === 'navigateToSection') {
+1936- const sectionId = (fc.args as any).sectionId;
+1937- const element = document.getElementById(sectionId);
+1938- if (element) {
+1939- element.scrollIntoView({ behavior: 'smooth' });
+1940: setMessages(prev => [...prev, { role: 'bot', text: `Certainly. I have navigated you to the ${sectionId} section.` }]);
+1941- } else {
+1942- // Fallback if ID doesn't exist (should not happen with correct enum)
+--
+1952- } catch (e) {
+1953- console.error(e);
+1954: setMessages(prev => [...prev, { role: 'bot', text: "I apologize, but I am currently updating my navigational systems. Please try again momentarily." }]);
+1955- } finally {
+1956- setIsTyping(false);
+--
+1970- </div>
+1971- <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
+1972: {messages.length === 0 && (<div className="bg-primary/10 border border-primary/20 p-6 rounded-[2rem] rounded-tl-none"><p className=" text-foreground/80 text-sm leading-relaxed italic font-medium">"Welcome to Orient Global. I can help you find products, check our filtration standards, or navigate the site for you. What would you like to see?"</p></div>)}
+1973- {messages.map((m, i) => (<div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] p-5 rounded-[2rem] text-sm leading-relaxed font-medium ${m.role === 'user' ? 'bg-primary text-foreground rounded-br-none shadow-lg' : '/10 bg-background text-foreground/80 border border-transparent rounded-bl-none shadow-md'}`}>{m.text}</div></div>))}
+1974- {isTyping && (<div className="flex justify-start"><div className="/10 bg-background p-5 rounded-[2rem] rounded-bl-none flex gap-1.5 shadow-md"><span className="w-2 h-2 bg-primary rounded-full animate-bounce" /><span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" /><span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" /></div></div>)}
+--
+2122- const scrollContainerRef = useRef<HTMLDivElement>(null);
+2123- const [scrolled, setScrolled] = useState(false);
+2124: const [navHidden, setNavHidden] = useState(false);
+2125- const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+2126- const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+--
+2174- if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+2175- setScrollDirection('down');
+2176: setNavHidden(true);
+2177- } else {
+2178- setScrollDirection('up');
+2179: setNavHidden(false);
+2180- }
+2181- lastScrollY.current = currentScrollY;
+--
+2321- if (currentView !== 'home') {
+2322- setScrolled(false);
+2323: setNavHidden(false);
+2324- lastScrollY.current = 0;
+2325- const container = document.getElementById('main-scroll-container');
+--
+2331- if (currentView === 'home') {
+2332- setScrolled(currentSectionIndex > 0);
+2333: setNavHidden(scrollDirection === 'down' && currentSectionIndex > 0);
+2334- }
+2335- }, [currentSectionIndex, scrollDirection, currentView]);
+--
+2371- {currentView === 'home' && (
+2372- <>
+2373: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isReady={!isLoading} skipAnimation={hasPlayedInitialAnimation.current} setCurrentSectionIndex={setCurrentSectionIndex} currentSectionIndex={currentSectionIndex} pageType="hero" heroId="hero" />
+2374- <div className="relative w-full">
+2375- <SectionWrapper id="hero" index={0} className="relative w-full h-[100dvh] flex flex-col justify-center cinematic-section">
+--
+2425- {currentView === 'bakery' && (
+2426- <div className="relative">
+2427: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation pageType="hero" heroId="hero-bakery" />
+2428- <div>
+2429: <BakeryNav navHidden={navHidden} currentView={bakeryView} setView={setBakeryView} />
+2430- <div className="pt-0 lg:pt-12">
+2431- <BakeryApp currentView={bakeryView} />
+--
+2437- {currentView === 'supermarket' && (
+2438- <div className="relative">
+2439: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation pageType="market" />
+2440- <div>
+2441: <SupermarketNav navHidden={navHidden} activePage={supermarketPage} setActivePage={setSupermarketPage} setIsSmartPasteOpen={setIsSmartPasteOpen} />
+2442- <div className="pt-0 lg:pt-12">
+2443- <SupermarketApp activePage={supermarketPage} setActivePage={setSupermarketPage} isSmartPasteOpen={isSmartPasteOpen} setIsSmartPasteOpen={setIsSmartPasteOpen} />
+--
+2449- {currentView === 'dining' && (
+2450- <div className="relative">
+2451: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation pageType="hero" heroId="hero-dining" />
+2452- <div>
+2453: <DiningNav navHidden={navHidden} currentView={diningView} setView={setDiningView} />
+2454- <div className="pt-0 lg:pt-12">
+2455- <DiningApp currentView={diningView} />
+--
+2461- {currentView === 'games' && (
+2462- <div className="relative">
+2463: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation pageType="games" />
+2464- <div>
+2465: <GamesNav navHidden={navHidden} currentPage={gamesPage} onNavigate={setGamesPage} />
+2466- <div className="pt-0 lg:pt-12">
+2467: <GamesApp currentPage={gamesPage} onNavigate={setGamesPage} />
+2468- </div>
+2469- <Footer setCurrentView={setCurrentView} />
+--
+2473- {currentView === 'water' && (
+2474- <div className="relative">
+2475: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation pageType="hero" heroId="hero-water" />
+2476- <div>
+2477: <WaterNav navHidden={navHidden} currentPage={waterPage} onNavigate={setWaterPage} />
+2478- <div className="pt-0 lg:pt-12">
+2479: <WaterApp currentPage={waterPage} onNavigate={setWaterPage} />
+2480- </div>
+2481- <Footer setCurrentView={setCurrentView} />
+--
+2485- {currentView === 'lounge' && (
+2486- <div className="relative">
+2487: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation pageType="hero" heroId="hero-lounge" />
+2488- <div>
+2489: <LoungeNav navHidden={navHidden} currentPage={loungePage} onNavigate={setLoungePage} />
+2490- <div className="pt-0 lg:pt-12">
+2491: <LoungeApp currentPage={loungePage} onNavigate={setLoungePage} />
+2492- </div>
+2493- <Footer setCurrentView={setCurrentView} />
+--
+2497- {currentView === 'about' && (
+2498- <div className="relative">
+2499: <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation />
+2500- <div className="pt-14 lg:pt-16">
+2501- <About setCurrentView={setCurrentView} />

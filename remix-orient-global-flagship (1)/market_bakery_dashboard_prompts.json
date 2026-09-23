@@ -1,0 +1,107 @@
+{
+  "project_identity": {
+    "name": "Orient Global Market & Bakery Command Center",
+    "version": "1.0.0",
+    "aesthetic_profile": "Clean Utility (Market) / Warm Organic (Bakery) / High-Performance UI",
+    "target_platform": "Full-Stack React + Node.js (Express) + WebSocket for real-time inventory"
+  },
+  "user_roles": {
+    "admin_staff": {
+      "permissions": [
+        "Update daily stock levels (Market)",
+        "Log fresh bakes and pastry counts (Bakery)",
+        "Process incoming wholesale orders",
+        "Update 'Under $5' and 'BOGOF' promotional tags"
+      ],
+      "constraints": "Cannot change base pricing, modify loyalty reward tiers, or approve large wholesale credit without HOD approval."
+    },
+    "admin_hod": {
+      "permissions": [
+        "All Staff permissions",
+        "Final authority on Pricing and Promotions",
+        "Approval for Wholesale Credit and Catering Contracts",
+        "Access to 'Market & Bakery Analytics Hub'",
+        "Override authority for all live inventory"
+      ],
+      "approval_logic": "Must provide a 'Reason for Declination' if a price change or wholesale contract is rejected, visible to the proposing staff member."
+    }
+  },
+  "division_data_models": {
+    "supermarket_market": {
+      "inventory_management": {
+        "categories": ["Produce", "Pantry", "Beverages", "Household", "Imported"],
+        "items": [
+          {
+            "id": "UUID",
+            "sku": "String",
+            "name": "String",
+            "category": "Enum",
+            "price": "Number",
+            "stock_level": "Number",
+            "reorder_threshold": "Number",
+            "is_bogof": "Boolean",
+            "is_under_5": "Boolean"
+          }
+        ]
+      },
+      "smart_paste_analytics": {
+        "frequently_searched_items": "Array of Strings",
+        "conversion_rate": "Percentage"
+      },
+      "loyalty_program": {
+        "total_members": "Number",
+        "active_promotions": "Array of Objects {id, title, discount_percentage, expiry_date}"
+      },
+      "wholesale_orders": {
+        "pending_requests": "Array of Objects {company_name, order_volume, requested_discount, status}"
+      }
+    },
+    "bakery_golden_crust": {
+      "production_schedule": {
+        "batches": [
+          {
+            "id": "UUID",
+            "product_name": "String",
+            "stage": "Enum [Mixing, Cold Fermentation, Proofing, Baking, Ready]",
+            "start_time": "Timestamp",
+            "expected_completion": "Timestamp",
+            "quantity": "Number"
+          }
+        ]
+      },
+      "custom_orders": {
+        "cakes_and_catering": [
+          {
+            "id": "UUID",
+            "client_name": "String",
+            "event_date": "Date",
+            "specifications": "Text",
+            "status": "Enum [Pending Review, Approved, In Progress, Ready for Pickup]"
+          }
+        ]
+      },
+      "live_inventory": {
+        "fresh_bakes": "Array of Objects {item_name, current_count, shelf_life_hours}",
+        "raw_ingredients": "Array of Objects {ingredient, stock_kg, supplier}"
+      }
+    }
+  },
+  "approval_workflow_mechanism": {
+    "states": [
+      "DRAFT_STAGED",
+      "PENDING_HOD_REVIEW",
+      "LIVE_PUBLISHED",
+      "REJECTED_NEEDS_REVISION"
+    ],
+    "transaction_log": {
+      "timestamp": "DateTime",
+      "staff_id": "UserRef",
+      "division": "Enum [Market, Bakery]",
+      "change_summary": "String",
+      "diff_data": "Object {before, after}",
+      "hod_notes": "String (Required for Rejection)"
+    }
+  },
+  "ai_builder_master_prompt_supermarket": "Act as an expert frontend developer. Build a high-performance administrative dashboard for 'Orient Global Market'. The UI must feature a 'Clean Utility' aesthetic (light gray/white backgrounds, crisp borders, monospace accents for data, and a highly scannable grid layout). \n\n### MODULE 1: INVENTORY & PRICING (HOD ONLY)\n- A real-time 'Price Adjustment Queue' for reviewing staff-proposed price changes.\n- Action buttons: [Approve & Sync to POS] and [Decline with Reason].\n\n### MODULE 2: ANALYTICS & LOYALTY (HOD ONLY)\n- A 'Smart Paste Insights' view showing the most frequently pasted shopping list items.\n- A 'Loyalty Program' overview tracking active members and promotion redemption rates.\n\n### MODULE 3: OPERATIONAL INPUT (STAFF & HOD)\n- A 'Stock Manager' for updating daily inventory levels and flagging items for reorder.\n- A 'Promotions Toggle' to quickly add/remove items from the 'Under $5' and 'BOGOF' categories.\n\n### MODULE 4: WHOLESALE LOGISTICS\n- A Kanban-style board for managing bulk wholesale orders from local businesses.\n\n### TECHNICAL REQUIREMENTS:\n- React frontend with Tailwind CSS and Recharts for data visualization.\n- Use a responsive sidebar layout with a dense, data-rich main content area.\n- Implement a 'Live Preview' window that renders the actual site components with the proposed data.",
+  "ai_builder_master_prompt_bakery": "Act as an expert frontend developer. Build a warm, artisanal administrative dashboard for 'Orient Global Bakery - Golden Crust'. The UI must feature a 'Warm Organic' aesthetic (off-white/cream backgrounds, elegant serif headings like Playfair Display, subtle amber/gold accents, and soft rounded corners). \n\n### MODULE 1: PRODUCTION & FERMENTATION (STAFF & HOD)\n- A 'Live Production Tracker' visualizing the 48-hour cold fermentation process for sourdough batches.\n- Visual progress bars indicating stages: Mixing, Fermentation, Proofing, Baking.\n\n### MODULE 2: CUSTOM ORDERS & CATERING (HOD ONLY)\n- A 'Catering Approval' view where HOD reviews custom cake and large event requests before confirming with clients.\n- Action buttons: [Approve & Send Invoice] and [Decline/Modify Request].\n\n### MODULE 3: DAILY INVENTORY (STAFF & HOD)\n- A 'Fresh Bakes Counter' to log the morning's output (croissants, baguettes, etc.) and track sell-through rates.\n- An 'Ingredient Supply' monitor tracking local sourced items (plantain, coconut) vs. imported flours.\n\n### TECHNICAL REQUIREMENTS:\n- React frontend with Tailwind CSS.\n- Use 'Framer Motion' for smooth, organic layout transitions and progress bar animations.\n- Implement a 'Live Preview' window that renders the actual site components with the proposed data.\n- The 'admin_staff' view must show a clear timeline of their production logs and HOD feedback."
+}

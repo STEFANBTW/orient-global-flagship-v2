@@ -1,0 +1,160 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application (customer, staff, HOD, boss).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "staff", "hod", "boss"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name", "role", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "An item available for purchase.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "oldPrice": { "type": "number" },
+        "unit": { "type": "string" },
+        "stock": { "type": "number" },
+        "category": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "tierInfo": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "draft"] },
+        "division": { "type": "string" },
+        "sensitivity": { "type": "string" },
+        "ingredients": { "type": "string" },
+        "highlight": { "type": "string" },
+        "volume": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "price", "stock", "category", "status", "createdAt", "updatedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer's purchase order.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "tableNumber": { "type": "string" },
+        "notes": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/entities/OrderItem" }
+        },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["awaiting_chef", "confirmed", "preparing", "ten_min_warning", "ready", "completed", "cancelled", "pending", "processing", "shipped", "delivered"] },
+        "shippingAddress": { "type": "string" },
+        "prepDurationMinutes": { "type": "number" },
+        "timerEndsAt": { "type": "string", "format": "date-time" },
+        "tenMinAlertSent": { "type": "boolean" },
+        "chefConfirmedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "customerId", "items", "totalAmount", "status", "createdAt", "updatedAt"]
+    },
+    "OrderItem": {
+      "title": "OrderItem",
+      "description": "An item within an order.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "price": { "type": "number" },
+        "division": { "type": "string" }
+      },
+      "required": ["productId", "quantity", "price"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "System and order alerts for users and CMS.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "type": { "type": "string" },
+        "recipient": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "title", "message", "createdAt"]
+    },
+    "CMSContent": {
+      "title": "CMSContent",
+      "description": "Content blocks for the divisions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "division_id": { "type": "string" },
+        "block_type": { "type": "string" },
+        "content_payload": { "type": "object" },
+        "order_index": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "updatedBy": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "published_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "division_id", "block_type", "content_payload", "order_index", "status", "updatedBy", "updatedAt"]
+    },
+    "WeeklyUpdate": {
+      "title": "WeeklyUpdate",
+      "description": "Pending CMS updates for review.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "division_id": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "pending_review", "published"] },
+        "scheduled_for": { "type": "string", "format": "date-time" },
+        "changeset": { "type": "object" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "division_id", "title", "status", "changeset", "created_by", "created_at"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "#/entities/User",
+      "description": "Stores user profiles."
+    },
+    "/products/{productId}": {
+      "schema": "#/entities/Product",
+      "description": "Stores market inventory."
+    },
+    "/orders/{orderId}": {
+      "schema": "#/entities/Order",
+      "description": "Stores customer orders."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "#/entities/AppNotification",
+      "description": "Stores notifications for users and CMS."
+    },
+    "/cms_content/{contentId}": {
+      "schema": "#/entities/CMSContent",
+      "description": "Stores dynamic page content."
+    },
+    "/weekly_updates/{updateId}": {
+      "schema": "#/entities/WeeklyUpdate",
+      "description": "Stores pending CMS updates."
+    }
+  }
+}
