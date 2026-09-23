@@ -569,7 +569,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
       {/* Edit Account Details Modal (Full screen on mobile) */}
       <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
         <DialogContent className="w-full h-full sm:h-auto sm:max-w-md bg-card border-none shadow-2xl rounded-none sm:rounded-2xl p-5 sm:p-6 overflow-y-auto flex flex-col justify-between sm:justify-start">
-          <DialogHeader className="relative pr-8">
+          <DialogHeader className="pr-6">
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <User className="w-5 h-5 text-orange-500" />
               Edit Account Details
@@ -577,14 +577,6 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
             <DialogDescription className="text-xs text-muted-foreground">
               Update your personal contact details and default delivery address.
             </DialogDescription>
-            <button
-              type="button"
-              onClick={() => setIsEditProfileOpen(false)}
-              className="absolute top-0 right-0 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Close modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </DialogHeader>
 
           <form onSubmit={handleSaveProfileDetails} className="space-y-4 py-2">
