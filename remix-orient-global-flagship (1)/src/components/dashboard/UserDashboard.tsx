@@ -277,14 +277,14 @@ export default function UserDashboard() {
               });
             }
           }}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer bg-[#ffffff] dark:bg-[#232323] border border-slate-200 ${
             devicePermissionStatus === 'granted'
-              ? 'bg-[#232323] text-foreground border border-[#383838] shadow-sm opacity-100'
-              : 'bg-[#232323] text-gray-400 border-none opacity-20 hover:opacity-50'
+              ? 'text-foreground dark:border-[#383838] shadow-xs opacity-100'
+              : 'text-slate-700 dark:text-gray-400 dark:border-transparent opacity-100 dark:opacity-20 dark:hover:opacity-50 shadow-xs'
           }`}
           title={devicePermissionStatus === 'granted' ? 'Notifications Enabled' : 'Click to Enable Notifications'}
         >
-          <Bell className={`w-3.5 h-3.5 shrink-0 ${devicePermissionStatus === 'granted' ? 'text-orange-500' : 'text-gray-400'}`} />
+          <Bell className={`w-3.5 h-3.5 shrink-0 ${devicePermissionStatus === 'granted' ? 'text-orange-500' : 'text-slate-600 dark:text-gray-400'}`} />
           <span>Enable Notifications</span>
         </button>
       </div>
@@ -620,7 +620,7 @@ export default function UserDashboard() {
                         className="p-4 rounded-xl border-none bg-muted/20 hover:bg-muted/40 transition-all flex flex-col justify-between gap-3 group"
                       >
                         <div>
-                          <div className="flex items-center justify-between pb-2 border-b border-border/20">
+                          <div className="flex items-center justify-between pb-2 border-b border-border/20 dark:border-[#94a3b8]">
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold text-xs text-foreground">
                                 #{order.id}
@@ -649,7 +649,7 @@ export default function UserDashboard() {
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-border/20 flex items-center justify-between">
+                        <div className="pt-2 border-t border-border/20 dark:border-[#94a3b8] flex items-center justify-between">
                           <div>
                             <span className="text-[10px] text-muted-foreground block">Total Amount</span>
                             <span className="font-mono font-bold text-sm text-foreground">

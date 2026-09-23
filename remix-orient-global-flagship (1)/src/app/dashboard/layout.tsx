@@ -206,9 +206,9 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
               <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-xs shrink-0">
                 <Store className="w-4 h-4" />
               </div>
-              {/* Exact Name: Orient CMS or Orient User Portal */}
+              {/* Exact Name: Orient CMS or Orient Customer Dashboard */}
               <span className="text-base font-bold tracking-tight text-foreground leading-none">
-                {isAdminMode ? 'Orient CMS' : 'Orient User Portal'}
+                {isAdminMode ? 'Orient CMS' : 'Orient Customer Dashboard'}
               </span>
             </Link>
 
