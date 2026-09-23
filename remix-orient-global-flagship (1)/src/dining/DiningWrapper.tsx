@@ -78,6 +78,16 @@ export const DiningNav: React.FC<{ navHidden: boolean, currentView: DiningView, 
 };
 
 export const DiningApp: React.FC<{ currentView: DiningView; setView?: (v: DiningView) => void }> = ({ currentView, setView }) => {
+  useEffect(() => {
+    const handleNavEvent = (e: any) => {
+      if (e.detail?.view && setView) {
+        setView(e.detail.view);
+      }
+    };
+    window.addEventListener('orient:navigate-dining', handleNavEvent);
+    return () => window.removeEventListener('orient:navigate-dining', handleNavEvent);
+  }, [setView]);
+
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
@@ -90,7 +100,7 @@ export const DiningApp: React.FC<{ currentView: DiningView; setView?: (v: Dining
       case 'menu': return <MenuScreen />;
       case 'about': return <AboutScreen />;
       case 'delivery': return <DeliveryScreen />;
-      case 'reservations': return <ReservationsScreen />;
+      case 'reservations': return <ReservationsScreen onNavigateToMenu={() => setView?.('menu')} />;
       default: return <MenuScreen />;
     }
   };
