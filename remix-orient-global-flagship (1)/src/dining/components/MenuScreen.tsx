@@ -3,7 +3,7 @@ import { cmsApi } from '@/services/cmsApi';
 import { INITIAL_PRODUCTS_CATALOG, ProductItem } from '@/data/productsCatalog';
 import { getActiveConsumerUser } from '@/services/userService';
 import { orderService } from '@/services/orderService';
-
+import { UnifiedCheckout } from './UnifiedCheckout';
 interface DiningCategoryMeta {
   name: string;
   count: number;
@@ -286,10 +286,14 @@ const MenuScreen: React.FC = () => {
           </p>
           <a
             href="#menu-catalog"
-            style={{ border: '1.5px solid #F29E0D' }}
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-transparent text-[#F29E0D] font-black text-xs uppercase tracking-widest hover:bg-[#F29E0D] hover:text-white transition-all duration-300 shadow-md hover:shadow-[0_0_25px_rgba(242,158,13,0.4)] active:scale-95"
+            style={{
+              border: '1.5px solid #F29E0D',
+              boxShadow: '0 0 0 1.5px #F29E0D',
+              color: '#F29E0D'
+            }}
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-transparent text-[#F29E0D] font-black text-xs uppercase tracking-widest hover:bg-[#F29E0D] hover:text-white transition-all duration-300 active:scale-95"
           >
-            <span>Explore Menu</span>
+            <span>Browse Menu</span>
             <span className="material-icons text-sm">arrow_downward</span>
           </a>
         </div>
@@ -299,19 +303,19 @@ const MenuScreen: React.FC = () => {
       <div className="relative">
         {/* Sticky Search Bar - Anchored to top-right on top of filter bar, stays stuck when scrolling */}
         <div className="sticky top-3 sm:top-20 z-40 flex justify-end px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pointer-events-none -mb-10 sm:-mb-12">
-          <div className="pointer-events-auto flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-full bg-black/30 backdrop-blur-md shadow-lg border-0 border-none outline-none">
-            <span className="material-icons text-white/70 text-base sm:text-lg shrink-0">search</span>
+          <div className="pointer-events-auto flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-full bg-white/20 dark:bg-black/30 backdrop-blur-md shadow-lg border-0 border-none outline-none transition-colors duration-300">
+            <span className="material-icons text-neutral-700 dark:text-white/70 text-base sm:text-lg shrink-0">search</span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search menu..."
-              className="bg-transparent border-0 border-none outline-none text-white placeholder:text-white/60 text-xs sm:text-sm font-medium w-36 xs:w-48 sm:w-60 focus:w-44 sm:focus:w-72 transition-all duration-300 focus:ring-0 focus:outline-none"
+              className="bg-transparent border-0 border-none outline-none text-neutral-900 dark:text-white placeholder:text-neutral-500 dark:placeholder:text-white/60 text-xs sm:text-sm font-medium w-36 xs:w-48 sm:w-60 focus:w-44 sm:focus:w-72 transition-all duration-300 focus:ring-0 focus:outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-white/60 hover:text-white transition-colors shrink-0 p-0.5"
+                className="text-neutral-500 hover:text-neutral-900 dark:text-white/60 dark:hover:text-white transition-colors shrink-0 p-0.5"
                 aria-label="Clear search"
               >
                 <span className="material-icons text-sm sm:text-base">close</span>
@@ -376,7 +380,7 @@ const MenuScreen: React.FC = () => {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
           {filteredProducts.length === 0 && (
             <div className="text-center py-20 px-4 max-w-md mx-auto space-y-4">
-              <div className="w-14 h-14 mx-auto rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/70">
+              <div className="w-14 h-14 mx-auto rounded-full bg-black/5 dark:bg-black/30 backdrop-blur-md flex items-center justify-center text-neutral-600 dark:text-white/70">
                 <span className="material-icons text-3xl">search_off</span>
               </div>
               <h3 className="text-xl font-bold text-foreground">No menu items found</h3>
@@ -955,102 +959,24 @@ const MenuScreen: React.FC = () => {
       {/* 7. TRAY REVIEW & ORDER MODAL                              */}
       {/* ========================================================= */}
       {showTrayModal && (
-        <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border-0 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-transparent flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-foreground font-sans">Restaurant Order Tray</h3>
-                <p className="text-xs text-muted-foreground">Kitchen preparation: 11 mins</p>
-              </div>
-              <button
-                onClick={() => setShowTrayModal(false)}
-                className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 text-foreground flex items-center justify-center transition-colors"
-              >
-                <span className="material-icons text-sm">close</span>
-              </button>
-            </div>
-
-            <div className="p-6 max-h-80 overflow-y-auto space-y-4 divide-y divide-transparent">
-              {orderTray.map(item => (
-                <div key={item.product.id} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={item.product.image}
-                      alt={item.product.name}
-                      className="w-12 h-12 rounded-xl object-cover"
-                    />
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground line-clamp-1">{item.product.name}</h4>
-                      <p className="text-xs text-muted-foreground">₦10 • 11 mins prep</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleUpdateQuantity(item.product.id, -1)}
-                      className="w-7 h-7 rounded-full bg-muted hover:bg-muted/80 text-foreground flex items-center justify-center text-xs"
-                    >
-                      -
-                    </button>
-                    <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
-                    <button
-                      onClick={() => handleUpdateQuantity(item.product.id, 1)}
-                      disabled={item.quantity >= 5}
-                      className="w-7 h-7 rounded-full bg-muted hover:bg-muted/80 text-foreground flex items-center justify-center text-xs disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                    <span className="text-sm font-bold text-primary ml-2 w-10 text-right">
-                      ₦{item.quantity * 10}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-6 bg-muted/20 border-t border-transparent space-y-4">
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Guest Profile</span>
-                  <span className="font-semibold text-foreground">{activeUser?.name || 'Guest User'}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Service Destination</span>
-                  <span className="font-semibold text-foreground">{activeUser?.deliveryAddress || "Restaurant Table #04 (Dine-in)"}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Kitchen Prep Time</span>
-                  <span className="font-semibold text-foreground">11 Minutes</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold pt-2 border-t border-transparent text-foreground">
-                  <span>Total Due</span>
-                  <span className="text-primary text-base font-extrabold">₦{totalTrayAmount.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {orderPlaced ? (
-                <div className="p-3 bg-emerald-500/20 border-0 rounded-xl text-center text-emerald-400 font-bold text-xs">
-                  Order successfully sent to kitchen! (11 mins preparation)
-                </div>
-              ) : (
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowTrayModal(false)}
-                    className="flex-1 py-2.5 rounded-xl border-0 bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground font-semibold text-xs uppercase tracking-wider transition-colors"
-                  >
-                    Add More
-                  </button>
-                  <button
-                    onClick={handleCheckoutTray}
-                    className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-background font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-primary/25"
-                  >
-                    Send to Kitchen
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <UnifiedCheckout
+          isOpen={showTrayModal}
+          onClose={() => setShowTrayModal(false)}
+          onSuccess={() => {
+            setOrderTray([]);
+            setOrderPlaced(true);
+            setTimeout(() => setOrderPlaced(false), 2500);
+          }}
+          initialItems={orderTray.map(t => ({
+            id: t.product.id,
+            name: t.product.name,
+            quantity: t.quantity,
+            price: 10,
+            division: 'dining'
+          }))}
+          source="menu"
+          variant="modal"
+        />
       )}
 
     </div>

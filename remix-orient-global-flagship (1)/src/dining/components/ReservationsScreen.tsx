@@ -1,6 +1,10 @@
 import React, { useState, useRef } from 'react';
+import { UnifiedCheckout } from './UnifiedCheckout';
+interface ReservationsScreenProps {
+  onNavigateToMenu?: () => void;
+}
 
-const ReservationsScreen: React.FC = () => {
+const ReservationsScreen: React.FC<ReservationsScreenProps> = ({ onNavigateToMenu }) => {
   const TIMES = ['5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM'];
   const MOCK_RESERVED_TIMES: Record<string, string[]> = {
     "M2": ["7:00 PM", "7:30 PM", "8:00 PM"],
@@ -85,93 +89,21 @@ const ReservationsScreen: React.FC = () => {
  </div>
  </section>
 
- {/* Section 2: Pick Your Spot (Interactive SVG Map) */}
+ {/* Section 2: Unified Reservation Form */}
  <section className="py-16 px-6 relative bg-card transition-colors" id="floor-plan">
  <div className="max-w-7xl mx-auto">
  <div className="text-center mb-12">
- <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">Select Your Table</h2>
- <p className="text-muted-foreground text-sm">Hover over the map to see table details. Green indicates availability.</p>
- {/* Legend */}
- <div className="flex items-center justify-center gap-6 mt-6 text-xs">
- <div className="flex items-center gap-2">
- <div className="w-4 h-4 rounded-full bg-card border border-border "></div>
- <span className="text-muted-foreground ">Available</span>
- </div>
- <div className="flex items-center gap-2">
- <div className="w-4 h-4 rounded-full bg-primary/20 border border-primary"></div>
- <span className="text-muted-foreground ">Selected</span>
- </div>
- <div className="flex items-center gap-2">
- <div className="w-4 h-4 rounded-full bg-[#4b3b32]"></div>
- <span className="text-muted-foreground ">Occupied</span>
- </div>
- </div>
- </div>
- {/* Map Container */}
- <div ref={mapRef} className="relative bg-background border border-border rounded-2xl p-8 overflow-hidden shadow-2xl transition-colors">
- {/* Tooltip */}
- <div 
- className="absolute z-20 bg-card text-foreground p-3 rounded-lg shadow-xl border border-primary/30 pointer-events-none transform -translate-y-full -mt-2 transition-opacity duration-200"
- style={{ 
- left: tooltip.x, 
- top: tooltip.y, 
- opacity: tooltip.show ? 1 : 0,
- visibility: tooltip.show ? 'visible' : 'hidden'
- }}
- >
- <h4 className="font-bold text-primary mb-1 text-sm">Table {tooltip.id}</h4>
- <p className="text-xs text-foreground/80 ">Seats: {tooltip.seats}</p>
- <p className="text-xs text-muted-foreground italic mt-1">{tooltip.desc}</p>
+ <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">Reserve Your Table</h2>
+ <p className="text-muted-foreground text-sm">Select a table, time, and tell us your preferences.</p>
  </div>
  
- {/* SVG Map */}
- <svg className="w-full h-auto drop-shadow-lg select-none" viewBox="0 0 800 500">
- {/* Floor Background */}
- <rect className="fill-white dark:fill-[#221710]" height="500" rx="10" width="800" x="0" y="0"></rect>
- 
- {/* Main Hall Area */}
- <path d="M 50 50 L 550 50 L 550 350 L 50 350 Z" fill="none" className="stroke-gray-300 dark:stroke-[#3d2b20]" strokeWidth="2"></path>
- <text className="fill-gray-400 dark:fill-[#5c4535]" fontSize="14" fontWeight="bold" letterSpacing="2" x="60" y="80">MAIN HALL</text>
- 
- {/* Balcony Area */}
- <path d="M 50 370 L 550 370 L 550 480 L 50 480 Z" className="fill-gray-50 dark:fill-[#2d2018] stroke-gray-300 dark:stroke-[#3d2b20]" strokeWidth="2"></path>
- <text className="fill-gray-400 dark:fill-[#5c4535]" fontSize="14" fontWeight="bold" letterSpacing="2" x="60" y="400">THE BALCONY</text>
- 
- {/* Private Rooms Area */}
- <path d="M 570 50 L 750 50 L 750 480 L 570 480 Z" className="fill-gray-100 dark:fill-[#1a110c] stroke-gray-300 dark:stroke-[#3d2b20]" strokeWidth="2"></path>
- <text className="fill-gray-400 dark:fill-[#5c4535]" fontSize="14" fontWeight="bold" letterSpacing="2" x="590" y="80">PRIVATE SUITES</text>
- 
- {/* Tables Main Hall (Round 4-tops) */}
- <g className="group">
- <circle onMouseEnter={(e) => handleMouseEnter(e, "M1", "4", "Near Window", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" cx="150" cy="150" r="25"></circle>
- <circle className="table-seat occupied fill-gray-400 dark:fill-[#4b3b32]" cx="250" cy="150" r="25"></circle>
- <circle onMouseEnter={(e) => handleMouseEnter(e, "M3", "4", "Center Room", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" cx="350" cy="150" r="25"></circle>
- <circle onMouseEnter={(e) => handleMouseEnter(e, "M4", "4", "Near Kitchen", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" cx="450" cy="150" r="25"></circle>
- <circle onMouseEnter={(e) => handleMouseEnter(e, "M5", "4", "Quiet Corner", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" cx="150" cy="250" r="25"></circle>
- <circle className="table-seat occupied fill-gray-400 dark:fill-[#4b3b32]" cx="250" cy="250" r="25"></circle>
- <circle onMouseEnter={(e) => handleMouseEnter(e, "M7", "4", "Center Room", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" cx="350" cy="250" r="25"></circle>
- <circle className="table-seat occupied fill-gray-400 dark:fill-[#4b3b32]" cx="450" cy="250" r="25"></circle>
- </g>
- 
- {/* Tables Balcony (2-tops) */}
- <g className="group">
- <rect onMouseEnter={(e) => handleMouseEnter(e, "B1", "2", "Sunset View", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" height="40" rx="4" width="40" x="100" y="410"></rect>
- <rect className="table-seat occupied fill-gray-400 dark:fill-[#4b3b32]" height="40" rx="4" width="40" x="200" y="410"></rect>
- <rect onMouseEnter={(e) => handleMouseEnter(e, "B3", "2", "Sunset View", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" height="40" rx="4" width="40" x="300" y="410"></rect>
- <rect onMouseEnter={(e) => handleMouseEnter(e, "B4", "2", "Intimate", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" height="40" rx="4" width="40" x="400" y="410"></rect>
- </g>
- 
- {/* Private Rooms (Large Rects) */}
- <g className="group">
- <rect onMouseEnter={(e) => handleMouseEnter(e, "P1", "12", "The Jade Room", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" height="80" rx="8" width="120" x="600" y="120"></rect>
- <rect className="table-seat occupied fill-gray-400 dark:fill-[#4b3b32]" height="80" rx="8" width="120" x="600" y="250"></rect>
- <rect onMouseEnter={(e) => handleMouseEnter(e, "P3", "14", "The Onyx Room", false)} onMouseLeave={handleMouseLeave} className="table-seat fill-white dark:fill-surface-dark stroke-gray-300 dark:stroke-white/20 stroke-1" height="80" rx="8" width="120" x="600" y="380"></rect>
- </g>
- </svg>
- <div className="absolute bottom-4 right-4 text-xs text-muted-foreground font-mono">
- Updated: Just now
- </div>
- </div>
+ <UnifiedCheckout
+ isOpen={true}
+ onClose={() => {}}
+ source="reservation"
+ variant="inline"
+ onNavigateToMenu={onNavigateToMenu}
+ />
  </div>
  </section>
 
@@ -267,73 +199,7 @@ const ReservationsScreen: React.FC = () => {
  </div>
  </section>
 
- {/* Section 4: The Booking Form */}
- <section className="py-16 bg-card relative overflow-hidden transition-colors" id="booking">
- {/* Decorative Background Element */}
- <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none"></div>
- <div className="max-w-5xl mx-auto px-6 relative z-10">
- <div className="mb-10 text-center">
- <h2 className="text-3xl font-bold text-foreground ">Finalize Your Reservation</h2>
- <p className="text-muted-foreground mt-1.5 text-sm">Secure your spot at Orient in 3 simple steps.</p>
- </div>
- {/* Wizard Steps Header */}
- <div className="flex justify-between mb-10 relative">
- <div className="absolute top-1/2 left-0 w-full h-0.5 bg-background -z-10 transform -translate-y-1/2"></div>
- {/* Step 1 Indicator */}
- <div className="flex flex-col items-center gap-1.5 bg-card px-3 z-10">
- <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold border-4 border-transparent shadow-lg shadow-primary/30 text-sm">1</div>
- <span className="text-xs font-medium text-foreground ">Date & Time</span>
- </div>
- {/* Step 2 Indicator */}
- <div className="flex flex-col items-center gap-1.5 bg-card px-3 z-10">
- <div className="w-9 h-9 rounded-full bg-background border border-border text-muted-foreground flex items-center justify-center font-bold border-4 border-transparent text-sm">2</div>
- <span className="text-xs font-medium text-muted-foreground">Preferences</span>
- </div>
- {/* Step 3 Indicator */}
- <div className="flex flex-col items-center gap-1.5 bg-card px-3 z-10">
- <div className="w-9 h-9 rounded-full bg-background border border-border text-muted-foreground flex items-center justify-center font-bold border-4 border-transparent text-sm">3</div>
- <span className="text-xs font-medium text-muted-foreground">Contact</span>
- </div>
- </div>
- {/* Form Container */}
- <div className="bg-background border border-border rounded-2xl p-6 md:p-10 shadow-2xl transition-colors">
- {/* STEP 1 CONTENT */}
- <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
- <div className="space-y-5">
- <div>
- <label className="block text-xs font-medium text-foreground/80 mb-1.5">Select Date</label>
- <input className="w-full bg-card border border-border rounded-lg p-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent accent-primary" type="date" defaultValue="2023-10-24"/>
- </div>
- <div>
- <label className="block text-xs font-medium text-foreground/80 mb-1.5">Guests</label>
- <div className="flex gap-3">
- <button className="w-10 h-10 rounded-lg bg-card border border-border hover:border-primary text-foreground/80 flex items-center justify-center transition-colors text-sm">2</button>
- <button className="w-10 h-10 rounded-lg bg-primary border border-primary text-white flex items-center justify-center shadow-lg shadow-primary/20 text-sm">4</button>
- <button className="w-10 h-10 rounded-lg bg-card border border-border hover:border-primary text-foreground/80 flex items-center justify-center transition-colors text-sm">6</button>
- <button className="w-10 h-10 rounded-lg bg-card border border-border hover:border-primary text-foreground/80 flex items-center justify-center transition-colors text-sm">8+</button>
- </div>
- </div>
- </div>
- <div>
- <label className="block text-xs font-medium text-foreground/80 mb-1.5">Available Times</label>
- <div className="grid grid-cols-3 gap-2">
- {['5:00 PM', '5:30 PM', '6:00 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM'].map((time, idx) => (
- <button key={idx} className={`py-1.5 px-2 rounded-md text-xs border transition-all ${time === '7:00 PM' ? 'bg-primary text-background border-primary shadow-lg shadow-primary/20 font-medium' : 'bg-card border-border text-muted-foreground hover:border-primary hover:text-primary dark:hover:text-background'}`}>
- {time}
- </button>
- ))}
- </div>
- </div>
- </div>
- {/* Navigation Buttons */}
- <div className="flex justify-end mt-10 pt-6 border-t border-border ">
- <button className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg font-bold transition-all shadow-lg shadow-primary/20 flex items-center gap-2 text-sm">
- Next: Preferences <span className="material-icons text-sm">arrow_forward</span>
- </button>
- </div>
- </div>
- </div>
- </section>
+
 
  {/* AI Assistant: The Concierge */}
  <div className="fixed bottom-24 right-6 z-50 group">
