@@ -187,7 +187,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
   }
 
   return (
-    <div className="min-h-screen w-full bg-background font-display text-foreground flex flex-col">
+    <div className="admin-dashboard min-h-screen w-full bg-background font-display text-foreground flex flex-col">
       {/* ========================================================================= */}
       {/* UNIFIED SINGLE TOP BAR                                                    */}
       {/* ========================================================================= */}
@@ -215,7 +215,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
             {/* Back to Storefront button directly under Orient CMS */}
             <button
               onClick={() => onCancel ? onCancel() : navigate('/')}
-              className="mt-5 flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+              className="mt-5 flex items-center gap-1 text-[16px] font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
               title="Return to public storefront"
             >
               <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
@@ -384,14 +384,14 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-foreground">Notifications</span>
                     {unreadCount > 0 && (
-                      <Badge variant="outline" className="text-[10px] font-mono border-none text-muted-foreground">
+                      <Badge variant="outline" className="text-[14px] font-mono border-none text-muted-foreground">
                         {unreadCount} Unread
                       </Badge>
                     )}
                   </div>
                   <Link 
                     to="/dashboard/notifications" 
-                    className="text-[11px] text-primary hover:underline font-medium"
+                    className="text-[16px] text-primary hover:underline font-medium"
                   >
                     View History
                   </Link>
@@ -414,7 +414,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
                             {notif.message}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between w-full text-[10px] text-muted-foreground mt-0.5">
+                        <div className="flex items-center justify-between w-full text-[14px] text-muted-foreground mt-0.5">
                           <span>{notif.division || 'System'}</span>
                           <span className="font-mono">{new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
@@ -463,7 +463,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
                       </span>
                     ) : null}
                     <div className="mt-2">
-                      <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                      <span className={`inline-block text-[14px] font-bold px-2.5 py-0.5 rounded-full ${
                         isAdminMode ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/10 text-primary'
                       }`}>
                         {isAdminMode ? 'Admin Officer (The Boss)' : 'Customer Account'}
@@ -647,3 +647,4 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
     </div>
   );
 }
+

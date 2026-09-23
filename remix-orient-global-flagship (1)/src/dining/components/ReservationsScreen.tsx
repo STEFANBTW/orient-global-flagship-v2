@@ -1,27 +1,48 @@
 import React, { useState, useRef } from 'react';
 
 const ReservationsScreen: React.FC = () => {
- const [tooltip, setTooltip] = useState<{show: boolean, x: number, y: number, id: string, seats: string, desc: string}>({
- show: false, x: 0, y: 0, id: '', seats: '', desc: ''
- });
+  const TIMES = ['5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM'];
+  const MOCK_RESERVED_TIMES: Record<string, string[]> = {
+    "M2": ["7:00 PM", "7:30 PM", "8:00 PM"],
+    "M6": ["5:00 PM", "5:30 PM"],
+    "B2": ["8:00 PM", "8:30 PM", "9:00 PM"],
+    "P2": ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM"],
+    "M4": ["6:00 PM", "6:30 PM"]
+  };
 
- const mapRef = useRef<HTMLDivElement>(null);
+  const [tooltip, setTooltip] = useState<{show: boolean, x: number, y: number, id: string, seats: string, desc: string}>({
+    show: false, x: 0, y: 0, id: '', seats: '', desc: ''
+  });
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [guests, setGuests] = useState<number>(2);
 
- const handleMouseEnter = (e: React.MouseEvent, id: string, seats: string, desc: string, isOccupied: boolean) => {
- if (isOccupied) return;
- 
- // Calculate position relative to the map container
- const rect = mapRef.current?.getBoundingClientRect();
- if (rect) {
- const x = e.clientX - rect.left;
- const y = e.clientY - rect.top;
- setTooltip({ show: true, x, y, id, seats, desc });
- }
- };
+  const mapRef = useRef<HTMLDivElement>(null);
 
- const handleMouseLeave = () => {
- setTooltip(prev => ({ ...prev, show: false }));
- };
+  const handleMouseEnter = (e: React.MouseEvent, id: string, seats: string, desc: string) => {
+    const rect = mapRef.current?.getBoundingClientRect();
+    if (rect) {
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setTooltip({ show: true, x, y, id, seats, desc });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip(prev => ({ ...prev, show: false }));
+  };
+
+  const handleTableClick = (id: string) => {
+    setSelectedTableId(id);
+    setSelectedTime(null);
+  };
+  
+  const getTableClass = (id: string) => {
+    if (selectedTableId === id) return "table-seat fill-primary/20 stroke-primary stroke-2 cursor-pointer";
+    return "table-seat fill-white dark:fill-[#2d2018] stroke-gray-300 dark:stroke-white/20 stroke-1 hover:fill-gray-100 dark:hover:fill-[#3d2b20] cursor-pointer transition-colors";
+  };
 
  return (
  <div className="bg-background text-foreground font-display min-h-screen selection:bg-primary selection:text-background">

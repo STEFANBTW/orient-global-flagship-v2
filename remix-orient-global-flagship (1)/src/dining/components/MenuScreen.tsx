@@ -66,6 +66,7 @@ const MenuScreen: React.FC = () => {
   const [showTrayModal, setShowTrayModal] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [sommelierFilter, setSommelierFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const activeUser = getActiveConsumerUser();
 
@@ -204,8 +205,19 @@ const MenuScreen: React.FC = () => {
   const totalTrayCount = orderTray.reduce((acc, item) => acc + item.quantity, 0);
   const totalTrayAmount = orderTray.reduce((acc, item) => acc + item.quantity * 10, 0);
 
+  const query = searchQuery.trim().toLowerCase();
+  const filteredProducts = useMemo(() => {
+    if (!query) return diningProducts;
+    return diningProducts.filter(p => 
+      p.name.toLowerCase().includes(query) ||
+      p.description?.toLowerCase().includes(query) ||
+      p.ingredients?.toLowerCase().includes(query) ||
+      p.category.toLowerCase().includes(query)
+    );
+  }, [diningProducts, query]);
+
   // The 3 Signature Sommelier Items & Standard Drink Catalog for the "Drinks & Cellar" Menu Section
-  const allDrinks = diningProducts.filter(p => p.category === "Drinks & Cellar");
+  const allDrinks = filteredProducts.filter(p => p.category === "Drinks & Cellar");
   const sommelierDrinks = allDrinks.filter(p => 
     p.id === "PRD-D-021" || 
     p.id === "PRD-D-022" || 
@@ -274,7 +286,8 @@ const MenuScreen: React.FC = () => {
           </p>
           <a
             href="#menu-catalog"
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-[#F29E0D] bg-transparent text-[#F29E0D] font-black text-xs uppercase tracking-widest hover:bg-[#F29E0D] hover:text-white hover:border-transparent transition-all duration-300 shadow-md hover:shadow-[0_0_25px_rgba(242,158,13,0.4)] active:scale-95"
+            style={{ border: '1.5px solid #F29E0D' }}
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-transparent text-[#F29E0D] font-black text-xs uppercase tracking-widest hover:bg-[#F29E0D] hover:text-white transition-all duration-300 shadow-md hover:shadow-[0_0_25px_rgba(242,158,13,0.4)] active:scale-95"
           >
             <span>Explore Menu</span>
             <span className="material-icons text-sm">arrow_downward</span>
@@ -282,67 +295,110 @@ const MenuScreen: React.FC = () => {
         </div>
       </header>
 
-      {/* ========================================================= */}
-      {/* 2. SIMPLIFIED MENU CATALOG INTRO & CATEGORY BAR           */}
-      {/* ========================================================= */}
-      <section id="menu-catalog" className="pt-8 sm:pt-16 pb-4 sm:pb-8 bg-background relative border-b border-transparent scroll-mt-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          {/* Streamlined Header */}
-          <div className="text-center max-w-2xl mx-auto mb-4 sm:mb-8">
-            <h2 className="text-2xl sm:text-4xl font-bold text-foreground font-sans tracking-tight">
-              Restaurant Menu
-            </h2>
-          </div>
-
-          {/* Clean Category Navigation (Space-Conservative, Horizontal Scroll on Mobile, Never Overflowing) */}
-          <div className="w-full max-w-6xl mx-auto flex sm:flex-wrap items-center sm:justify-center gap-2 sm:gap-2.5 px-2 py-1.5 overflow-x-auto no-scrollbar scroll-smooth">
-            <button
-              onClick={() => setActiveCategory("All")}
-              className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-sm sm:text-base font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-2 shrink-0 ${
-                activeCategory === "All"
-                  ? "bg-primary text-background shadow-lg shadow-primary/25 ring-2 ring-primary/40"
-                  : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm"
-              }`}
-            >
-              <span>All Items</span>
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
-                25
-              </span>
-            </button>
-
-            {DINING_CATEGORIES.map(cat => (
+      {/* Menu Catalog & Main Container with Sticky Search Bar */}
+      <div className="relative">
+        {/* Sticky Search Bar - Anchored to top-right on top of filter bar, stays stuck when scrolling */}
+        <div className="sticky top-3 sm:top-20 z-40 flex justify-end px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pointer-events-none -mb-10 sm:-mb-12">
+          <div className="pointer-events-auto flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-full bg-black/30 backdrop-blur-md shadow-lg border-0 border-none outline-none">
+            <span className="material-icons text-white/70 text-base sm:text-lg shrink-0">search</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search menu..."
+              className="bg-transparent border-0 border-none outline-none text-white placeholder:text-white/60 text-xs sm:text-sm font-medium w-36 xs:w-48 sm:w-60 focus:w-44 sm:focus:w-72 transition-all duration-300 focus:ring-0 focus:outline-none"
+            />
+            {searchQuery && (
               <button
-                key={cat.name}
-                onClick={() => setActiveCategory(cat.name)}
+                onClick={() => setSearchQuery("")}
+                className="text-white/60 hover:text-white transition-colors shrink-0 p-0.5"
+                aria-label="Clear search"
+              >
+                <span className="material-icons text-sm sm:text-base">close</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* 2. SIMPLIFIED MENU CATALOG INTRO & CATEGORY BAR           */}
+        {/* ========================================================= */}
+        <section id="menu-catalog" className="pt-8 sm:pt-16 pb-4 sm:pb-8 bg-background relative border-b border-transparent scroll-mt-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            {/* Streamlined Header */}
+            <div className="text-center max-w-2xl mx-auto mb-4 sm:mb-8">
+              <h2 className="text-2xl sm:text-4xl font-bold text-foreground font-sans tracking-tight">
+                Restaurant Menu
+              </h2>
+            </div>
+
+            {/* Clean Category Navigation (Space-Conservative, Horizontal Scroll on Mobile, Never Overflowing) */}
+            <div className="w-full max-w-6xl mx-auto flex sm:flex-wrap items-center sm:justify-center gap-2 sm:gap-2.5 px-2 py-1.5 overflow-x-auto no-scrollbar scroll-smooth">
+              <button
+                onClick={() => setActiveCategory("All")}
                 className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-sm sm:text-base font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-2 shrink-0 ${
-                  activeCategory === cat.name
+                  activeCategory === "All"
                     ? "bg-primary text-background shadow-lg shadow-primary/25 ring-2 ring-primary/40"
                     : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm"
                 }`}
               >
-                <span>{cat.name}</span>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
-                  {cat.count}
+                <span>All Items</span>
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+                  {filteredProducts.length}
                 </span>
               </button>
-            ))}
+
+              {DINING_CATEGORIES.map(cat => (
+                <button
+                  key={cat.name}
+                  onClick={() => setActiveCategory(cat.name)}
+                  className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-sm sm:text-base font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-2 shrink-0 ${
+                    activeCategory === cat.name
+                      ? "bg-primary text-background shadow-lg shadow-primary/25 ring-2 ring-primary/40"
+                      : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm"
+                  }`}
+                >
+                  <span>{cat.name}</span>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+                    {filteredProducts.filter(p => p.category === cat.name).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+
           </div>
+        </section>
 
-        </div>
-      </section>
+        {/* ========================================================= */}
+        {/* 3. BENTO GRID MENU WITH FULL-IMAGE BLOW-UP CARDS          */}
+        {/* ========================================================= */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-20 px-4 max-w-md mx-auto space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/70">
+                <span className="material-icons text-3xl">search_off</span>
+              </div>
+              <h3 className="text-xl font-bold text-foreground">No menu items found</h3>
+              <p className="text-sm text-muted-foreground">
+                We couldn't find any dishes or drinks matching "{searchQuery}".
+              </p>
+              <button
+                onClick={() => setSearchQuery("")}
+                className="px-5 py-2 rounded-full bg-primary text-white text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-all shadow-md active:scale-95"
+              >
+                Clear Search
+              </button>
+            </div>
+          )}
 
-      {/* ========================================================= */}
-      {/* 3. BENTO GRID MENU WITH FULL-IMAGE BLOW-UP CARDS          */}
-      {/* ========================================================= */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
-        {DINING_CATEGORIES.map(catMeta => {
-          if (activeCategory !== "All" && activeCategory !== catMeta.name) {
-            return null;
-          }
+          {DINING_CATEGORIES.map(catMeta => {
+            if (activeCategory !== "All" && activeCategory !== catMeta.name) {
+              return null;
+            }
 
-          const categoryItems = diningProducts.filter(p => p.category === catMeta.name);
-          if (categoryItems.length === 0) return null;
+            const categoryItems = filteredProducts.filter(p => p.category === catMeta.name);
+            if (categoryItems.length === 0) return null;
 
           return (
             <section
@@ -597,6 +653,7 @@ const MenuScreen: React.FC = () => {
           );
         })}
       </main>
+      </div>
 
       {/* ========================================================= */}
       {/* 4. AURA SOMMELIER & BEVERAGE GALLERY (ORIGINAL 5 DRINKS)  */}

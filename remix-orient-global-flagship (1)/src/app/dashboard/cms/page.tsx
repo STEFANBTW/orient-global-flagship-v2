@@ -16,7 +16,7 @@ export default function CMSPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Content Management System</span>
+            <span className="text-[14px] font-bold uppercase tracking-widest text-primary">Content Management System</span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight font-headline text-foreground mt-1">
             CMS Control Hub
@@ -31,7 +31,7 @@ export default function CMSPage() {
             <TabsTrigger value="inventory" className="text-xs font-semibold gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-4 py-2">
               <Box className="w-3.5 h-3.5" />
               <span>Catalog & Inventory (90 Items)</span>
-              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary-foreground/20 text-primary-foreground">
+              <Badge variant="secondary" className="text-[13px] px-1.5 py-0 bg-primary-foreground/20 text-primary-foreground">
                 Active Test
               </Badge>
             </TabsTrigger>

@@ -123,7 +123,7 @@ export default function NotificationsPage() {
         >
           <div className="text-xs text-muted-foreground">Total History</div>
           <div className="text-2xl font-bold font-mono text-foreground mt-1">{counts.total}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">All logged events</div>
+          <div className="text-[16px] text-muted-foreground mt-1">All logged events</div>
         </Card>
 
         <Card 
@@ -137,7 +137,7 @@ export default function NotificationsPage() {
             <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
           </div>
           <div className="text-2xl font-bold font-mono text-amber-500 mt-1">{counts.unattended}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">Requires immediate attention</div>
+          <div className="text-[16px] text-muted-foreground mt-1">Requires immediate attention</div>
         </Card>
 
         <Card 
@@ -151,7 +151,7 @@ export default function NotificationsPage() {
             <Clock className="w-3.5 h-3.5 text-blue-500" />
           </div>
           <div className="text-2xl font-bold font-mono text-blue-500 mt-1">{counts.inProgress}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">Being actively resolved</div>
+          <div className="text-[16px] text-muted-foreground mt-1">Being actively resolved</div>
         </Card>
 
         <Card 
@@ -165,7 +165,7 @@ export default function NotificationsPage() {
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
           </div>
           <div className="text-2xl font-bold font-mono text-emerald-500 mt-1">{counts.attended}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">Completed / fulfilled</div>
+          <div className="text-[16px] text-muted-foreground mt-1">Completed / fulfilled</div>
         </Card>
       </div>
 
@@ -321,23 +321,23 @@ export default function NotificationsPage() {
                     {/* Content details */}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-mono text-[11px] text-muted-foreground">{notif.id}</span>
+                        <span className="font-mono text-[16px] text-muted-foreground">{notif.id}</span>
                         {notif.division && (
-                          <Badge variant="outline" className="text-[10px] font-medium">
+                          <Badge variant="outline" className="text-[14px] font-medium">
                             {notif.division}
                           </Badge>
                         )}
                         {notif.category && (
-                          <span className="text-[10px] uppercase font-mono text-muted-foreground px-1.5 py-0.5 rounded-xs bg-muted">
+                          <span className="text-[14px] uppercase font-mono text-muted-foreground px-1.5 py-0.5 rounded-xs bg-muted">
                             {notif.category}
                           </span>
                         )}
                         {!notif.read && (
-                          <span className="text-[10px] font-semibold text-primary px-1.5 py-0.5 rounded-xs bg-primary/10">
+                          <span className="text-[14px] font-semibold text-primary px-1.5 py-0.5 rounded-xs bg-primary/10">
                             New
                           </span>
                         )}
-                        <span className="text-[11px] text-muted-foreground ml-auto font-mono">
+                        <span className="text-[16px] text-muted-foreground ml-auto font-mono">
                           {new Date(notif.timestamp).toLocaleString()}
                         </span>
                       </div>
@@ -354,7 +354,7 @@ export default function NotificationsPage() {
 
                     <button
                       onClick={() => updateNotificationStatus(notif.id, 'unattended')}
-                      className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                      className={`text-[16px] px-2.5 py-1 rounded-md border transition-colors ${
                         currentStatus === 'unattended'
                           ? 'border-amber-500 bg-amber-500/10 text-amber-500 font-semibold'
                           : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -365,7 +365,7 @@ export default function NotificationsPage() {
 
                     <button
                       onClick={() => updateNotificationStatus(notif.id, 'in_progress')}
-                      className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                      className={`text-[16px] px-2.5 py-1 rounded-md border transition-colors ${
                         currentStatus === 'in_progress'
                           ? 'border-blue-500 bg-blue-500/10 text-blue-500 font-semibold'
                           : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -376,7 +376,7 @@ export default function NotificationsPage() {
 
                     <button
                       onClick={() => updateNotificationStatus(notif.id, 'attended')}
-                      className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                      className={`text-[16px] px-2.5 py-1 rounded-md border transition-colors ${
                         currentStatus === 'attended'
                           ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 font-semibold'
                           : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'

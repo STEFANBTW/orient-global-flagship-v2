@@ -143,32 +143,32 @@ export default function OrdersDashboardPage() {
 
   const getStatusBadge = (order: CustomerOrder) => {
     if (order.status === 'awaiting_chef') return (
-      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[11px] font-bold gap-1">
+      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[16px] font-bold gap-1">
         <Clock className="w-3 h-3" /> Pending
       </Badge>
     );
     if (order.status === 'preparing') return (
-      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/30 text-[11px] font-bold gap-1">
+      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/30 text-[16px] font-bold gap-1">
         <ChefHat className="w-3 h-3" /> Preparing
       </Badge>
     );
     if (order.status === 'ten_min_warning') return (
-      <Badge variant="outline" className="bg-orange-500/20 text-orange-400 border-orange-500/40 text-[11px] font-bold gap-1 animate-pulse">
+      <Badge variant="outline" className="bg-orange-500/20 text-orange-400 border-orange-500/40 text-[16px] font-bold gap-1 animate-pulse">
         <AlertTriangle className="w-3 h-3" /> 10-Min Alert
       </Badge>
     );
     if (order.status === 'five_min_warning') return (
-      <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/40 text-[11px] font-bold gap-1 animate-pulse">
+      <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/40 text-[16px] font-bold gap-1 animate-pulse">
         <AlertTriangle className="w-3 h-3" /> 5-Min Alert
       </Badge>
     );
     if (order.status === 'ready') return (
-      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[11px] font-bold gap-1">
+      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[16px] font-bold gap-1">
         <CheckCircle2 className="w-3 h-3" /> Ready for Pickup
       </Badge>
     );
     if (order.status === 'completed') return (
-      <Badge variant="outline" className="bg-slate-500/10 text-slate-400 border-slate-500/30 text-[11px] font-bold gap-1">
+      <Badge variant="outline" className="bg-slate-500/10 text-slate-400 border-slate-500/30 text-[16px] font-bold gap-1">
         <Trophy className="w-3 h-3" /> Completed
       </Badge>
     );
@@ -181,7 +181,7 @@ export default function OrdersDashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 font-mono">
+            <span className="text-[14px] font-bold uppercase tracking-widest text-emerald-500 font-mono">
               Live Kitchen & Order Dispatch Station • Role: BOSS
             </span>
           </div>
@@ -197,28 +197,28 @@ export default function OrdersDashboardPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div onClick={() => setSelectedFilter('all')} className={`p-4 rounded-xl border cursor-pointer transition-all ${ selectedFilter === 'all' ? 'bg-card border-primary ring-1 ring-primary' : 'bg-card/50 border-border/60 hover:border-border' }`}>
-          <span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground block">Total Active</span>
+          <span className="text-[14px] uppercase font-mono tracking-wider text-muted-foreground block">Total Active</span>
           <span className="text-2xl font-black text-foreground">{activeOrders.length}</span>
         </div>
         <div onClick={() => setSelectedFilter('awaiting_chef')} className={`p-4 rounded-xl border cursor-pointer transition-all ${ selectedFilter === 'awaiting_chef' ? 'bg-amber-500/10 border-amber-500 ring-1 ring-amber-500' : 'bg-card/50 border-border/60 hover:border-border' }`}>
-          <span className="text-[10px] uppercase font-mono tracking-wider text-amber-500 block">Pending</span>
+          <span className="text-[14px] uppercase font-mono tracking-wider text-amber-500 block">Pending</span>
           <span className="text-2xl font-black text-amber-500">{awaitingChefCount}</span>
-          <span className="text-[10px] text-muted-foreground block mt-0.5">Awaiting Chef</span>
+          <span className="text-[14px] text-muted-foreground block mt-0.5">Awaiting Chef</span>
         </div>
         <div onClick={() => setSelectedFilter('preparing')} className={`p-4 rounded-xl border cursor-pointer transition-all ${ selectedFilter === 'preparing' ? 'bg-blue-500/10 border-blue-500 ring-1 ring-blue-500' : 'bg-card/50 border-border/60 hover:border-border' }`}>
-          <span className="text-[10px] uppercase font-mono tracking-wider text-blue-500 block">In Kitchen</span>
+          <span className="text-[14px] uppercase font-mono tracking-wider text-blue-500 block">In Kitchen</span>
           <span className="text-2xl font-black text-blue-500">{preparingCount}</span>
-          <span className="text-[10px] text-muted-foreground block mt-0.5">Timer Running</span>
+          <span className="text-[14px] text-muted-foreground block mt-0.5">Timer Running</span>
         </div>
         <div onClick={() => setSelectedFilter('ready')} className={`p-4 rounded-xl border cursor-pointer transition-all ${ selectedFilter === 'ready' ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500' : 'bg-card/50 border-border/60 hover:border-border' }`}>
-          <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-500 block">Ready</span>
+          <span className="text-[14px] uppercase font-mono tracking-wider text-emerald-500 block">Ready</span>
           <span className="text-2xl font-black text-emerald-500">{readyCount}</span>
-          <span className="text-[10px] text-muted-foreground block mt-0.5">Collect Now</span>
+          <span className="text-[14px] text-muted-foreground block mt-0.5">Collect Now</span>
         </div>
         <div onClick={() => setSelectedFilter('completed')} className={`p-4 rounded-xl border cursor-pointer transition-all ${ selectedFilter === 'completed' ? 'bg-slate-500/10 border-slate-400 ring-1 ring-slate-400' : 'bg-card/50 border-border/60 hover:border-border' }`}>
-          <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">Completed</span>
+          <span className="text-[14px] uppercase font-mono tracking-wider text-slate-400 block">Completed</span>
           <span className="text-2xl font-black text-slate-400">{completedCount}</span>
-          <span className="text-[10px] text-muted-foreground block mt-0.5">Done & Served</span>
+          <span className="text-[14px] text-muted-foreground block mt-0.5">Done & Served</span>
         </div>
       </div>
 
@@ -257,7 +257,7 @@ export default function OrdersDashboardPage() {
       {/* Orders Table */}
       <div className="bg-card/80 border border-border/60 rounded-xl overflow-hidden shadow-sm">
         <Table>
-          <TableHeader className="bg-muted/40 text-[11px] uppercase font-mono tracking-wider">
+          <TableHeader className="bg-muted/40 text-[16px] uppercase font-mono tracking-wider">
             <TableRow>
               <TableHead className="w-[120px]">Order ID</TableHead>
               <TableHead>Customer & Destination</TableHead>
@@ -297,7 +297,7 @@ export default function OrdersDashboardPage() {
                   <TableRow key={order.id} className={`hover:bg-muted/20 border-border/40 ${isCompleted ? 'opacity-60' : ''}`}>
                     <TableCell className="font-mono text-xs font-bold text-foreground">
                       #{order.id}
-                      <span className="text-[10px] text-muted-foreground block font-normal">
+                      <span className="text-[14px] text-muted-foreground block font-normal">
                         {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </TableCell>
@@ -305,12 +305,12 @@ export default function OrdersDashboardPage() {
                     <TableCell>
                       <div className="text-xs">
                         <span className="font-bold text-foreground block">{order.customerName}</span>
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] mt-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-[16px] mt-0.5">
                           <MapPin className="w-3 h-3 text-primary" />
                           <span>{order.tableNumber || order.shippingAddress}</span>
                         </div>
                         {order.notes && (
-                          <span className="text-[10px] text-amber-500/90 italic block mt-0.5">"{order.notes}"</span>
+                          <span className="text-[14px] text-amber-500/90 italic block mt-0.5">"{order.notes}"</span>
                         )}
                       </div>
                     </TableCell>
@@ -320,8 +320,8 @@ export default function OrdersDashboardPage() {
                         {order.items.map((it, idx) => (
                           <div key={idx} className="flex items-center gap-2 text-xs">
                             <span className="font-semibold text-foreground">{it.name}</span>
-                            <span className="font-mono text-primary text-[11px] font-bold">x{it.quantity}</span>
-                            <span className="text-[10px] text-muted-foreground">(₦10)</span>
+                            <span className="font-mono text-primary text-[16px] font-bold">x{it.quantity}</span>
+                            <span className="text-[14px] text-muted-foreground">(₦10)</span>
                           </div>
                         ))}
                       </div>
@@ -342,14 +342,14 @@ export default function OrdersDashboardPage() {
                           }`}>
                             {remainingFormatted}
                           </div>
-                          <span className="text-[10px] text-muted-foreground block">
+                          <span className="text-[14px] text-muted-foreground block">
                             {order.fiveMinAlertSent ? '✓ 5m alert sent' : order.tenMinAlertSent ? '✓ 10m alert sent' : 'Auto-alerts pending'}
                           </span>
                         </div>
                       ) : order.status === 'ready' || order.status === 'completed' ? (
-                        <span className="text-[11px] font-bold text-emerald-500">Done</span>
+                        <span className="text-[16px] font-bold text-emerald-500">Done</span>
                       ) : (
-                        <span className="text-[11px] text-muted-foreground italic">Not started</span>
+                        <span className="text-[16px] text-muted-foreground italic">Not started</span>
                       )}
                     </TableCell>
 
@@ -418,7 +418,7 @@ export default function OrdersDashboardPage() {
               Notifications Stream (All Channels)
             </h3>
           </div>
-          <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+          <Badge variant="outline" className="text-[14px] font-mono text-muted-foreground">
             {notifications.length} Total
           </Badge>
         </div>
@@ -429,12 +429,12 @@ export default function OrdersDashboardPage() {
             <div key={n.id} className="p-3 rounded-lg border border-border/40 bg-background/60 text-xs space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-foreground truncate max-w-[180px]">{n.title}</span>
-                <span className="text-[9px] text-muted-foreground font-mono shrink-0">
+                <span className="text-[13px] text-muted-foreground font-mono shrink-0">
                   {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground line-clamp-2">{n.message}</p>
-              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+              <p className="text-[16px] text-muted-foreground line-clamp-2">{n.message}</p>
+              <span className={`text-[13px] font-mono px-1.5 py-0.5 rounded ${
                 n.recipient === 'user' ? 'bg-blue-500/10 text-blue-400' :
                 n.recipient === 'cms' ? 'bg-amber-500/10 text-amber-400' : 'bg-muted text-muted-foreground'
               }`}>{n.recipient}</span>

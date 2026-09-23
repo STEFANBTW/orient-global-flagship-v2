@@ -153,7 +153,7 @@ export default function UsersPage() {
   }) => (
     <div className="space-y-3">
       <div>
-        <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Full Name *</label>
+        <label className="text-[16px] font-semibold text-muted-foreground block mb-1">Full Name *</label>
         <Input
           value={data.name || ''}
           onChange={e => setData({ ...data, name: e.target.value })}
@@ -164,7 +164,7 @@ export default function UsersPage() {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Phone *</label>
+          <label className="text-[16px] font-semibold text-muted-foreground block mb-1">Phone *</label>
           <Input
             value={data.phone || ''}
             onChange={e => setData({ ...data, phone: e.target.value })}
@@ -174,7 +174,7 @@ export default function UsersPage() {
           />
         </div>
         <div>
-          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Email</label>
+          <label className="text-[16px] font-semibold text-muted-foreground block mb-1">Email</label>
           <Input
             type="email"
             value={data.email || ''}
@@ -185,7 +185,7 @@ export default function UsersPage() {
         </div>
       </div>
       <div>
-        <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Delivery Address</label>
+        <label className="text-[16px] font-semibold text-muted-foreground block mb-1">Delivery Address</label>
         <Input
           value={data.deliveryAddress || ''}
           onChange={e => setData({ ...data, deliveryAddress: e.target.value })}
@@ -195,7 +195,7 @@ export default function UsersPage() {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">City</label>
+          <label className="text-[16px] font-semibold text-muted-foreground block mb-1">City</label>
           <Input
             value={data.city || ''}
             onChange={e => setData({ ...data, city: e.target.value })}
@@ -204,7 +204,7 @@ export default function UsersPage() {
           />
         </div>
         <div>
-          <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Role</label>
+          <label className="text-[16px] font-semibold text-muted-foreground block mb-1">Role</label>
           <select
             value={data.role || 'customer'}
             onChange={e => setData({ ...data, role: e.target.value as AppUser['role'] })}
@@ -247,7 +247,7 @@ export default function UsersPage() {
           { label: 'Staff / Admins', value: users.filter(u => u.role !== 'customer').length, color: 'text-foreground' },
         ].map(s => (
           <div key={s.label} className="p-4 rounded-xl bg-card border border-border/60">
-            <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{s.label}</p>
+            <p className="text-[14px] font-mono uppercase tracking-wider text-muted-foreground">{s.label}</p>
             <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
           </div>
         ))}
@@ -256,16 +256,16 @@ export default function UsersPage() {
       {/* Toolbar: search + sort */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 inset-y-0 my-auto w-3.5 h-3.5 text-white/70 dark:text-muted-foreground pointer-events-none" />
+          <Search className="absolute left-3 inset-y-0 my-auto w-3.5 h-3.5 text-muted-foreground dark:text-white/70 pointer-events-none" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, email, phone..."
-            className="h-9 pl-9 text-xs border-none bg-[#222222] text-white dark:bg-muted/50 dark:text-foreground rounded-lg w-full"
+            className="h-9 pl-9 text-xs border-none bg-muted/50 dark:bg-[#222222] text-foreground dark:text-white rounded-lg w-full"
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] text-muted-foreground">Sort:</span>
+          <span className="font-mono text-[16px] text-muted-foreground">Sort:</span>
           {(['name', 'createdAt', 'activity'] as SortField[]).map(f => (
             <button
               key={f}
@@ -281,7 +281,7 @@ export default function UsersPage() {
             </button>
           ))}
         </div>
-        <span className="text-[11px] font-mono text-muted-foreground ml-auto">
+        <span className="text-[16px] font-mono text-muted-foreground ml-auto">
           {sorted.length} of {users.length}
         </span>
       </div>
@@ -290,7 +290,7 @@ export default function UsersPage() {
       <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40 text-[10px] uppercase font-mono tracking-wider">
+            <TableRow className="bg-muted/40 text-[14px] uppercase font-mono tracking-wider">
               <TableHead className="py-3">User</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Role</TableHead>
@@ -313,23 +313,23 @@ export default function UsersPage() {
                     <TableCell className="py-3">
                       <div className="flex items-center gap-2.5">
                         <Avatar className="h-8 w-8 bg-primary/10 text-primary shrink-0">
-                          <AvatarFallback className="text-[11px] font-bold">
+                          <AvatarFallback className="text-[16px] font-bold">
                             {u.avatar || u.name.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="text-xs font-bold text-foreground">{u.name}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono">{u.id}</p>
+                          <p className="text-[14px] text-muted-foreground font-mono">{u.id}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <p className="text-xs text-foreground">{u.email || '—'}</p>
-                      <p className="text-[11px] text-muted-foreground font-mono">{u.phone}</p>
+                      <p className="text-[16px] text-muted-foreground font-mono">{u.phone}</p>
                     </TableCell>
                     <TableCell>
                       <Badge
-                        className={`text-[10px] font-bold border-none uppercase ${
+                        className={`text-[14px] font-bold border-none uppercase ${
                           u.role === 'boss'
                             ? 'bg-purple-600 text-white'
                             : u.role === 'hod'
@@ -387,7 +387,7 @@ export default function UsersPage() {
             <div className="flex items-center justify-between p-5 border-b border-border/40 bg-muted/20">
               <div>
                 <h2 className="text-base font-bold">Edit User</h2>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-[16px] text-muted-foreground mt-0.5">
                   Changes persist to Firestore and affect login immediately.
                 </p>
               </div>
@@ -420,7 +420,7 @@ export default function UsersPage() {
             <div className="flex items-center justify-between p-5 border-b border-border/40 bg-muted/20">
               <div>
                 <h2 className="text-base font-bold">Create User</h2>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-[16px] text-muted-foreground mt-0.5">
                   Saved to Firestore. User can log in immediately.
                 </p>
               </div>
@@ -453,7 +453,7 @@ export default function UsersPage() {
             <div className="flex items-center justify-between p-5 border-b border-border/40 bg-muted/20 shrink-0">
               <div>
                 <h2 className="text-base font-bold">Order History — {viewingUser.name}</h2>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[16px] text-muted-foreground">
                   {viewingUser.email} · {viewingUser.phone}
                 </p>
               </div>
@@ -477,7 +477,7 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold">#{order.id}</span>
                         <Badge
-                          className={`text-[10px] font-bold border-none uppercase ${
+                          className={`text-[14px] font-bold border-none uppercase ${
                             order.status === 'completed'
                               ? 'bg-emerald-600 text-white'
                               : order.status === 'cancelled'
@@ -496,7 +496,7 @@ export default function UsersPage() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[14px] text-muted-foreground">
                       {new Date(order.createdAt).toLocaleString()} · {order.division || 'dining'}
                     </p>
                     <div className="bg-card rounded-lg border border-border/40 p-3 space-y-1">
@@ -528,3 +528,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

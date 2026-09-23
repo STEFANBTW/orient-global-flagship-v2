@@ -261,7 +261,7 @@ export default function InventoryPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card/60 border border-border/40 p-6 rounded-2xl backdrop-blur-md">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Live CMS & Inventory Engine</span>
+            <span className="text-[14px] font-bold uppercase tracking-widest text-emerald-500">Live CMS & Inventory Engine</span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight font-headline text-foreground mt-1">
             Master Inventory Catalog
@@ -320,7 +320,7 @@ export default function InventoryPage() {
             <Box className="w-4 h-4 text-primary" />
           </div>
           <div className="text-2xl font-bold text-foreground mt-2">{totalCount}</div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Across all 6 luxury divisions</p>
+          <p className="text-[14px] text-muted-foreground mt-0.5">Across all 6 luxury divisions</p>
         </div>
 
         <div 
@@ -332,7 +332,7 @@ export default function InventoryPage() {
             <PackageCheck className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-bold text-emerald-500 mt-2">{inStockCount}</div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Ready for immediate fulfillment</p>
+          <p className="text-[14px] text-muted-foreground mt-0.5">Ready for immediate fulfillment</p>
         </div>
 
         <div 
@@ -344,7 +344,7 @@ export default function InventoryPage() {
             <AlertCircle className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl font-bold text-amber-500 mt-2">{lowStockCount}</div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Requires replenishment soon</p>
+          <p className="text-[14px] text-muted-foreground mt-0.5">Requires replenishment soon</p>
         </div>
 
         <div 
@@ -356,7 +356,7 @@ export default function InventoryPage() {
             <Minus className="w-4 h-4 text-red-500" />
           </div>
           <div className="text-2xl font-bold text-red-500 mt-2">{outOfStockCount}</div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Sold out / zero balance</p>
+          <p className="text-[14px] text-muted-foreground mt-0.5">Sold out / zero balance</p>
         </div>
       </div>
 
@@ -382,7 +382,7 @@ export default function InventoryPage() {
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-primary-foreground' : div.color}`} />
               <span>{div.name}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+              <span className={`text-[14px] px-1.5 py-0.5 rounded-full font-bold ${
                 isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}>
                 {count}
@@ -415,34 +415,34 @@ export default function InventoryPage() {
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
           <div className="flex items-center gap-1 bg-background/60 p-1 rounded-lg border border-border/40 text-xs">
-            <span className="text-[10px] text-muted-foreground uppercase px-2 font-semibold">Filter:</span>
+            <span className="text-[14px] text-muted-foreground uppercase px-2 font-semibold">Filter:</span>
             <button
               onClick={() => setStockFilter('all')}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium ${stockFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-2 py-0.5 rounded text-[16px] font-medium ${stockFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               All
             </button>
             <button
               onClick={() => setStockFilter('in_stock')}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium ${stockFilter === 'in_stock' ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-2 py-0.5 rounded text-[16px] font-medium ${stockFilter === 'in_stock' ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
             >
               In Stock
             </button>
             <button
               onClick={() => setStockFilter('low')}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium ${stockFilter === 'low' ? 'bg-amber-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-2 py-0.5 rounded text-[16px] font-medium ${stockFilter === 'low' ? 'bg-amber-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Low
             </button>
             <button
               onClick={() => setStockFilter('out')}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium ${stockFilter === 'out' ? 'bg-red-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-2 py-0.5 rounded text-[16px] font-medium ${stockFilter === 'out' ? 'bg-red-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Out
             </button>
           </div>
 
-          <Badge variant="outline" className="text-[11px] font-medium px-2.5 py-1">
+          <Badge variant="outline" className="text-[16px] font-medium px-2.5 py-1">
             Showing <strong className="mx-1 text-foreground">{filteredProducts.length}</strong> of {products.length}
           </Badge>
         </div>
@@ -453,21 +453,21 @@ export default function InventoryPage() {
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow className="border-border/40 hover:bg-transparent">
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[70px]">Image</TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[110px]">SKU / ID</TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground min-w-[220px]">Item & Category</TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[100px]">Division</TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Unit Price</TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground min-w-[210px]">
+              <TableHead className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground w-[70px]">Image</TableHead>
+              <TableHead className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground w-[110px]">SKU / ID</TableHead>
+              <TableHead className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground min-w-[220px]">Item & Category</TableHead>
+              <TableHead className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground w-[100px]">Division</TableHead>
+              <TableHead className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground w-[120px]">Unit Price</TableHead>
+              <TableHead className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground min-w-[210px]">
                 <span className="flex items-center gap-1.5 text-primary">
                   <span>Quantity on Ground</span>
-                  <Badge variant="secondary" className="text-[9px] py-0 px-1.5 bg-primary/10 text-primary">Test #2</Badge>
+                  <Badge variant="secondary" className="text-[13px] py-0 px-1.5 bg-primary/10 text-primary">Test #2</Badge>
                 </span>
               </TableHead>
-              <TableHead className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-right min-w-[150px]">
+              <TableHead className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground text-right min-w-[150px]">
                 <span className="flex items-center justify-end gap-1.5 text-primary">
                   <span>Details</span>
-                  <Badge variant="secondary" className="text-[9px] py-0 px-1.5 bg-primary/10 text-primary">Test #1</Badge>
+                  <Badge variant="secondary" className="text-[13px] py-0 px-1.5 bg-primary/10 text-primary">Test #1</Badge>
                 </span>
               </TableHead>
             </TableRow>
@@ -527,7 +527,7 @@ export default function InventoryPage() {
                     <TableCell className="font-mono text-xs font-bold text-foreground">
                       {product.id}
                       {product.sensitivity === 'high' && (
-                        <span className="block text-[8px] font-sans font-bold text-amber-500 uppercase">High Sensitivity</span>
+                        <span className="block text-[12px] font-sans font-bold text-amber-500 uppercase">High Sensitivity</span>
                       )}
                     </TableCell>
 
@@ -538,11 +538,11 @@ export default function InventoryPage() {
                           {product.name}
                         </span>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                          <span className="text-[14px] text-muted-foreground uppercase font-medium">
                             {product.category}
                           </span>
                           {product.volume && (
-                            <span className="text-[10px] text-muted-foreground/70">
+                            <span className="text-[14px] text-muted-foreground/70">
                               • {product.volume}
                             </span>
                           )}
@@ -554,7 +554,7 @@ export default function InventoryPage() {
                     <TableCell>
                       <Badge 
                         variant="outline" 
-                        className="text-[10px] font-semibold uppercase tracking-wider capitalize border-border/50 bg-background/50"
+                        className="text-[14px] font-semibold uppercase tracking-wider capitalize border-border/50 bg-background/50"
                       >
                         {product.division}
                       </Badge>
@@ -605,15 +605,15 @@ export default function InventoryPage() {
                         {/* Status Pill */}
                         <div>
                           {isOut ? (
-                            <Badge className="bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] font-bold uppercase">
+                            <Badge className="bg-red-500/10 text-red-500 border border-red-500/20 text-[13px] font-bold uppercase">
                               Out
                             </Badge>
                           ) : isLow ? (
-                            <Badge className="bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[9px] font-bold uppercase">
+                            <Badge className="bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[13px] font-bold uppercase">
                               Low ({stock})
                             </Badge>
                           ) : (
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[9px] font-bold uppercase">
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[13px] font-bold uppercase">
                               In Stock ({stock})
                             </Badge>
                           )}
@@ -664,7 +664,7 @@ export default function InventoryPage() {
         <DialogContent id="modal-edit-product-dialog" className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-[10px] uppercase">
+              <Badge variant="outline" className="font-mono text-[14px] uppercase">
                 {editingProduct?.id}
               </Badge>
               <span className="text-xs text-muted-foreground capitalize">

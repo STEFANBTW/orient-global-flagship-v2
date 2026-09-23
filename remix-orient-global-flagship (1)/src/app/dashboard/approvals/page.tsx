@@ -119,7 +119,7 @@ export default function ApprovalsPage() {
 
  <Tabs defaultValue="operational" className="w-full">
  <TabsList className="bg-secondary border border-transparent p-1 h-12 mb-6">
- <TabsTrigger value="operational" className="data-[state=active]:bg-primary data-[state=active]:text-foreground font-bold text-[10px] uppercase tracking-widest px-8">
+ <TabsTrigger value="operational" className="data-[state=active]:bg-primary data-[state=active]:text-foreground font-bold text-[14px] uppercase tracking-widest px-8">
  <Clock className="w-3.5 h-3.5 mr-2" /> Operational Queue
  {allPending.length > 0 && (
  <Badge className="ml-2 bg-red-500 text-foreground border-none h-5 w-5 p-0 flex items-center justify-center rounded-full">
@@ -128,7 +128,7 @@ export default function ApprovalsPage() {
  )}
  </TabsTrigger>
  {isBoss && (
- <TabsTrigger value="enrollment" className="data-[state=active]:bg-primary data-[state=active]:text-foreground font-bold text-[10px] uppercase tracking-widest px-8">
+ <TabsTrigger value="enrollment" className="data-[state=active]:bg-primary data-[state=active]:text-foreground font-bold text-[14px] uppercase tracking-widest px-8">
  <UserPlus className="w-3.5 h-3.5 mr-2" /> Enrollment Requests
  </TabsTrigger>
  )}
@@ -140,11 +140,11 @@ export default function ApprovalsPage() {
  <Table>
  <TableHeader className="bg-muted/50">
  <TableRow className="border-transparent">
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary">Requester</TableHead>
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary">Division</TableHead>
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary">Request</TableHead>
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary">Submitted</TableHead>
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary text-right">Action</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary">Requester</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary">Division</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary">Request</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary">Submitted</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary text-right">Action</TableHead>
  </TableRow>
  </TableHeader>
  <TableBody>
@@ -157,12 +157,12 @@ export default function ApprovalsPage() {
  </div>
  <div className="flex flex-col">
  <span className="text-sm font-bold text-foreground">{req.requesterName}</span>
- <span className="text-[10px] text-muted-foreground/70 capitalize">{req.requesterRole.replace('admin_', '')}</span>
+ <span className="text-[14px] text-muted-foreground/70 capitalize">{req.requesterRole.replace('admin_', '')}</span>
  </div>
  </div>
  </TableCell>
  <TableCell>
- <Badge variant="outline" className="text-[10px] uppercase border-transparent text-muted-foreground bg-muted/50">
+ <Badge variant="outline" className="text-[14px] uppercase border-transparent text-muted-foreground bg-muted/50">
  {req.division}
  </Badge>
  </TableCell>
@@ -192,7 +192,7 @@ export default function ApprovalsPage() {
  <Button 
  size="sm" 
  onClick={() => req.type === 'cms' ? handleApproveCMS(req.id) : handleApproveRoleRequest(req.id)}
- className="h-8 bg-emerald-600 hover:bg-emerald-700 text-foreground font-bold text-[10px] uppercase px-4"
+ className="h-8 bg-emerald-600 hover:bg-emerald-700 text-foreground font-bold text-[14px] uppercase px-4"
  >
  <Check className="w-3.5 h-3.5 mr-2" /> Approve
  </Button>
@@ -224,10 +224,10 @@ export default function ApprovalsPage() {
  <Table>
  <TableHeader className="bg-muted/50">
  <TableRow className="border-transparent">
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary">Applicant</TableHead>
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary">Requested Division</TableHead>
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary">Submitted</TableHead>
- <TableHead className="text-[10px] font-bold uppercase tracking-widest text-primary text-right">Clearance</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary">Applicant</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary">Requested Division</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary">Submitted</TableHead>
+ <TableHead className="text-[14px] font-bold uppercase tracking-widest text-primary text-right">Clearance</TableHead>
  </TableRow>
  </TableHeader>
  <TableBody>
@@ -238,12 +238,12 @@ export default function ApprovalsPage() {
  <User className="w-3.5 h-3.5 text-muted-foreground/70" />
  <div className="flex flex-col">
  <span className="text-sm font-bold text-foreground">{req.name}</span>
- <span className="text-[10px] text-muted-foreground/70">{req.email}</span>
+ <span className="text-[14px] text-muted-foreground/70">{req.email}</span>
  </div>
  </div>
  </TableCell>
  <TableCell>
- <Badge variant="outline" className="text-[10px] uppercase border-primary/20 text-primary bg-primary/5">
+ <Badge variant="outline" className="text-[14px] uppercase border-primary/20 text-primary bg-primary/5">
  {req.requestedDivision}
  </Badge>
  </TableCell>
@@ -263,7 +263,7 @@ export default function ApprovalsPage() {
  <Button 
  size="sm" 
  onClick={() => handleApproveEnrollment(req.id, req.uid)}
- className="h-8 bg-primary text-foreground font-bold text-[10px] uppercase px-4"
+ className="h-8 bg-primary text-foreground font-bold text-[14px] uppercase px-4"
  >
  Grant Access
  </Button>
