@@ -228,7 +228,6 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-mono uppercase tracking-widest text-primary">Admin CMS · User Management</p>
           <h1 className="text-2xl font-extrabold text-foreground tracking-tight mt-0.5">Users</h1>
         </div>
         <Button
@@ -243,9 +242,9 @@ export default function UsersPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total Users', value: users.length, color: 'text-foreground' },
-          { label: 'Customers', value: users.filter(u => u.role === 'customer').length, color: 'text-emerald-500' },
-          { label: 'Total Orders', value: orders.length, color: 'text-amber-500' },
-          { label: 'Staff / Admins', value: users.filter(u => u.role !== 'customer').length, color: 'text-primary' },
+          { label: 'Customers', value: users.filter(u => u.role === 'customer').length, color: 'text-foreground' },
+          { label: 'Total Orders', value: orders.length, color: 'text-foreground' },
+          { label: 'Staff / Admins', value: users.filter(u => u.role !== 'customer').length, color: 'text-foreground' },
         ].map(s => (
           <div key={s.label} className="p-4 rounded-xl bg-card border border-border/60">
             <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{s.label}</p>
@@ -257,12 +256,12 @@ export default function UsersPage() {
       {/* Toolbar: search + sort */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+          <Search className="absolute left-3 inset-y-0 my-auto w-3.5 h-3.5 text-white/70 dark:text-muted-foreground pointer-events-none" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, email, phone..."
-            className="h-9 pl-9 text-xs border-none bg-muted/50 rounded-lg"
+            className="h-9 pl-9 text-xs border-none bg-[#222222] text-white dark:bg-muted/50 dark:text-foreground rounded-lg w-full"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -273,8 +272,8 @@ export default function UsersPage() {
               onClick={() => toggleSort(f)}
               className={`inline-flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 sortField === f
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted/60 hover:bg-muted text-foreground'
+                  ? 'bg-muted text-foreground'
+                  : 'bg-muted/30 hover:bg-muted/60 text-muted-foreground'
               }`}
             >
               {f === 'name' ? 'Name' : f === 'createdAt' ? 'Date Added' : 'Activity'}
@@ -346,7 +345,7 @@ export default function UsersPage() {
                     <TableCell>
                       <button
                         onClick={() => setViewingUser(u)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground text-xs font-bold transition-colors"
                       >
                         <ShoppingBag className="w-3 h-3" /> {count}
                       </button>

@@ -274,7 +274,7 @@ const MenuScreen: React.FC = () => {
           </p>
           <a
             href="#menu-catalog"
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-primary text-background font-bold text-xs uppercase tracking-widest hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30 active:scale-95"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-[#F29E0D] bg-transparent text-[#F29E0D] font-black text-xs uppercase tracking-widest hover:bg-[#F29E0D] hover:text-white hover:border-transparent transition-all duration-300 shadow-md hover:shadow-[0_0_25px_rgba(242,158,13,0.4)] active:scale-95"
           >
             <span>Explore Menu</span>
             <span className="material-icons text-sm">arrow_downward</span>
@@ -299,14 +299,14 @@ const MenuScreen: React.FC = () => {
           <div className="w-full max-w-6xl mx-auto flex sm:flex-wrap items-center sm:justify-center gap-2 sm:gap-2.5 px-2 py-1.5 overflow-x-auto no-scrollbar scroll-smooth">
             <button
               onClick={() => setActiveCategory("All")}
-              className={`px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+              className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-sm sm:text-base font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-2 shrink-0 ${
                 activeCategory === "All"
                   ? "bg-primary text-background shadow-lg shadow-primary/25 ring-2 ring-primary/40"
                   : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm"
               }`}
             >
               <span>All Items</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
                 25
               </span>
             </button>
@@ -315,15 +315,14 @@ const MenuScreen: React.FC = () => {
               <button
                 key={cat.name}
                 onClick={() => setActiveCategory(cat.name)}
-                className={`px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+                className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-sm sm:text-base font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-2 shrink-0 ${
                   activeCategory === cat.name
                     ? "bg-primary text-background shadow-lg shadow-primary/25 ring-2 ring-primary/40"
                     : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm"
                 }`}
               >
-                <span>{cat.icon}</span>
                 <span>{cat.name}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
                   {cat.count}
                 </span>
               </button>
@@ -354,12 +353,11 @@ const MenuScreen: React.FC = () => {
               {/* Clean Section Title without subtext */}
               <div className="flex items-center justify-between mb-8 pb-3 border-b border-transparent">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{catMeta.icon}</span>
                   <h3 className="text-2xl sm:text-3xl font-bold text-foreground font-sans">
                     {catMeta.name}
                   </h3>
                 </div>
-                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-muted-foreground">
+                <span className="text-sm sm:text-base font-bold px-3.5 sm:px-4 py-1.5 rounded-full bg-muted text-muted-foreground">
                   {categoryItems.length} items
                 </span>
               </div>
@@ -398,7 +396,7 @@ const MenuScreen: React.FC = () => {
                             <span className="text-[10px] font-semibold text-white/90 bg-black/35 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
                               Sommelier Select
                             </span>
-                            <span className="text-sm font-black text-white bg-primary px-3 py-1 rounded-full shadow-lg">
+                            <span className="text-base sm:text-lg font-black text-white bg-primary px-3.5 py-1 rounded-full shadow-lg">
                               ₦10
                             </span>
                           </div>
@@ -419,12 +417,12 @@ const MenuScreen: React.FC = () => {
                                 {drink.name}
                               </h4>
                               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/25 backdrop-blur-md text-[10px] shadow-sm border border-white/10 max-w-full">
-                                <span className="flex items-center gap-1 text-white/90 font-medium whitespace-nowrap">
-                                  <span className="material-icons text-primary text-[10px]">schedule</span>
+                                <span className="flex items-center gap-1 text-white font-medium whitespace-nowrap">
+                                  <span className="material-icons text-white text-[10px]">schedule</span>
                                   11m Prep
                                 </span>
-                                <span className="w-1 h-1 rounded-full bg-white/40 shrink-0"></span>
-                                <span className="text-emerald-400 font-semibold whitespace-nowrap">
+                                <span className="w-1 h-1 rounded-full bg-white/70 shrink-0"></span>
+                                <span className="text-white font-semibold whitespace-nowrap">
                                   {drink.stock || 5} Servings Available
                                 </span>
                               </div>
@@ -534,7 +532,7 @@ const MenuScreen: React.FC = () => {
                           <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border-0">
                             {dish.category}
                           </span>
-                          <span className="text-sm sm:text-base font-black text-white bg-primary px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
+                          <span className="text-base sm:text-lg font-black text-white bg-primary px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
                             ₦10
                           </span>
                         </div>
@@ -564,14 +562,14 @@ const MenuScreen: React.FC = () => {
                               {dish.name}
                             </h4>
                             
-                            {/* Translucent pill capsule with light blurry bg enclosing prep time & green servings */}
+                            {/* Translucent pill capsule with light blurry bg enclosing prep time & plain white servings */}
                             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-black/25 backdrop-blur-md text-[10px] sm:text-xs shadow-sm border border-white/10 max-w-full">
-                              <span className="flex items-center gap-1 text-white/90 font-medium whitespace-nowrap">
-                                <span className="material-icons text-primary text-[10px] sm:text-xs">schedule</span>
+                              <span className="flex items-center gap-1 text-white font-medium whitespace-nowrap">
+                                <span className="material-icons text-white text-[10px] sm:text-xs">schedule</span>
                                 11m Prep
                               </span>
-                              <span className="w-1 h-1 rounded-full bg-white/40 shrink-0"></span>
-                              <span className="text-emerald-400 font-semibold tracking-wide whitespace-nowrap">
+                              <span className="w-1 h-1 rounded-full bg-white/70 shrink-0"></span>
+                              <span className="text-white font-semibold tracking-wide whitespace-nowrap">
                                 {dish.stock || 5} Servings Available
                               </span>
                             </div>
@@ -796,23 +794,23 @@ const MenuScreen: React.FC = () => {
               <span className="material-icons text-base sm:text-lg">close</span>
             </button>
 
-            {/* Header Image: Exactly 50% of the viewport height (50dvh) on mobile */}
-            <div className="relative h-[50dvh] sm:h-[45%] w-full bg-black shrink-0 overflow-hidden">
+            {/* Header Image: Exactly 50% of the window height */}
+            <div className="relative h-1/2 w-full bg-neutral-100 dark:bg-neutral-900 shrink-0 overflow-hidden">
               <img
                 src={selectedProduct.image}
                 alt={selectedProduct.name}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20"></div>
+              {/* Bottom Gradient: Fades entirely into transparency by ~20% of image height */}
+              <div className="absolute bottom-0 inset-x-0 h-[22%] bg-gradient-to-t from-white via-white/80 to-transparent dark:from-neutral-950 dark:via-neutral-950/80 dark:to-transparent z-10 pointer-events-none"></div>
 
-              {/* Vital Information Overlay at the bottom of the 50dvh Image */}
+              {/* Vital Information Overlay at the bottom of the 50% Image */}
               <div className="absolute bottom-4 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-5 flex items-end justify-between gap-3 z-20">
                 <div className="min-w-0 pr-2">
-                  {/* Category tag: NO orange background, NO border, thin white text */}
-                  <span className="text-xs sm:text-sm uppercase font-[200] font-extralight tracking-widest text-white/90 mb-1 inline-block bg-transparent border-0 p-0 shadow-none">
+                  <span className="text-xs sm:text-sm uppercase font-bold tracking-widest text-neutral-700 dark:text-neutral-300 mb-1 inline-block bg-transparent border-0 p-0 shadow-none">
                     {selectedProduct.category}
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-bold text-white font-sans leading-tight line-clamp-2 sm:line-clamp-none drop-shadow-md">
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-950 dark:text-white font-sans leading-tight line-clamp-2 sm:line-clamp-none drop-shadow-xs">
                     {selectedProduct.name}
                   </h3>
                 </div>
@@ -825,15 +823,15 @@ const MenuScreen: React.FC = () => {
             {/* Modal Scrollable Middle Content (The ONLY area that scrolls) */}
             <div className="p-4 sm:p-5 space-y-3 sm:space-y-3.5 flex-1 overflow-y-auto overscroll-contain">
               
-              {/* Prep Time & Servings Available Pill */}
+              {/* Prep Time & Servings Available Pill - Adapts black/white per theme */}
               <div>
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 backdrop-blur-md text-xs sm:text-sm border border-neutral-300/40 dark:border-white/10 text-neutral-800 dark:text-neutral-100 max-w-full">
-                  <span className="flex items-center gap-1 font-normal text-foreground/80 whitespace-nowrap">
-                    <span className="material-icons text-primary text-sm">schedule</span>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900/10 dark:bg-white/10 backdrop-blur-md text-xs sm:text-sm border border-neutral-300/40 dark:border-white/10 text-neutral-950 dark:text-white max-w-full">
+                  <span className="flex items-center gap-1 font-medium text-neutral-950 dark:text-white whitespace-nowrap">
+                    <span className="material-icons text-neutral-950 dark:text-white text-sm">schedule</span>
                     11m Prep Time
                   </span>
-                  <span className="w-1 h-1 rounded-full bg-foreground/30 shrink-0"></span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">
+                  <span className="w-1 h-1 rounded-full bg-neutral-950/40 dark:bg-white/40 shrink-0"></span>
+                  <span className="text-neutral-950 dark:text-white font-medium whitespace-nowrap">
                     5 Servings Available
                   </span>
                 </div>
@@ -857,11 +855,11 @@ const MenuScreen: React.FC = () => {
                 </div>
               )}
 
-              {/* Chef & Sommelier Pairing Message */}
-              <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 p-3 sm:p-3.5 rounded-xl text-xs sm:text-sm space-y-1 shadow-xs">
-                <p className="font-medium text-amber-800 dark:text-amber-400 uppercase text-xs tracking-wider flex items-center gap-1.5">
-                  <span className="material-icons text-sm">restaurant</span>
-                  Chef & Sommelier Pairing
+              {/* Chef's Recommended Pairing Message - No background, adapts per theme */}
+              <div className="p-1 sm:p-1.5 space-y-1 bg-transparent border-0">
+                <p className="font-bold text-neutral-950 dark:text-white uppercase text-xs tracking-wider flex items-center gap-1.5">
+                  <span className="material-icons text-sm text-neutral-950 dark:text-white">restaurant</span>
+                  Chef's Recommended Pairing
                 </p>
                 <p className="text-neutral-700 dark:text-neutral-200 font-normal leading-relaxed text-xs sm:text-sm">
                   {selectedProduct.category === "Soups & Natural Swallows"

@@ -22,6 +22,8 @@ import CMSPage from './app/dashboard/cms/page';
 import InventoryPage from './app/dashboard/inventory/page';
 import OrdersPage from './app/dashboard/orders/page';
 import NotificationsPage from './app/dashboard/notifications/page';
+import UsersPage from './app/dashboard/users/page';
+
 
 export default function StudioApp({ onCancel, initialRoute = '/login' }: { onCancel: () => void, initialRoute?: string }) {
   return (
@@ -47,6 +49,7 @@ export default function StudioApp({ onCancel, initialRoute = '/login' }: { onCan
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="orders" element={<OrdersPage />} />
                 <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="users" element={<UsersPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>

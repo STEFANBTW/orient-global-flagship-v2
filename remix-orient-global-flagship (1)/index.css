@@ -58,6 +58,34 @@
   --font-heading: "Montserrat", sans-serif;
   --font-serif: "Playfair Display", serif;
   --font-code: "Source Code Pro", ui-monospace, SFMono-Regular, monospace;
+
+  /* Font scale: 1.44x (44% larger globally) */
+  --text-xs: 1.08rem;
+  --text-xs--line-height: 1.44rem;
+  --text-sm: 1.26rem;
+  --text-sm--line-height: 1.8rem;
+  --text-base: 1.44rem;
+  --text-base--line-height: 2.16rem;
+  --text-lg: 1.62rem;
+  --text-lg--line-height: 2.52rem;
+  --text-xl: 1.8rem;
+  --text-xl--line-height: 2.52rem;
+  --text-2xl: 2.16rem;
+  --text-2xl--line-height: 2.88rem;
+  --text-3xl: 2.7rem;
+  --text-3xl--line-height: 3.24rem;
+  --text-4xl: 3.24rem;
+  --text-4xl--line-height: 3.6rem;
+  --text-5xl: 4.32rem;
+  --text-5xl--line-height: 1.44;
+  --text-6xl: 5.4rem;
+  --text-6xl--line-height: 1.44;
+  --text-7xl: 6.48rem;
+  --text-7xl--line-height: 1.44;
+  --text-8xl: 8.64rem;
+  --text-8xl--line-height: 1.44;
+  --text-9xl: 11.52rem;
+  --text-9xl--line-height: 1.44;
 }
 
 @layer utilities {
@@ -93,7 +121,8 @@
   }
   
   *, ::before, ::after {
-    border-color: var(--color-border);
+    border-width: 0 !important;
+    border-color: transparent !important;
   }
 
   .dark {
