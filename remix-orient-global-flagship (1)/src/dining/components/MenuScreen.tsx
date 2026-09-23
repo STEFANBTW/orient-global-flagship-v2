@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { cmsApi } from '@/services/cmsApi';
 import { INITIAL_PRODUCTS_CATALOG, ProductItem } from '@/data/productsCatalog';
 import { getActiveConsumerUser } from '@/services/userService';

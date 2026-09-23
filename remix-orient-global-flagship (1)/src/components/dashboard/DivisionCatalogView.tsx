@@ -170,8 +170,8 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
   // Quick Order Modal State
   const [orderingItem, setOrderingItem] = useState<ProductItem | null>(null);
   const [orderQuantity, setOrderQuantity] = useState(1);
-  const [orderCustomerName, setOrderCustomerName] = useState(getActiveConsumerUser().name);
-  const [orderPhone, setOrderPhone] = useState(getActiveConsumerUser().phone);
+  const [orderCustomerName, setOrderCustomerName] = useState(getActiveConsumerUser()?.name || '');
+  const [orderPhone, setOrderPhone] = useState(getActiveConsumerUser()?.phone || '');
   const [orderTable, setOrderTable] = useState('Table 1');
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
