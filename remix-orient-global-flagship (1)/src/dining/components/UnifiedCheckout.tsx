@@ -704,6 +704,11 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                             <h4 className="text-lg font-black text-foreground">Table {selectedTableId}</h4>
                           </div>
                         </div>
+
+                        <div className="mt-4">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Reservation Date</label>
+                          <CustomDatePicker selectedDate={selectedDate} onChange={setSelectedDate} />
+                        </div>
                         
                         {/* Reserved Times Banner - ONLY shows if there are actual conflicts */}
                         {currentTableReservedTimes.length > 0 && (

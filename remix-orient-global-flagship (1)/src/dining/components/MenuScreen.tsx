@@ -322,14 +322,14 @@ const MenuScreen: React.FC = () => {
         {/* ========================================================= */}
         
         {/* Filter Buttons (Static) */}
-        <div className="bg-background py-3 w-full border-b border-border/40">
+        <div className="bg-background pt-2 pb-4 w-full">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-center flex-wrap gap-1.5 w-full">
+            <div className="flex items-center justify-start flex-wrap gap-2 w-full">
               <button
                 onClick={() => setActiveCategory("All")}
-                className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1 shrink-0 ${activeCategory === "All"
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1 shrink-0 ${activeCategory === "All"
                   ? "bg-primary text-background shadow-md shadow-primary/25 ring-1 ring-primary/40"
-                  : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm"
+                  : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm border border-border/40"
                   }`}
               >
                 <span>All Items</span>
@@ -342,9 +342,9 @@ const MenuScreen: React.FC = () => {
                 <button
                   key={cat.name}
                   onClick={() => setActiveCategory(cat.name)}
-                  className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1 shrink-0 ${activeCategory === cat.name
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1 shrink-0 ${activeCategory === cat.name
                     ? "bg-primary text-background shadow-md shadow-primary/25 ring-1 ring-primary/40"
-                    : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm"
+                    : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm border border-border/40"
                     }`}
                 >
                   <span>{cat.name}</span>
@@ -357,22 +357,22 @@ const MenuScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Search Bar (Sticky) */}
-        <div className="sticky top-[50px] sm:top-[60px] z-40 bg-background/95 backdrop-blur-md py-3 w-full shadow-sm pointer-events-none">
+        {/* Search Bar (Sticky - Floating Pill) */}
+        <div className="sticky top-[70px] z-40 w-full pointer-events-none mt-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end">
-            <div className="pointer-events-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/5 dark:bg-white/10 backdrop-blur-md shadow-inner border border-black/5 dark:border-white/5 transition-colors duration-300 shrink-0 w-full md:w-auto">
-              <span className="material-icons text-neutral-700 dark:text-white/70 text-xs shrink-0">search</span>
+            <div className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur-md shadow-md border border-black/10 dark:border-white/10 transition-colors duration-300 shrink-0 w-full md:w-auto">
+              <span className="material-icons text-neutral-800 dark:text-white/80 text-sm shrink-0">search</span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search menu..."
-                className="bg-transparent border-0 border-none outline-none text-neutral-900 dark:text-white placeholder:text-neutral-500 dark:placeholder:text-white/60 text-[11px] font-medium w-full md:w-36 focus:md:w-48 transition-all duration-300 focus:ring-0 focus:outline-none"
+                className="bg-transparent border-0 border-none outline-none text-neutral-900 dark:text-white placeholder:text-neutral-600 dark:placeholder:text-white/60 text-xs font-medium w-full md:w-40 focus:md:w-56 transition-all duration-300 focus:ring-0 focus:outline-none"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="text-neutral-500 hover:text-neutral-900 dark:text-white/60 dark:hover:text-white transition-colors shrink-0 p-0.5"
+                  className="text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white transition-colors shrink-0 p-0.5"
                   aria-label="Clear search"
                 >
                   <span className="material-icons text-xs">close</span>
