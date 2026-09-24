@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V8 Engine Pipeline Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-red: #f87171;
+            --accent-purple: #c084fc;
+            --accent-yellow: #facc15;
+            --border-color: #334155;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 150px);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .panel.active {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.2);
+        }
+
+        .panel.deopt {
+            border-color: var(--accent-red);
+            animation: shake 0.5s;
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .code-block {
+            background: #0b1120;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .ast-tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ast-node {
+            background: var(--border-color);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            opacity: 0.3;
+            transition: opacity 0.3s, transform 0.3s, background 0.3s;
+        }
+
+        .ast-node.parsed {
+            opacity: 1;
+            background: var(--accent-purple);
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding-top: 10px;
+        }
+
+        button {
+            background: #1e293b;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--border-color);
+            color: #fff;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: var(--accent-blue);
+            color: #0f172a;
+            border-color: var(--accent-blue);
+        }
+
+        button.primary:hover:not(:disabled) {
+            background: #0284c7;
+        }
+
+        button.danger {
+            background: var(--accent-red);
+            color: #0f172a;
+            border-color: var(--accent-red);
+        }
+
+        .connection {
+            position: absolute;
+            background: var(--border-color);
+            z-index: 0;
+            transition: background 0.3s;
+        }
+
+        .pulse {
+            animation: pulse-border 1.5s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #334155;
+        }
+        
+        .status-badge.hot { background: var(--accent-yellow); color: #000; }
+        .status-badge.opt { background: var(--accent-green); color: #000; }
+        .status-badge.deopt { background: var(--accent-red); color: #000; }
+
+        .hidden { display: none !important; }
+        .opacity-0 { opacity: 0; }
+        .transition-opacity { transition: opacity 0.5s; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>V8 Engine Pipeline</h1>
+        <p>Interactive simulation of AST parsing, Ignition interpreter, TurboFan optimization, and Deoptimization.</p>
+    </header>
+
+    <div class="container">
+        <!-- Panel 1: Source Code -->
+        <div class="panel" id="panel-source">
+            <div class="panel-title">1. JS Source Code <span class="status-badge" id="source-status">Idle</span></div>
+            <div class="code-block" id="code-source">
+function calculate(x, y) {
+  return x * y;
+}
+
+// Event Loop triggers calculation
+for(let i=0; i<100; i++) {
+  calculate(5, 10);
+}
+            </div>
+        </div>
+
+        <!-- Panel 2: Parser & AST -->
+        <div class="panel" id="panel-ast">
+            <div class="panel-title">2. V8 Parser (AST) <span class="status-badge" id="ast-status">Waiting</span></div>
+            <div class="code-block" style="display: flex; justify-content: center; align-items: center;">
+                <div class="ast-tree">
+                    <div class="ast-node" id="ast-prog">Program</div>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="ast-node" id="ast-func">FunctionDecl</div>
+                        <div class="ast-node" id="ast-loop">ForStatement</div>
+                    </div>
+                    <div style="display: flex; gap: 20px;">
+                        <div class="ast-node" id="ast-ret">ReturnStmt</div>
+                        <div class="ast-node" id="ast-call">CallExpr</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Ignition Interpreter -->
+        <div class="panel" id="panel-ignition">
+            <div class="panel-title">3. Ignition (Bytecode) <span class="status-badge" id="ig-status">Waiting</span></div>
+            <div class="code-block" id="code-bytecode" style="opacity: 0.3;">
+0x1a2b: Ldar a1
+0x1a2d: Mul a0, [0]
+0x1a30: Return
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #94a3b8;">
+                Execution Count: <span id="exec-count" style="color: var(--accent-blue); font-weight: bold;">0</span>
+            </div>
+        </div>
+
+        <!-- Panel 4: V8 Profiler -->
+        <div class="panel" id="panel-profiler">
+            <div class="panel-title">4. V8 Profiler Thread <span class="status-badge" id="prof-status">Monitoring</span></div>
+            <div class="code-block">
+Log:
+<span id="prof-log" style="color: #94a3b8;">Awaiting execution data...</span>
+            </div>
+        </div>
+
+        <!-- Panel 5: TurboFan Compiler -->
+        <div class="panel" id="panel-turbofan">
+            <div class="panel-title">5. TurboFan Compiler <span class="status-badge" id="tf-status">Dormant</span></div>
+            <div class="code-block" id="code-tf" style="opacity: 0.3;">
+Generating Speculative
+Machine Code based on
+Type Feedback Vector:
+{ x: SMI, y: SMI }
+            </div>
+        </div>
+
+        <!-- Panel 6: CPU Machine Code -->
+        <div class="panel" id="panel-cpu">
+            <div class="panel-title">6. L1 Instruction Cache <span class="status-badge" id="cpu-status">Empty</span></div>
+            <div class="code-block" id="code-machine" style="opacity: 0.3;">
+imul eax, edx
+ret
+// 0x90909090
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-parse" class="primary">1. Parse AST</button>
+            <button id="btn-interpret" disabled>2. Run Ignition</button>
+            <button id="btn-hot" disabled>3. Mark as "Hot"</button>
+            <button id="btn-deopt" class="danger" disabled>4. Pass String (Deoptimize)</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-reset" style="margin-left: 20px;">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const btnParse = document.getElementById('btn-parse');
+        const btnInterpret = document.getElementById('btn-interpret');
+        const btnHot = document.getElementById('btn-hot');
+        const btnDeopt = document.getElementById('btn-deopt');
+        const btnReset = document.getElementById('btn-reset');
+
+        const nodes = {
+            prog: document.getElementById('ast-prog'),
+            func: document.getElementById('ast-func'),
+            loop: document.getElementById('ast-loop'),
+            ret: document.getElementById('ast-ret'),
+            call: document.getElementById('ast-call')
+        };
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // State variables
+        let state = 0; // 0: init, 1: parsed, 2: interpreting, 3: optimized, 4: deopt
+        let isPaused = false;
+        let pauseResolve = null;
+        let isPlaying = false;
+        
+        const btnPause = document.getElementById('btn-pause');
+        btnPause.onclick = () => {
+            if (!isPaused) {
+                isPaused = true;
+                btnPause.innerText = '▶ Resume';
+            } else {
+                isPaused = false;
+                btnPause.innerText = '⏸ Pause';
+                if (pauseResolve) pauseResolve();
+            }
+        };
+
+        btnParse.onclick = async () => {
+            btnParse.disabled = true;
+            document.getElementById('panel-source').classList.add('active');
+            document.getElementById('source-status').textContent = 'Parsing...';
+            
+            await sleep(500);
+            document.getElementById('panel-ast').classList.add('active');
+            document.getElementById('ast-status').textContent = 'Generating...';
+            
+            nodes.prog.classList.add('parsed'); await sleep(300);
+            nodes.func.classList.add('parsed'); nodes.loop.classList.add('parsed'); await sleep(300);
+            nodes.ret.classList.add('parsed'); nodes.call.classList.add('parsed');
+            
+            document.getElementById('ast-status').textContent = 'AST Ready';
+            document.getElementById('source-status').textContent = 'Done';
+            document.getElementById('panel-source').classList.remove('active');
+            
+            btnInterpret.disabled = false;
+            btnInterpret.classList.add('primary');
+        };
+
+        btnInterpret.onclick = async () => {
+            btnInterpret.disabled = true;
+            btnInterpret.classList.remove('primary');
+            
+            document.getElementById('panel-ast').classList.remove('active');
+            document.getElementById('panel-ignition').classList.add('active');
+            document.getElementById('ig-status').textContent = 'Generating...';
+            
+            await sleep(600);
+            document.getElementById('code-bytecode').style.opacity = '1';
+            document.getElementById('ig-status').textContent = 'Executing';
+            document.getElementById('ig-status').classList.add('opt');
+
+            document.getElementById('panel-profiler').classList.add('active');
+            
+            btnPause.disabled = false;
+            isPlaying = true;
+            
+            // Simulate execution loop
+            const countSpan = document.getElementById('exec-count');
+            const profLog = document.getElementById('prof-log');
+            
+            for(let i=1; i<=10; i++) {
+                if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+                countSpan.textContent = i;
+                if(i===5) profLog.innerHTML = `<span style="color:var(--accent-yellow)">Function 'calculate' hit 5 times. Type Vector = {x: SMI, y: SMI}</span>`;
+                await sleep(100);
+            }
+
+            document.getElementById('panel-ignition').classList.remove('active');
+            document.getElementById('panel-profiler').classList.remove('active');
+            
+            btnPause.disabled = true;
+            isPlaying = false;
+            
+            btnHot.disabled = false;
+            btnHot.classList.add('primary');
+        };
+
+        btnHot.onclick = async () => {
+            btnHot.disabled = true;
+            btnHot.classList.remove('primary');
+
+            document.getElementById('prof-log').innerHTML = `<span style="color:var(--accent-red); font-weight:bold;">THRESHOLD REACHED. Dispatching to TurboFan...</span>`;
+            
+            document.getElementById('panel-turbofan').classList.add('active');
+            document.getElementById('tf-status').textContent = 'Optimizing';
+            document.getElementById('tf-status').classList.add('hot');
+            document.getElementById('code-tf').style.opacity = '1';
+            
+            await sleep(1000);
+            
+            document.getElementById('panel-cpu').classList.add('active');
+            document.getElementById('panel-cpu').classList.add('pulse');
+            document.getElementById('cpu-status').textContent = 'Compiled';
+            document.getElementById('cpu-status').classList.add('opt');
+            document.getElementById('code-machine').style.opacity = '1';
+            document.getElementById('code-machine').innerHTML = `<span style="color:var(--accent-green)">imul eax, edx\nret\n// Hardware Speed Unlocked</span>`;
+            
+            document.getElementById('ig-status').textContent = 'Bypassed';
+            document.getElementById('ig-status').className = 'status-badge';
+            document.getElementById('code-bytecode').style.opacity = '0.3';
+            
+            document.getElementById('panel-turbofan').classList.remove('active');
+            
+            btnDeopt.disabled = false;
+        };
+
+        btnDeopt.onclick = async () => {
+            btnDeopt.disabled = true;
+            
+            document.getElementById('code-source').innerHTML = `calculate(5, 10);\n<span style="color:var(--accent-red)">calculate(5, "10"); // String passed!</span>`;
+            document.getElementById('panel-source').classList.add('deopt');
+            
+            await sleep(500);
+            
+            document.getElementById('prof-log').innerHTML = `<span style="color:var(--accent-red); font-weight:bold;">TYPE ASSUMPTION VIOLATION. SMI expected, String received.</span>`;
+            
+            document.getElementById('panel-cpu').classList.remove('pulse');
+            document.getElementById('panel-cpu').classList.add('deopt');
+            document.getElementById('cpu-status').textContent = 'Trashed';
+            document.getElementById('cpu-status').className = 'status-badge deopt';
+            document.getElementById('code-machine').innerHTML = `<span style="color:var(--accent-red)">/* MACHINE CODE DISCARDED */</span>`;
+            
+            await sleep(800);
+            
+            document.getElementById('panel-cpu').classList.remove('deopt');
+            document.getElementById('panel-cpu').classList.remove('active');
+            
+            document.getElementById('panel-ignition').classList.add('active');
+            document.getElementById('panel-ignition').classList.add('deopt');
+            document.getElementById('ig-status').textContent = 'Deopt Bailout';
+            document.getElementById('ig-status').className = 'status-badge deopt';
+            document.getElementById('code-bytecode').style.opacity = '1';
+            
+            setTimeout(() => {
+                document.getElementById('panel-ignition').classList.remove('deopt');
+                document.getElementById('panel-source').classList.remove('deopt');
+            }, 1000);
+        };
+
+        btnReset.onclick = () => {
+            isPlaying = false;
+            isPaused = false;
+            if (pauseResolve) pauseResolve();
+            if (btnPause) {
+                btnPause.innerText = '⏸ Pause';
+                btnPause.disabled = true;
+            }
+            location.reload();
+        };
+
+    </script>
+</body>
+</html>

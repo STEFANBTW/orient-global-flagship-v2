@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Storage API Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active {
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .code-line.executing {
+            background: rgba(56, 189, 248, 0.2);
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Flow Architecture */
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            flex-grow: 1;
+            padding: 10px;
+            position: relative;
+        }
+
+        .flow-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 20px;
+            position: relative;
+        }
+
+        .flow-node {
+            background: rgba(0,0,0,0.4);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .flow-node h3 {
+            margin: 0 0 5px 0;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .flow-node.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+        .flow-node.cache { border-color: var(--orange); }
+
+        .packet {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            z-index: 10;
+            opacity: 0;
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* State DB */
+        .cache-db {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--orange);
+            border-radius: 8px;
+            padding: 10px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .cache-entry {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: fadeIn 0.4s;
+        }
+        
+        .cache-entry.hit {
+            border-color: var(--green);
+            background: rgba(74, 222, 128, 0.1);
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry {
+            border-left: 2px solid var(--border);
+            padding-left: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        .log-entry.api { border-left-color: var(--purple); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+        .log-entry.warn { border-left-color: var(--yellow); color: var(--yellow); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+        
+        button.cache-btn {
+            background: rgba(251, 146, 60, 0.15);
+            color: var(--orange);
+            border-color: var(--orange);
+        }
+        button.cache-btn:hover:not(:disabled) { background: rgba(251, 146, 60, 0.25); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+        .class { color: var(--yellow); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Cache Storage API Simulation</h1>
+        <p>Service Worker Interception & Request/Response Object Caching</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Flow -->
+        <div class="panel" id="panel-flow">
+            <div class="panel-title">1. Network & Proxy Architecture <span class="status-badge" id="badge-flow">Ready</span></div>
+            <div class="flow-diagram" id="flow-diagram">
+                
+                <div class="flow-row" style="margin-bottom: 20px;">
+                    <div class="flow-node" id="node-client">
+                        <h3>Client (Browser)</h3>
+                        <span style="font-size: 0.7rem; color: var(--text-dim);">fetch('/api/map-data')</span>
+                    </div>
+                </div>
+                
+                <div class="flow-row" style="margin-bottom: 20px;">
+                    <div class="flow-node" id="node-sw">
+                        <h3>Service Worker</h3>
+                        <span style="font-size: 0.7rem; color: var(--text-dim);">event.respondWith()</span>
+                    </div>
+                </div>
+                
+                <div class="flow-row">
+                    <div class="flow-node cache" id="node-cache">
+                        <h3 style="color: var(--orange);">Cache Storage</h3>
+                        <span style="font-size: 0.7rem; color: var(--text-dim);">LevelDB Backend</span>
+                    </div>
+                    <div class="flow-node" id="node-net">
+                        <h3>Network</h3>
+                        <span style="font-size: 0.7rem; color: var(--text-dim);">Origin Server</span>
+                    </div>
+                </div>
+
+                <!-- Animated Payload Packet -->
+                <div class="packet" id="packet"></div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Cache DB & State -->
+        <div class="panel" id="panel-state">
+            <div class="panel-title">2. Cache Storage State <span class="status-badge" id="badge-state">Empty</span></div>
+            <div class="cache-db" id="cache-db">
+                <div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No caches available.</div>
+            </div>
+            
+            <div class="panel-title" style="margin-top: 20px;">3. Service Worker Code <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0">self.addEventListener(<span class="string">'fetch'</span>, (event) => {</span>
+<span class="code-line" id="line-1">  event.respondWith((<span class="keyword">async</span> () => {</span>
+<span class="code-line" id="line-2">    <span class="keyword">const</span> cache = <span class="keyword">await</span> caches.open(<span class="string">'map-cache-v1'</span>);</span>
+<span class="code-line" id="line-3">    <span class="keyword">const</span> cachedResponse = <span class="keyword">await</span> cache.match(event.request);</span>
+<span class="code-line" id="line-4"></span>
+<span class="code-line" id="line-5">    <span class="keyword">if</span> (cachedResponse) <span class="keyword">return</span> cachedResponse;</span>
+<span class="code-line" id="line-6"></span>
+<span class="code-line" id="line-7">    <span class="keyword">const</span> networkResponse = <span class="keyword">await</span> fetch(event.request);</span>
+<span class="code-line" id="line-8">    cache.put(event.request, networkResponse.clone());</span>
+<span class="code-line" id="line-9">    <span class="keyword">return</span> networkResponse;</span>
+<span class="code-line" id="line-10">  })());</span>
+<span class="code-line" id="line-11">});</span></div>
+        </div>
+
+        <!-- Panel 3: System Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">4. Execution Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Service Worker registered and waiting for fetch events...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Master Controls -->
+        <div class="master-controls">
+            <button id="btn-fetch" class="primary">Trigger fetch('/api/map-data')</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-clear" class="cache-btn">Clear Cache Storage</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnFetch = document.getElementById('btn-fetch');
+        const btnClear = document.getElementById('btn-clear');
+        const logOutput = document.getElementById('log-output');
+        const cacheDb = document.getElementById('cache-db');
+        const packet = document.getElementById('packet');
+
+        let isExecuting = false;
+        let cacheMemory = new Map(); // Mock Cache Storage
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearHighlight() {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+        }
+
+        function highlightLine(lineNumbers) {
+            clearHighlight();
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+        
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        // Animation Math
+        function getCenter(el) {
+            const rect = el.getBoundingClientRect();
+            const parent = document.getElementById('flow-diagram').getBoundingClientRect();
+            return {
+                x: rect.left - parent.left + rect.width / 2 - 8,
+                y: rect.top - parent.top + rect.height / 2 - 8
+            };
+        }
+
+        async function animatePacket(fromId, toId, color = 'var(--accent)') {
+            const from = getCenter(document.getElementById(fromId));
+            const to = getCenter(document.getElementById(toId));
+            
+            packet.style.transition = 'none';
+            packet.style.left = `${from.x}px`;
+            packet.style.top = `${from.y}px`;
+            packet.style.background = color;
+            packet.style.boxShadow = `0 0 10px ${color}`;
+            
+            // Force reflow
+            packet.offsetHeight;
+            
+            packet.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            packet.style.opacity = '1';
+            packet.style.left = `${to.x}px`;
+            packet.style.top = `${to.y}px`;
+            
+            await sleep(600);
+            packet.style.opacity = '0';
+        }
+        
+        function pulseNode(id) {
+            const el = document.getElementById(id);
+            el.classList.add('active');
+            setTimeout(() => el.classList.remove('active'), 800);
+        }
+
+        function renderCache() {
+            if (cacheMemory.size === 0) {
+                cacheDb.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No caches available.</div>';
+                document.getElementById('badge-state').innerText = 'Empty';
+            } else {
+                cacheDb.innerHTML = '<div style="color: var(--orange); margin-bottom: 5px;">Storage: "map-cache-v1"</div>';
+                cacheMemory.forEach((val, key) => {
+                    const el = document.createElement('div');
+                    el.className = 'cache-entry';
+                    el.id = `ce-${key.replace(/[^a-z]/g,'')}`;
+                    el.innerHTML = `
+                        <span>[Request] <span class="string">${key}</span></span>
+                        <span>[Response Blob] <span class="number">${val.size}</span></span>
+                    `;
+                    cacheDb.appendChild(el);
+                });
+                document.getElementById('badge-state').innerText = '1 Entry';
+                document.getElementById('badge-state').className = 'status-badge active';
+                document.getElementById('badge-state').style.background = 'var(--orange)';
+            }
+        }
+
+        btnFetch.addEventListener('click', async () => {
+            if (isExecuting) return;
+            isExecuting = true;
+            btnFetch.disabled = true;
+            btnClear.disabled = true;
+            
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Intercepting';
+
+            // Start Request
+            log(`Client fired fetch('/api/map-data')`);
+            pulseNode('node-client');
+            await animatePacket('node-client', 'node-sw');
+            
+            // SW Intercept
+            pulseNode('node-sw');
+            highlightLine([0, 1]);
+            await sleep(500);
+
+            // Open Cache
+            highlightLine(2);
+            log(`caches.open('map-cache-v1') resolved`, 'api');
+            await sleep(500);
+
+            // Check Cache
+            highlightLine(3);
+            log(`Checking cache for Request('/api/map-data')`, 'api');
+            pulseNode('node-cache');
+            await animatePacket('node-sw', 'node-cache', 'var(--orange)');
+            
+            const reqUrl = '/api/map-data';
+            const hasCache = cacheMemory.has(reqUrl);
+            
+            if (hasCache) {
+                // Cache HIT
+                log(`Cache HIT! Response found in LevelDB.`, 'result');
+                const ce = document.getElementById(`ce-${reqUrl.replace(/[^a-z]/g,'')}`);
+                if(ce) ce.classList.add('hit');
+                
+                await animatePacket('node-cache', 'node-sw', 'var(--green)');
+                highlightLine([5]);
+                await sleep(500);
+                
+                // Return to client
+                log(`Returning cached response to Client immediately.`, 'result');
+                await animatePacket('node-sw', 'node-client', 'var(--green)');
+                pulseNode('node-client');
+                if(ce) setTimeout(() => ce.classList.remove('hit'), 1000);
+            } 
+            else {
+                // Cache MISS
+                log(`Cache MISS. Falling back to Network...`, 'warn');
+                await animatePacket('node-cache', 'node-sw', 'var(--red)');
+                highlightLine(7);
+                await sleep(500);
+                
+                // Fetch from Network
+                log(`fetch(event.request) fired to Origin Server.`, 'api');
+                pulseNode('node-net');
+                await animatePacket('node-sw', 'node-net');
+                await sleep(600); // simulate latency
+                
+                // Network Returns
+                log(`Network returned Response (200 OK, 14.5kb).`);
+                await animatePacket('node-net', 'node-sw');
+                pulseNode('node-sw');
+                
+                // Put in Cache
+                highlightLine(8);
+                log(`cache.put(event.request, networkResponse.clone())`, 'api');
+                await animatePacket('node-sw', 'node-cache', 'var(--orange)');
+                pulseNode('node-cache');
+                
+                cacheMemory.set(reqUrl, { size: '14.5kb' });
+                renderCache();
+                log(`Response Blob committed to LevelDB Cache Storage.`, 'result');
+                await sleep(500);
+                
+                // Return to Client
+                highlightLine(9);
+                log(`Returning network response to Client.`);
+                await animatePacket('node-sw', 'node-client');
+                pulseNode('node-client');
+            }
+
+            clearHighlight();
+            document.getElementById('badge-code').className = 'status-badge';
+            document.getElementById('badge-code').innerText = 'Idle';
+            isExecuting = false;
+            btnFetch.disabled = false;
+            btnClear.disabled = false;
+            btnFetch.innerText = "Trigger fetch('/api/map-data') again";
+        });
+
+        btnClear.addEventListener('click', () => {
+            cacheMemory.clear();
+            renderCache();
+            log(`caches.delete('map-cache-v1') executed. Storage cleared.`);
+            document.getElementById('badge-state').className = 'status-badge';
+            document.getElementById('badge-state').style.background = 'var(--surface2)';
+            btnFetch.innerText = "Trigger fetch('/api/map-data')";
+        });
+
+        // Init
+        renderCache();
+
+    </script>
+</body>
+</html>

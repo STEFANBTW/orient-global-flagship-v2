@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>07 — Skeuomorphism | Interactive Mindmap</title>
+    <link href="https://fonts.googleapis.com/css2?family=Garamond&family=Georgia&family=Inter:wght@300;400;500;600;700&family=Courier+Prime&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../fonts/fonts.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', Georgia, serif;
+            background: #F0E8D0;
+            background-image:
+                radial-gradient(ellipse at center, transparent 40%, rgba(180,150,90,0.15) 100%),
+                repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(180,150,90,0.08) 31px, rgba(180,150,90,0.08) 32px);
+            color: #2C1A08;
+            overflow: auto;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(240,232,208,0.95);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 16px rgba(180,150,90,0.5), 0 1px 0 rgba(255,255,255,0.6);
+            border-bottom: 1px solid rgba(180,150,90,0.25);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            font-family: Georgia, serif;
+            color: #2C1A08;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        
+        .header h1 .family-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: #F0E8D0;
+            color: #7A3820;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Courier Prime', monospace;
+            box-shadow: 3px 3px 8px rgba(180,150,90,0.5), -2px -2px 5px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+        }
+        
+        .controls { display: flex; gap: 16px; }
+        
+        .btn {
+            padding: 10px 24px;
+            border: 1px solid rgba(180,150,90,0.4);
+            background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%), #F0E8D0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #2C1A08;
+            box-shadow: 3px 3px 8px rgba(180,150,90,0.5), -2px -2px 5px rgba(255,255,255,0.85);
+            transition: all 150ms ease;
+            outline: none;
+        }
+        
+        .btn:hover {
+            box-shadow: 2px 2px 5px rgba(180,150,90,0.5), -1px -1px 3px rgba(255,255,255,0.85);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+            box-shadow: inset 2px 2px 5px rgba(180,150,90,0.5), inset -1px -1px 3px rgba(255,255,255,0.85);
+            background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 100%), #F0E8D0;
+        }
+        
+        .main {
+            padding: 40px;
+            max-width: 100%;
+            overflow: visible;
+        }
+        
+        .mindmap-container {
+            background: #F0E8D0;
+            border-radius: 8px;
+            padding: 48px;
+            margin-bottom: 40px;
+            position: relative;
+            box-shadow: inset 0 2px 8px rgba(180,150,90,0.5), 0 0 0 1px rgba(180,150,90,0.25);
+            overflow: visible;
+        }
+        
+        .canvas-svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: visible;
+        }
+        
+        .tree {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 0;
+        }
+        
+        .tree > ul { display: flex; flex-direction: column; gap: 0; list-style: none; }
+        
+        ul { list-style: none; padding: 0; margin: 0; }
+        
+        li.node {
+            position: relative;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 0;
+        }
+        
+        li.node > ul {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        li.node.collapsed > ul { display: none; }
+        
+        .node-content {
+            display: inline-block;
+            white-space: nowrap;
+            padding: 8px 16px;
+            margin: 6px 16px 6px 0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2C1A08;
+            background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%), #F0E8D0;
+            box-shadow: 3px 3px 8px rgba(180,150,90,0.5), -2px -2px 5px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+            cursor: default;
+            transition: all 150ms ease;
+            position: relative;
+            user-select: none;
+        }
+        
+        .node-content:hover {
+            box-shadow: 2px 2px 5px rgba(180,150,90,0.5), -1px -1px 3px rgba(255,255,255,0.85);
+        }
+        
+        li.node.root > .node-content {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: Georgia, serif;
+            padding: 14px 28px;
+            border-radius: 8px;
+            color: #2C1A08;
+            background: linear-gradient(135deg, #7A3820 0%, #5C2D0E 100%);
+            color: #F5ECD7;
+            box-shadow: 5px 5px 14px rgba(180,150,90,0.5), -3px -3px 8px rgba(255,255,255,0.85);
+            cursor: pointer;
+            letter-spacing: 0.01em;
+        }
+        
+        li.node.category > .node-content {
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            padding: 10px 22px;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 0.01em;
+        }
+
+        li.node.category-industries > .node-content { color: #7A3820; }
+        li.node.category-psych > .node-content { color: #4A2C1A; }
+        li.node.category-color > .node-content { color: #C9A84C; }
+        li.node.category-type > .node-content { color: #5C6670; }
+        li.node.category-spacing > .node-content { color: #5C3A22; }
+        li.node.category-borders > .node-content { color: #6B2D0E; }
+        li.node.category-ui > .node-content { color: #4A5560; }
+        li.node.category-texture > .node-content { color: #8B6249; }
+        li.node.category-anim > .node-content { color: #3E2410; }
+        li.node.category-avoid > .node-content { color: #CC2200; }
+        
+        li.node.sub > .node-content {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        li.node.leaf > .node-content {
+            font-size: 11.5px;
+            font-weight: 400;
+            white-space: normal;
+            max-width: 340px;
+            padding: 6px 12px;
+            border-radius: 5px;
+            line-height: 1.5;
+            cursor: default;
+        }
+
+        /* Material Swatch Colors */
+        .color-panel {
+            display: flex;
+            gap: 40px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            border-radius: 10px;
+            padding: 28px;
+            margin-top: 16px;
+            color: #2C1A08;
+            text-align: left;
+            box-shadow: 5px 5px 14px rgba(180,150,90,0.5), -3px -3px 8px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+            overflow-x: auto;
+        }
+        
+        .color-group { flex: 1; min-width: 160px; }
+        .color-group h4 {
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #5C3A22;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(180,150,90,0.3);
+            padding-bottom: 6px;
+        }
+        
+        .swatch-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .swatch {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.15);
+            flex-shrink: 0;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .swatch-label { font-size: 11px; color: #5C3A22; font-family: 'Courier Prime', monospace; }
+        .swatch-desc { font-size: 10px; color: #8B6249; margin-top: 1px; }
+
+        /* Font Gallery */
+        .font-gallery {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            overflow-x: auto;
+            padding: 12px 4px;
+            scroll-behavior: smooth;
+        }
+        
+        .font-gallery::-webkit-scrollbar { height: 4px; }
+        .font-gallery::-webkit-scrollbar-track { background: rgba(180,150,90,0.1); border-radius: 2px; }
+        .font-gallery::-webkit-scrollbar-thumb { background: rgba(122,56,32,0.3); border-radius: 2px; }
+        .font-gallery::-webkit-scrollbar-thumb:hover { background: rgba(122,56,32,0.5); }
+        
+        .font-preview {
+            flex: 0 0 200px;
+            padding: 16px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            border-radius: 8px;
+            box-shadow: 4px 4px 10px rgba(180,150,90,0.5), -2px -2px 6px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+        }
+        
+        .font-name { font-size: 16px; font-weight: 700; color: #2C1A08; margin-bottom: 4px; }
+        .font-category { font-size: 10px; color: #8B6249; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+        .font-sample { font-size: 20px; color: #2C1A08; margin-bottom: 10px; line-height: 1.3; }
+        
+        .font-weights { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .font-weights span {
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            border: 1px solid rgba(180,150,90,0.3);
+            box-shadow: 2px 2px 4px rgba(180,150,90,0.5), -1px -1px 3px rgba(255,255,255,0.85);
+            transition: all 150ms ease;
+            font-size: 11px;
+            display: inline-block;
+            color: #2C1A08;
+            user-select: none;
+        }
+        .font-weights span:hover { box-shadow: 1px 1px 3px rgba(180,150,90,0.5), -1px -1px 2px rgba(255,255,255,0.85); }
+        .font-weights span.active-weight {
+            box-shadow: inset 2px 2px 4px rgba(180,150,90,0.5), inset -1px -1px 3px rgba(255,255,255,0.85) !important;
+            font-weight: 600; color: #7A3820;
+        }
+
+        /* Demo Grid */
+        .demo-grid {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 16px;
+            text-align: left;
+            padding: 12px 4px;
+            scroll-behavior: smooth;
+        }
+        
+        .demo-studio {
+            flex: 0 0 300px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 4px 4px 10px rgba(180,150,90,0.5), -2px -2px 6px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .demo-studio h3 { color: #2C1A08; font-size: 15px; display: flex; align-items: center; gap: 8px; font-family: Georgia, serif; }
+        
+        .demo-stage {
+            background: #F0E8D0;
+            box-shadow: inset 3px 3px 8px rgba(180,150,90,0.5), inset -2px -2px 5px rgba(255,255,255,0.85);
+            border-radius: 8px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .demo-controls { display: flex; gap: 8px; }
+        
+        .demo-btn {
+            padding: 6px 14px;
+            border: 1px solid rgba(180,150,90,0.4);
+            background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%), #F0E8D0;
+            color: #2C1A08;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            box-shadow: 3px 3px 6px rgba(180,150,90,0.5), -2px -2px 4px rgba(255,255,255,0.85);
+            transition: all 80ms ease;
+        }
+        
+        .demo-btn:hover { box-shadow: 2px 2px 4px rgba(180,150,90,0.5), -1px -1px 3px rgba(255,255,255,0.85); }
+        
+        .demo-btn:active {
+            transform: translateY(1px);
+            box-shadow: inset 2px 2px 4px rgba(180,150,90,0.5), inset -1px -1px 3px rgba(255,255,255,0.85);
+            background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.2) 100%), #F0E8D0;
+        }
+        
+        .demo-specs { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #8B6249; }
+        
+        .demo-spec {
+            background: #F0E8D0;
+            padding: 6px 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: inset 2px 2px 5px rgba(180,150,90,0.5), inset -1px -1px 3px rgba(255,255,255,0.85);
+        }
+
+        /* Leather texture helper */
+        .leather-surface {
+            background:
+                radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.08) 0%, transparent 70%),
+                #5C2D0E;
+            background-image:
+                radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.08) 0%, transparent 70%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%235C2D0E'/%3E%3Ccircle cx='2' cy='2' r='0.8' fill='rgba(0,0,0,0.15)'/%3E%3C/svg%3E");
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            font-family: Georgia, serif;
+            color: #2C1A08;
+            margin: 40px 0 24px 0;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(180,150,90,0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, #7A3820, #C9A84C);
+            border-radius: 2px;
+        }
+
+        /* Typography Playground */
+        .typo-playground {
+            display: flex;
+            gap: 32px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            border-radius: 10px;
+            padding: 28px;
+            margin-top: 16px;
+            color: #2C1A08;
+            text-align: left;
+            box-shadow: 5px 5px 14px rgba(180,150,90,0.5), -3px -3px 8px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+        }
+        
+        @media (max-width: 992px) { .typo-playground { flex-direction: column; } }
+        
+        .playground-controls {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        
+        .control-group label {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            color: #2C1A08;
+            align-items: center;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: #7A3820;
+            height: 6px;
+            background: rgba(180,150,90,0.3);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .control-group select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid rgba(180,150,90,0.4);
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            box-shadow: inset 2px 2px 5px rgba(180,150,90,0.5), inset -1px -1px 3px rgba(255,255,255,0.85);
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            color: #2C1A08;
+        }
+        
+        .rec-check {
+            font-size: 12px;
+            color: #5C7A3E;
+            font-weight: bold;
+            opacity: 0.15;
+            transition: all 150ms ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+        
+        .rec-check::after {
+            content: 'Recommended';
+            font-size: 9px;
+            font-weight: 600;
+            background: rgba(92,122,62,0.1);
+            color: #5C7A3E;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+        
+        .rec-check.active { opacity: 1; }
+        
+        .playground-preview-container {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 380px;
+        }
+        
+        .playground-preview-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            border-radius: 10px;
+            padding: 32px;
+            box-shadow: 5px 5px 14px rgba(180,150,90,0.5), -3px -3px 8px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            text-align: left;
+            transition: all 250ms ease;
+            position: relative;
+        }
+        
+        .playground-preview-card.rule-violated {
+            box-shadow: inset 3px 3px 8px rgba(204,34,0,0.12), 0 0 16px rgba(204,34,0,0.3);
+            border-color: rgba(204,34,0,0.4);
+        }
+        
+        .mock-cat {
+            color: #7A3820;
+            font-family: 'Courier Prime', monospace;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+        
+        .mock-headline {
+            font-family: Georgia, serif;
+            color: #2C1A08;
+            line-height: 1.25;
+            margin-bottom: 14px;
+            transition: all 200ms ease;
+        }
+        
+        .mock-divider {
+            height: 1px;
+            background: linear-gradient(90deg, rgba(180,150,90,0.4), transparent);
+            margin: 14px 0;
+        }
+        
+        .mock-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 11px;
+            color: #8B6249;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: 14px;
+        }
+        
+        .mock-body {
+            font-family: 'Inter', sans-serif;
+            color: #5C3A22;
+            line-height: 1.7;
+            transition: all 200ms ease;
+        }
+        
+        .rule-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(122,56,32,0.1);
+            border: 1px solid rgba(122,56,32,0.3);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #7A3820;
+            margin-top: 16px;
+            font-family: 'Courier Prime', monospace;
+        }
+
+        /* Spec Display */
+        .spec-display {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        
+        .spec-pill {
+            padding: 5px 12px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%), #F0E8D0;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'Courier Prime', monospace;
+            color: #2C1A08;
+            box-shadow: 2px 2px 5px rgba(180,150,90,0.5), -1px -1px 3px rgba(255,255,255,0.85);
+            border: 1px solid rgba(180,150,90,0.3);
+        }
+        
+        /* Skeuomorphic demo elements */
+        .skeu-button {
+            padding: 12px 28px;
+            border: 1px solid rgba(122,56,32,0.5);
+            background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(0,0,0,0.05) 100%), #C4956A;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: Georgia, serif;
+            font-size: 14px;
+            color: #2C1A08;
+            box-shadow: 3px 3px 8px rgba(90,50,20,0.5), -2px -2px 5px rgba(255,240,200,0.7), inset 0 1px 0 rgba(255,255,255,0.4);
+            transition: all 80ms ease;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+        }
+        
+        .skeu-button:active {
+            transform: translateY(1px);
+            background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.2) 100%), #C4956A;
+            box-shadow: inset 3px 3px 8px rgba(90,50,20,0.5), inset -2px -2px 5px rgba(255,240,200,0.4);
+        }
+
+        .leather-card {
+            background:
+                radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.07) 0%, transparent 60%),
+                #5C2D0E;
+            border-radius: 8px;
+            border: 8px solid #3E1F00;
+            box-shadow: 4px 4px 12px rgba(30,10,0,0.6), -2px -2px 6px rgba(200,150,80,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .leather-card::before {
+            content: '';
+            position: absolute;
+            top: 8px; left: 8px; right: 8px; bottom: 8px;
+            border: 1px dashed rgba(245,236,215,0.25);
+            border-radius: 3px;
+            pointer-events: none;
+        }
+
+        .paper-card {
+            background: #F5F0DC;
+            background-image:
+                radial-gradient(ellipse at center, transparent 30%, rgba(180,150,90,0.12) 100%),
+                repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(180,150,90,0.15) 31px, rgba(180,150,90,0.15) 32px);
+            border-radius: 2px;
+            box-shadow: 3px 3px 12px rgba(120,90,40,0.4), -1px -1px 3px rgba(255,255,255,0.9);
+        }
+
+        .metal-panel {
+            background: linear-gradient(180deg,
+                rgba(255,255,255,0.4) 0%,
+                transparent 25%,
+                transparent 100%
+            ),
+            repeating-linear-gradient(90deg,
+                #9E9E9E 0px,
+                #9E9E9E 1px,
+                #A8A8A8 1px,
+                #A8A8A8 2px
+            );
+            border-radius: 3px;
+            border: 1px solid #888;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.4), -1px -1px 3px rgba(255,255,255,0.5);
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'Courier Prime', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #8B6249;
+            margin-bottom: 6px;
+        }
+
+        .neu-stage-input {
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: 1px solid rgba(180,150,90,0.4);
+            background: #F0E8D0;
+            box-shadow: inset 3px 3px 7px rgba(180,150,90,0.5), inset -2px -2px 5px rgba(255,255,255,0.85);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: #2C1A08;
+            outline: none;
+        }
+        
+        .neu-stage-input:focus {
+            border-color: rgba(122,56,32,0.5);
+        }
+
+        .color-compare-panel {
+            width: 500px;
+            flex-shrink: 0;
+        }
+        
+        .ccp-header {
+            font-size: 14px;
+            font-weight: 700;
+            font-family: Georgia, serif;
+            color: #2C1A08;
+            margin-bottom: 16px;
+        }
+        
+        .ccp-swatches {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .ccp-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            padding: 8px 12px;
+            transition: all 150ms ease;
+            border: 1px solid transparent;
+        }
+        
+        .ccp-row:hover {
+            background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%), #F0E8D0;
+            box-shadow: 2px 2px 6px rgba(180,150,90,0.5), -1px -1px 3px rgba(255,255,255,0.85);
+            border-color: rgba(180,150,90,0.3);
+        }
+        
+        .ccp-row.selected {
+            box-shadow: inset 2px 2px 5px rgba(180,150,90,0.5), inset -1px -1px 3px rgba(255,255,255,0.85);
+            border-color: rgba(122,56,32,0.3);
+        }
+        
+        .ccp-swatch {
+            width: 48px;
+            height: 34px;
+            border-radius: 5px;
+            border: 1px solid rgba(0,0,0,0.15);
+            flex-shrink: 0;
+        }
+        
+        .ccp-info { flex: 1; }
+        .ccp-name { font-size: 13px; font-weight: 600; color: #2C1A08; }
+        .ccp-hex { font-size: 11px; font-family: 'Courier Prime', monospace; color: #8B6249; }
+        
+        .ccp-preview-box {
+            margin-top: 16px;
+            border-radius: 8px;
+            padding: 24px;
+            min-height: 80px;
+            transition: all 300ms ease;
+            border: 1px solid rgba(180,150,90,0.3);
+        }
+        
+        .ccp-preview-label { font-size: 12px; opacity: 0.7; }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <span class="family-num">07</span>
+            Skeuomorphism — Interactive Mindmap
+        </h1>
+        <div class="controls">
+            <button class="btn" onclick="expandAll()">Expand All</button>
+            <button class="btn" onclick="collapseAll()">Collapse All</button>
+            <button class="btn" onclick="downloadOffline()">⬇ Download Offline</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="mindmap-container" id="mindmap-container">
+            <svg class="canvas-svg" id="canvas-svg"></svg>
+            <div class="tree" id="tree">
+                <ul>
+                    <li class="node root" id="root-node">
+                        <div class="node-content" onclick="toggleNode(this)">
+                            07 — Skeuomorphism
+                        </div>
+                        <ul>
+
+                            <!-- Category 1: Ranked Industries -->
+                            <li class="node category category-industries">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Ranked Industries</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>1. Music Production Software / DAWs</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Virtual mixing boards, equalizers, and studio hardware references feel physically satisfying and professionally exact.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>2. Gaming (Simulation Games)</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Games simulating real-world environments use skeuomorphic UI to reinforce the simulation and deepen player immersion.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>3. Luxury Goods E-Commerce</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Leather-textured product pages reinforce material quality and transfer premium tactile memory to the visitor.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>4. Financial Services (Heritage Institutions)</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Wood-grain and leather textures signal tradition, permanence, and established institutional trust.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>5. Education Platforms (Children's)</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Books that look like real books, notebooks that look like real notebooks — familiar physical metaphors dramatically reduce learning curves.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>6. Note-Taking / Personal Organization Apps</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">The original context for skeuomorphism's renaissance: Apple's Notes app, leather-bound calendar apps — users immediately understand the metaphor.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>7. Craft / Artisanal Brands</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">A coffee roaster whose website feels like parchment, a whiskey brand whose interface feels like aged wood — the material IS the brand story.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>8. Legal / Professional Services (Heritage)</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Communicating institutional longevity through material references to libraries, leather, and formal paper documents.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>9. Cooking / Recipe Platforms</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Recipe cards that look like index cards, cookbooks that look like real books — matching the physical experience of cooking.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>10. Subscription Boxes / Gift Products</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">The unboxing experience translated into digital — textured, material-rich interfaces that reference the physical gift experience.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 2: Psychological Foundation -->
+                            <li class="node category category-psych">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Psychological Foundation</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Familiarity Transfer</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Borrows established meaning and emotional associations of physical objects and transfers them instantly to digital interfaces.</div></li>
+                                            <li class="node leaf"><div class="node-content">Most powerful when audience is non-technical OR when brand value is rooted in physical tradition.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Material Memory</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Leather texture triggers remembered weight, smell, and warmth. Wood texture triggers remembered grain and solidity.</div></li>
+                                            <li class="node leaf"><div class="node-content">Creates emotional connections that flat design simply cannot access.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 3: Color System -->
+                            <li class="node category category-color">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Color System</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Palette Logic</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Colors derived directly from physical materials — dictated by the material world, not brand color theory.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Material Palettes & Comparison</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf">
+                                                <div class="node-content" style="display:block; width:100%; white-space:normal;">
+                                                    <div class="color-panel">
+                                                        <!-- Leather -->
+                                                        <div class="color-group">
+                                                            <h4>Leather</h4>
+                                                            
+                                                            <div class="swatch-row" onclick="selectColor('#3E1F00','Deep Dark Brown')">
+                                                                <div class="swatch" style="background:#3E1F00;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#3E1F00</div>
+                                                                    <div class="swatch-desc">Deep Dark Brown</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#5C2D0E','Base Leather')">
+                                                                <div class="swatch" style="background:#5C2D0E;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#5C2D0E</div>
+                                                                    <div class="swatch-desc">Base Leather</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#7A3B1E','Warm Dark Brown')">
+                                                                <div class="swatch" style="background:#7A3B1E;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#7A3B1E</div>
+                                                                    <div class="swatch-desc">Warm Dark Brown</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#C4956A','Tan Leather')">
+                                                                <div class="swatch" style="background:#C4956A;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#C4956A</div>
+                                                                    <div class="swatch-desc">Tan Leather</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#D4A574','Light Tan')">
+                                                                <div class="swatch" style="background:#D4A574;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#D4A574</div>
+                                                                    <div class="swatch-desc">Light Tan</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#A67C52','Mid Tan')">
+                                                                <div class="swatch" style="background:#A67C52;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#A67C52</div>
+                                                                    <div class="swatch-desc">Mid Tan</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#8B6249','Aged Leather')">
+                                                                <div class="swatch" style="background:#8B6249;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#8B6249</div>
+                                                                    <div class="swatch-desc">Aged Leather</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#F5ECD7','Cream Stitching')">
+                                                                <div class="swatch" style="background:#F5ECD7;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#F5ECD7</div>
+                                                                    <div class="swatch-desc">Cream Stitching</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#2C1A08','Dark Stitching')">
+                                                                <div class="swatch" style="background:#2C1A08;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#2C1A08</div>
+                                                                    <div class="swatch-desc">Dark Stitching</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Paper -->
+                                                        <div class="color-group">
+                                                            <h4>Paper / Parchment</h4>
+                                                            
+                                                            <div class="swatch-row" onclick="selectColor('#F5F0DC','Cream White')">
+                                                                <div class="swatch" style="background:#F5F0DC; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#F5F0DC</div>
+                                                                    <div class="swatch-desc">Cream White</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#EDE3C5','Parchment')">
+                                                                <div class="swatch" style="background:#EDE3C5; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#EDE3C5</div>
+                                                                    <div class="swatch-desc">Parchment</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#F0E8D0','Warm Paper')">
+                                                                <div class="swatch" style="background:#F0E8D0; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#F0E8D0</div>
+                                                                    <div class="swatch-desc">Warm Paper</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#DDD3B8','Aged Paper')">
+                                                                <div class="swatch" style="background:#DDD3B8; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#DDD3B8</div>
+                                                                    <div class="swatch-desc">Aged Paper</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#C8BA98','Worn Paper')">
+                                                                <div class="swatch" style="background:#C8BA98; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#C8BA98</div>
+                                                                    <div class="swatch-desc">Worn Paper</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#B5A880','Old Yellowed')">
+                                                                <div class="swatch" style="background:#B5A880; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#B5A880</div>
+                                                                    <div class="swatch-desc">Old Yellowed</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#C4B49A','Edge Darkened')">
+                                                                <div class="swatch" style="background:#C4B49A; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#C4B49A</div>
+                                                                    <div class="swatch-desc">Edge Darkened</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#E8DFC8','Ruled Lines')">
+                                                                <div class="swatch" style="background:#E8DFC8; border-color: rgba(0,0,0,0.2);"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#E8DFC8</div>
+                                                                    <div class="swatch-desc">Ruled Lines</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Wood / Metal / Accent -->
+                                                        <div class="color-group">
+                                                            <h4>Wood Grain</h4>
+                                                            
+                                                            <div class="swatch-row" onclick="selectColor('#C4956A','Light Oak')">
+                                                                <div class="swatch" style="background:#C4956A;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#C4956A</div>
+                                                                    <div class="swatch-desc">Light Oak</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#4A2C1A','Dark Walnut')">
+                                                                <div class="swatch" style="background:#4A2C1A;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#4A2C1A</div>
+                                                                    <div class="swatch-desc">Dark Walnut</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#3E2410','Walnut Dark')">
+                                                                <div class="swatch" style="background:#3E2410;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#3E2410</div>
+                                                                    <div class="swatch-desc">Walnut Dark</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#6B2D0E','Cherry Wood')">
+                                                                <div class="swatch" style="background:#6B2D0E;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#6B2D0E</div>
+                                                                    <div class="swatch-desc">Cherry Wood</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#7A3820','Cherry Mid')">
+                                                                <div class="swatch" style="background:#7A3820;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#7A3820</div>
+                                                                    <div class="swatch-desc">Cherry Mid</div>
+                                                                </div>
+                                                            </div>
+                                                            <h4 style="margin-top:16px;">Metal / Accent</h4>
+                                                            
+                                                            <div class="swatch-row" onclick="selectColor('#9E9E9E','Brushed Aluminum')">
+                                                                <div class="swatch" style="background:#9E9E9E;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#9E9E9E</div>
+                                                                    <div class="swatch-desc">Brushed Aluminum</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#B0B0B0','Aluminum Hi')">
+                                                                <div class="swatch" style="background:#B0B0B0;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#B0B0B0</div>
+                                                                    <div class="swatch-desc">Aluminum Hi</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#C9A84C','Gold')">
+                                                                <div class="swatch" style="background:#C9A84C;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#C9A84C</div>
+                                                                    <div class="swatch-desc">Gold</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#D4A017','Gold Highlight')">
+                                                                <div class="swatch" style="background:#D4A017;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#D4A017</div>
+                                                                    <div class="swatch-desc">Gold Highlight</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#5C6670','Steel')">
+                                                                <div class="swatch" style="background:#5C6670;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#5C6670</div>
+                                                                    <div class="swatch-desc">Steel</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#CC2200','Red Ink')">
+                                                                <div class="swatch" style="background:#CC2200;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#CC2200</div>
+                                                                    <div class="swatch-desc">Red Ink</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#1A3B8C','Blue Ink')">
+                                                                <div class="swatch" style="background:#1A3B8C;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#1A3B8C</div>
+                                                                    <div class="swatch-desc">Blue Ink</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swatch-row" onclick="selectColor('#1A1A2E','Near-Black Blue')">
+                                                                <div class="swatch" style="background:#1A1A2E;"></div>
+                                                                <div>
+                                                                    <div class="swatch-label">#1A1A2E</div>
+                                                                    <div class="swatch-desc">Near-Black Blue</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Comparison Preview -->
+                                                        <div class="color-compare-panel">
+                                                            <div class="ccp-header">Click any swatch to preview</div>
+                                                            <div id="ccp-preview-box" class="ccp-preview-box" style="background:#F5F0DC;">
+                                                                <div class="ccp-preview-label" style="color:#2C1A08;">Selected swatch preview<br><strong>#F5F0DC — Cream White</strong></div>
+                                                            </div>
+                                                            <div style="margin-top:12px; font-size:11px; color:#8B6249;">
+                                                                Text on dark leather: <span style="font-family:'Courier Prime',monospace;color:#F5ECD7; background:#5C2D0E; padding:2px 6px; border-radius:3px;">#F5ECD7 Cream</span>
+                                                            </div>
+                                                            <div style="margin-top:8px; font-size:11px; color:#8B6249;">
+                                                                Text on parchment: <span style="font-family:'Courier Prime',monospace;color:#2C1A08; background:#F5F0DC; padding:2px 6px; border-radius:3px;">#2C1A08 Dark Brown</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 4: Typography -->
+                            <li class="node category category-type">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Typography</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Font Classification by Material</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Paper/Document: Georgia, Palatino, Courier Prime, Special Elite. Leather/Luxury: Garamond, Caslon. Technical/DAW: monospace, industrial sans-serif.</div></li>
+                                            <li class="node leaf">
+                                                <div class="node-content" style="display:block; width:100%;">
+                                                    <div class="font-gallery">
+                                                        <div class="font-preview">
+                                                            <div class="font-name" style="font-family:Georgia,serif;">Georgia</div>
+                                                            <div class="font-category">Classic Serif — Paper Interfaces</div>
+                                                            <div class="font-sample" style="font-family:Georgia,serif;">The physical page</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this,'Georgia',400)" class="active-weight">400</span>
+                                                                <span onclick="applyWeight(this,'Georgia',700)">700</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="font-preview">
+                                                            <div class="font-name" style="font-family:'Courier Prime',monospace;">Courier Prime</div>
+                                                            <div class="font-category">Typewriter — Document Interfaces</div>
+                                                            <div class="font-sample" style="font-family:'Courier Prime',monospace;">The physical page</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this,'Courier Prime',400)" class="active-weight">400</span>
+                                                                <span onclick="applyWeight(this,'Courier Prime',700)">700</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="font-preview">
+                                                            <div class="font-name" style="font-family:'Inter',sans-serif;">Inter</div>
+                                                            <div class="font-category">Neutral UI — Cross-Material</div>
+                                                            <div class="font-sample" style="font-family:'Inter',sans-serif;">The physical page</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this,'Inter',400)">400</span>
+                                                                <span onclick="applyWeight(this,'Inter',500)" class="active-weight">500</span>
+                                                                <span onclick="applyWeight(this,'Inter',600)">600</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="font-preview">
+                                                            <div class="font-name" style="font-family:'DM Sans',sans-serif;">DM Sans</div>
+                                                            <div class="font-category">Body — Technical Interfaces</div>
+                                                            <div class="font-sample" style="font-family:'DM Sans',sans-serif;">The physical page</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this,'DM Sans',400)" class="active-weight">400</span>
+                                                                <span onclick="applyWeight(this,'DM Sans',500)">500</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Sizing & Scale Rules</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Body: 14px–16px (matches physical book comfort). Headlines: sized realistically for the object. NO 96px headlines — no physical notebook has one.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content">
+                                            <span style="cursor:pointer; color:#7A3820; text-decoration:underline; text-decoration-style:dotted;" onclick="document.getElementById('typography-studio').scrollIntoView({behavior:'smooth'})">📖 Open Typography Studio ↓</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 5: Spacing & Layout -->
+                            <li class="node category category-spacing">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Spacing & Layout</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Physical Reference Rule</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Before any spacing decision: "What would this be in the real physical object?" — The physical reference IS the specification.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Material Spacing Specs</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Notebook lines: 28px–32px. Legal pad margin rule: ~80px from left. Leather border: 20px–30px. Book gutter: inner margin wider than outer.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 6: Borders, Shapes & Forms -->
+                            <li class="node category category-borders">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Borders, Shapes & Forms</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Material Edges</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">No 1px solid borders — use leather stitching edges, page corner curls, machined metal bezels, or wooden edge-banding instead.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Bevel Effect</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Top-left: rgba(255,255,255,0.3)→transparent gradient. Bottom-right: rgba(0,0,0,0.2)→transparent. Together = raised beveled surface.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Border Radius by Material</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Buttons: 6px–10px. Notebook pages: 0px (square corners). Leather portfolio: 4px–8px. Metal panels: 2px–4px (machined precision).</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 7: UI Components -->
+                            <li class="node category category-ui">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>UI Components</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Navigation</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Folder tabs protruding from content top. Book spine sidebar with different texture. Physical toggle/switch navigation buttons.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Form Elements</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Inputs: paper recesses or metal frames with inner shadow. Checkboxes: physical form boxes with SVG check marks. Radios: circular physical selectors.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 8: Imagery & Texture -->
+                            <li class="node category category-texture">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Imagery & Texture</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Interactive Material Demos</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf">
+                                                <div class="node-content" style="display:block; width:100%;">
+                                                    <div class="demo-grid">
+                                                        <!-- Leather Demo -->
+                                                        <div class="demo-studio">
+                                                            <h3>🟤 Leather Texture</h3>
+                                                            <div class="demo-stage leather-surface" style="height:120px;">
+                                                                <div style="position:absolute;top:12px;left:12px;right:12px;bottom:12px;border:1px dashed rgba(245,236,215,0.3);border-radius:3px;"></div>
+                                                                <span style="font-family:Georgia,serif;color:#F5ECD7;font-size:14px;position:relative;z-index:1;">Leather Portfolio</span>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><span>Base</span><span style="font-family:'Courier Prime',monospace;">#5C2D0E</span></div>
+                                                                <div class="demo-spec"><span>Stitching</span><span style="font-family:'Courier Prime',monospace;">dashed #F5ECD7</span></div>
+                                                                <div class="demo-spec"><span>Noise Overlay</span><span>30–40% opacity</span></div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Paper Demo -->
+                                                        <div class="demo-studio">
+                                                            <h3>📄 Paper / Parchment</h3>
+                                                            <div class="demo-stage paper-card" style="height:120px; justify-content:flex-start; align-items:flex-start; padding:16px;">
+                                                                <div style="font-family:'Courier Prime',monospace; font-size:12px; color:#2C1A08; line-height:2; width:100%;">
+                                                                    <span style="color:#1A3B8C;">First line of text</span><br>
+                                                                    Second line text content<br>
+                                                                    <span style="color:#CC2200;">Important marker here</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><span>Base</span><span style="font-family:'Courier Prime',monospace;">#F5F0DC</span></div>
+                                                                <div class="demo-spec"><span>Line spacing</span><span>28px–32px</span></div>
+                                                                <div class="demo-spec"><span>Edge vignette</span><span>radial-gradient</span></div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Metal Demo -->
+                                                        <div class="demo-studio">
+                                                            <h3>⚙️ Brushed Aluminum</h3>
+                                                            <div class="demo-stage metal-panel" style="height:120px;">
+                                                                <button class="skeu-button" style="background:linear-gradient(180deg,rgba(255,255,255,0.4) 0%,transparent 100%),#9E9E9E; color:#333; font-family:'Courier Prime',monospace; font-size:12px; padding:8px 20px; border-radius:3px;">ENGAGE</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><span>Base</span><span style="font-family:'Courier Prime',monospace;">#9E9E9E</span></div>
+                                                                <div class="demo-spec"><span>Brushing</span><span>1px stripe repeat</span></div>
+                                                                <div class="demo-spec"><span>Specular</span><span>top 30% highlight</span></div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Button Demo -->
+                                                        <div class="demo-studio">
+                                                            <h3>🔘 Skeuomorphic Button</h3>
+                                                            <div class="demo-stage" style="height:120px; flex-direction:column; gap:12px;">
+                                                                <button class="skeu-button" id="skeu-demo-btn">Press Me</button>
+                                                                <div id="skeu-btn-state" style="font-size:10px; color:#8B6249; font-family:'Courier Prime',monospace;">Resting state</div>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><span>Press</span><span>translateY(1px) / 80ms</span></div>
+                                                                <div class="demo-spec"><span>Release</span><span>ease-out / 120ms</span></div>
+                                                                <div class="demo-spec"><span>Gradient</span><span>inverts on press</span></div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Page Turn Demo -->
+                                                        <div class="demo-studio">
+                                                            <h3>📖 Page Turn</h3>
+                                                            <div class="demo-stage" style="height:120px; perspective:400px;">
+                                                                <div id="page-turn-el" style="
+                                                                    width:80px; height:100px;
+                                                                    background:#F5F0DC;
+                                                                    border-radius:2px 8px 8px 2px;
+                                                                    box-shadow:3px 3px 8px rgba(120,90,40,0.4);
+                                                                    display:flex; align-items:center; justify-content:center;
+                                                                    font-family:'Courier Prime',monospace; font-size:11px; color:#2C1A08;
+                                                                    transform-style:preserve-3d;
+                                                                    transition: transform 500ms ease;
+                                                                    transform-origin: left center;
+                                                                    cursor:pointer;
+                                                                " onclick="turnPage(this)">Page</div>
+                                                            </div>
+                                                            <div class="demo-controls">
+                                                                <button class="demo-btn" onclick="turnPage(document.getElementById('page-turn-el'))">Turn Page</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><span>Transform</span><span>rotateY(-180deg)</span></div>
+                                                                <div class="demo-spec"><span>Duration</span><span>400ms–600ms</span></div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- Toggle Demo -->
+                                                        <div class="demo-studio">
+                                                            <h3>🎚️ Material Toggle</h3>
+                                                            <div class="demo-stage" style="height:120px;">
+                                                                <div id="skeu-toggle" onclick="toggleSkeu(this)" style="
+                                                                    width:70px; height:36px;
+                                                                    background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(255,255,255,0.05) 100%), #8B6249;
+                                                                    border-radius:18px;
+                                                                    border:1px solid rgba(90,50,20,0.6);
+                                                                    box-shadow: inset 3px 3px 8px rgba(30,10,0,0.5), inset -2px -2px 5px rgba(200,150,80,0.15);
+                                                                    position:relative; cursor:pointer; transition:all 200ms ease;
+                                                                ">
+                                                                    <div id="skeu-thumb" style="
+                                                                        position:absolute; top:4px; left:4px;
+                                                                        width:28px; height:28px; border-radius:50%;
+                                                                        background: linear-gradient(135deg, #C4956A 0%, #8B6249 100%);
+                                                                        box-shadow: 2px 2px 5px rgba(30,10,0,0.5), -1px -1px 3px rgba(255,220,150,0.4);
+                                                                        transition: transform 200ms ease;
+                                                                    "></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><span>Travel</span><span>translateX(34px)</span></div>
+                                                                <div class="demo-spec"><span>Duration</span><span>200ms ease</span></div>
+                                                                <div class="demo-spec"><span>Material</span><span>Leather thumb</span></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 9: Animation & Motion -->
+                            <li class="node category category-anim">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Animation & Motion</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub"><div class="node-content">Button press: translateY(1px) in 80ms. Gradient inverts simultaneously. Release: 120ms ease-out.</div></li>
+                                    <li class="node sub"><div class="node-content">Page turn: rotateY(0°→-180°) with perspective on parent. Duration 400ms–600ms.</div></li>
+                                    <li class="node sub"><div class="node-content">Toggle: translateX slides thumb across track. background-position shifts to simulate physical rotation. 200ms.</div></li>
+                                    <li class="node sub"><div class="node-content">Physics-based easing only — slight overshoot, natural deceleration. No abstract digital easing.</div></li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 10: What to Strictly Avoid -->
+                            <li class="node category category-avoid">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>What to Strictly Avoid</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub"><div class="node-content">❌ Mixing material references on the same surface — leather + glass + paper creates material incoherence. One material per structural element.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Low-quality textures — pixelated or obviously tiled textures immediately break the illusion.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Physical impossibilities — a page that is also a tab that is also a folder cannot exist in physical reality.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Flat color buttons on textured surfaces — everything must be rendered. A flat button on leather looks unfinished.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Modern UI conventions breaking the metaphor — tooltips, modals, badges must all render in the material language.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Animating non-physical behaviors — a skeuomorphic page cannot fly across screen like a Material Design card.</div></li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 11: Suggested Font Pairings -->
+                            <li class="node category category-type">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Suggested Font Pairings</span>
+                                </div>
+                                <ul>
+                                    <li class="node leaf">
+                                        <div class="node-content" style="display:block; width:100%;">
+                                            <div class="demo-grid" style="margin-top:10px;">
+                                                <!-- Pairing 1 -->
+                                                <div class="demo-studio" style="flex:0 0 280px; gap:10px;">
+                                                    <div style="font-size:13px; font-weight:700; color:#2C1A08; font-family:Georgia,serif;">Pairing 1 — The Heritage Document</div>
+                                                    <div class="demo-spec" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                                                        <span style="font-family:Georgia,serif; font-weight:700; font-size:18px; color:#2C1A08;">Georgia Bold</span>
+                                                        <span style="font-size:10px; color:#8B6249;">Headline / Display</span>
+                                                    </div>
+                                                    <div class="demo-spec" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                                                        <span style="font-family:'Courier Prime',monospace; font-weight:400; font-size:14px; color:#5C3A22;">Courier Prime 400</span>
+                                                        <span style="font-size:10px; color:#8B6249;">Body / UI Text</span>
+                                                    </div>
+                                                    <div style="font-size:11px; color:#8B6249; line-height:1.5;">Best for: Note-taking apps, legal services, recipe books. Timeless serif headline with typewriter body reinforces the document metaphor.</div>
+                                                    <div class="demo-spec"><span>Pairing Contrast</span><span style="color:#7A3820; font-weight:600;">High ✓</span></div>
+                                                </div>
+                                                <!-- Pairing 2 -->
+                                                <div class="demo-studio" style="flex:0 0 280px; gap:10px;">
+                                                    <div style="font-size:13px; font-weight:700; color:#2C1A08; font-family:Georgia,serif;">Pairing 2 — The Luxury Executive</div>
+                                                    <div class="demo-spec" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                                                        <span style="font-family:Georgia,serif; font-style:italic; font-weight:400; font-size:20px; color:#2C1A08;">Georgia Italic</span>
+                                                        <span style="font-size:10px; color:#8B6249;">Headline / Display</span>
+                                                    </div>
+                                                    <div class="demo-spec" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                                                        <span style="font-family:'Inter',sans-serif; font-weight:400; font-size:14px; color:#5C3A22;">Inter 400</span>
+                                                        <span style="font-size:10px; color:#8B6249;">Body / UI Text</span>
+                                                    </div>
+                                                    <div style="font-size:11px; color:#8B6249; line-height:1.5;">Best for: Leather portfolio apps, luxury goods, financial heritage brands. Italic serif headline with clean neutral body maximises readability.</div>
+                                                    <div class="demo-spec"><span>Pairing Contrast</span><span style="color:#7A3820; font-weight:600;">High ✓</span></div>
+                                                </div>
+                                                <!-- Pairing 3 -->
+                                                <div class="demo-studio" style="flex:0 0 280px; gap:10px;">
+                                                    <div style="font-size:13px; font-weight:700; color:#2C1A08; font-family:Georgia,serif;">Pairing 3 — The Technical Instrument</div>
+                                                    <div class="demo-spec" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                                                        <span style="font-family:'Inter',sans-serif; font-weight:700; font-size:16px; color:#2C1A08; letter-spacing:0.04em;">Inter 700 Tracked</span>
+                                                        <span style="font-size:10px; color:#8B6249;">Headline / Label</span>
+                                                    </div>
+                                                    <div class="demo-spec" style="flex-direction:column; align-items:flex-start; gap:4px;">
+                                                        <span style="font-family:'Courier Prime',monospace; font-weight:400; font-size:13px; color:#5C3A22;">Courier Prime 400</span>
+                                                        <span style="font-size:10px; color:#8B6249;">Readouts / Data</span>
+                                                    </div>
+                                                    <div style="font-size:11px; color:#8B6249; line-height:1.5;">Best for: DAWs, simulation games, technical instruments. Tight tracked sans-serif labels with monospace readouts mirrors real hardware panels.</div>
+                                                    <div class="demo-spec"><span>Pairing Contrast</span><span style="color:#7A3820; font-weight:600;">Medium ✓</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Typography Studio Section -->
+        <div class="section-title" id="typography-studio">📖 Skeuomorphism Typography Studio</div>
+        
+        <!-- Live Phrase Input -->
+        <div style="margin-bottom: 20px; width: 100%; display: flex; align-items: center; gap: 12px;">
+            <label style="font-size: 14px; font-weight: 600; color: #2C1A08; font-family:Georgia,serif;">Custom Phrase:</label>
+            <input type="text" class="neu-stage-input" style="flex-grow: 1; padding: 10px 16px; font-size: 13px;" 
+                   placeholder="Type custom sentence to test typography..." oninput="updateFontPreviews(this.value)">
+        </div>
+
+        <div class="typo-playground">
+            <!-- Left Panel: Slider Controls -->
+            <div class="playground-controls">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600; font-size: 14px; color: #2C1A08; font-family:Georgia,serif;">Design Guidelines</span>
+                    <button class="btn" style="padding: 6px 14px; font-size: 11px;" onclick="resetPlaygroundPresets()">Reset Presets</button>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <span>Headline Font Size</span>
+                        <strong id="val-head-size">28px</strong>
+                        <span class="rec-check" id="chk-head-size"></span>
+                    </label>
+                    <input type="range" id="head-size" min="16" max="60" value="28" oninput="updatePlayground()">
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <span>Headline Letter Spacing</span>
+                        <strong id="val-head-spacing">0.01em</strong>
+                        <span class="rec-check" id="chk-head-spacing"></span>
+                    </label>
+                    <input type="range" id="head-spacing" min="-0.05" max="0.10" step="0.01" value="0.01" oninput="updatePlayground()">
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <span>Headline Font Weight</span>
+                        <strong id="val-head-weight">700</strong>
+                        <span class="rec-check" id="chk-head-weight"></span>
+                    </label>
+                    <input type="range" id="head-weight" min="300" max="900" step="100" value="700" oninput="updatePlayground()">
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <span>Body Font Size</span>
+                        <strong id="val-body-size">15px</strong>
+                        <span class="rec-check" id="chk-body-size"></span>
+                    </label>
+                    <input type="range" id="body-size" min="10" max="22" value="15" oninput="updatePlayground()">
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <span>Body Line Height</span>
+                        <strong id="val-body-lh">1.7</strong>
+                        <span class="rec-check" id="chk-body-lh"></span>
+                    </label>
+                    <input type="range" id="body-lh" min="1.2" max="2.2" step="0.1" value="1.7" oninput="updatePlayground()">
+                </div>
+                
+                <div class="control-group">
+                    <label><span>Headline Font</span></label>
+                    <select id="head-font" onchange="updatePlayground()">
+                        <option value="Georgia, serif" selected>Georgia (Classic Serif)</option>
+                        <option value="'Courier Prime', monospace">Courier Prime (Typewriter)</option>
+                        <option value="'Inter', sans-serif">Inter (UI / Labels)</option>
+                        <option value="'DM Sans', sans-serif">DM Sans (Technical)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label><span>Body Font</span></label>
+                    <select id="body-font" onchange="updatePlayground()">
+                        <option value="'Courier Prime', monospace" selected>Courier Prime (Typewriter)</option>
+                        <option value="'Inter', sans-serif">Inter (Neutral)</option>
+                        <option value="Georgia, serif">Georgia (Serif Body)</option>
+                        <option value="'DM Sans', sans-serif">DM Sans (Technical)</option>
+                    </select>
+                </div>
+
+                <div style="margin-top:8px; padding:12px; background:#F0E8D0; border-radius:6px; box-shadow:inset 2px 2px 6px rgba(180,150,90,0.5), inset -1px -1px 4px rgba(255,255,255,0.85); font-size:11px; color:#8B6249;">
+                    <strong style="color:#7A3820; font-family:Georgia,serif;">Skeuomorphism Rules:</strong><br>
+                    • Max headline: ~36px (physical scale)<br>
+                    • Body: 14px–16px for paper, 12px–14px for instrument panels<br>
+                    • Max weight: 700 (nothing feels punched through physical surface)<br>
+                    • Italic headlines preferred for luxury/leather contexts
+                </div>
+            </div>
+            
+            <!-- Right Panel: Blog Card Preview -->
+            <div class="playground-preview-container">
+                <div class="playground-preview-card" id="preview-card">
+                    <div class="mock-cat" id="play-lbl">Heritage Craft</div>
+                    <div class="mock-headline" id="play-head" style="font-size:28px; font-weight:700; font-family:Georgia,serif; letter-spacing:0.01em;">The Art of the Physical Instrument</div>
+                    <div class="mock-divider"></div>
+                    <div class="mock-meta">
+                        <span>Material Design Dept.</span>
+                        <span>·</span>
+                        <span>6 min read</span>
+                        <span>·</span>
+                        <span>Heritage Collection</span>
+                    </div>
+                    <div class="mock-body" id="play-body" style="font-size:15px; line-height:1.7; font-family:'Courier Prime',monospace;">
+                        Every material tells a story through texture and weight. When we render leather on screen, we invoke not just visual memory but tactile memory — the particular softness of grain, the give of well-worn hide. This is what separates authentic skeuomorphic design from mere imitation.
+                    </div>
+                    <div class="rule-badge" id="rule-badge" style="display:none;">⚠ Rule Violation Detected</div>
+                </div>
+                <div class="spec-display">
+                    <div class="spec-pill" id="spec-head-pill">Head: Georgia 700 / 28px / 0.01em</div>
+                    <div class="spec-pill" id="spec-body-pill">Body: Courier Prime / 15px / 1.7lh</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../fonts/jszip.min.js"></script>
+    <script>
+        // ===== TOGGLE NODE =====
+        function toggleNode(el) {
+            const li = el.closest('li.node');
+            if (li) {
+                li.classList.toggle('collapsed');
+                setTimeout(drawConnections, 50);
+            }
+        }
+        
+        function expandAll() {
+            document.querySelectorAll('li.node.collapsed').forEach(n => n.classList.remove('collapsed'));
+            setTimeout(drawConnections, 100);
+        }
+        
+        function collapseAll() {
+            document.querySelectorAll('li.node:not(.root)').forEach(n => {
+                if (!n.classList.contains('root')) n.classList.add('collapsed');
+            });
+            setTimeout(drawConnections, 100);
+        }
+        
+        // ===== SVG CONNECTIONS =====
+        function drawConnections() {
+            const svg = document.getElementById('canvas-svg');
+            const container = document.getElementById('mindmap-container');
+            const W = container.scrollWidth;
+            const H = container.scrollHeight;
+            svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+            svg.setAttribute('width', W);
+            svg.setAttribute('height', H);
+            svg.innerHTML = '';
+            
+            const catColors = {
+                'category-industries': '#7A3820',
+                'category-psych':      '#4A2C1A',
+                'category-color':      '#C9A84C',
+                'category-type':       '#5C6670',
+                'category-spacing':    '#5C3A22',
+                'category-borders':    '#6B2D0E',
+                'category-ui':         '#4A5560',
+                'category-texture':    '#8B6249',
+                'category-anim':       '#3E2410',
+                'category-avoid':      '#CC2200',
+            };
+            
+            function getColor(el) {
+                for (const [cls, col] of Object.entries(catColors)) {
+                    if (el.closest('.' + cls)) return col;
+                }
+                return '#A67C52';
+            }
+            
+            function getCenter(el) {
+                const r = el.getBoundingClientRect();
+                const cr = container.getBoundingClientRect();
+                return {
+                    x: r.left - cr.left + container.scrollLeft + r.width / 2,
+                    y: r.top - cr.top + container.scrollTop + r.height / 2
+                };
+            }
+            
+            function drawCurve(from, to, color) {
+                const midX = (from.x + to.x) / 2;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M${from.x},${from.y} C${midX},${from.y} ${midX},${to.y} ${to.x},${to.y}`);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', color);
+                path.setAttribute('stroke-width', '1.5');
+                path.setAttribute('stroke-opacity', '0.4');
+                svg.appendChild(path);
+            }
+            
+            document.querySelectorAll('li.node').forEach(node => {
+                const parentNode = node.parentElement?.closest('li.node');
+                if (!parentNode) return;
+                const fromEl = parentNode.querySelector(':scope > .node-content');
+                const toEl = node.querySelector(':scope > .node-content');
+                if (!fromEl || !toEl) return;
+                const fromPt = getCenter(fromEl);
+                const toPt = getCenter(toEl);
+                const color = getColor(node);
+                drawCurve(fromPt, toPt, color);
+            });
+        }
+        
+        // ===== COLOR PANEL =====
+        function selectColor(hex, name) {
+            const box = document.getElementById('ccp-preview-box');
+            box.style.background = hex;
+            // Determine text color based on luminance
+            const r = parseInt(hex.slice(1,3), 16);
+            const g = parseInt(hex.slice(3,5), 16);
+            const b = parseInt(hex.slice(5,7), 16);
+            const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            const textColor = lum > 0.45 ? '#2C1A08' : '#F5ECD7';
+            box.innerHTML = `<div class="ccp-preview-label" style="color:${textColor};">Selected swatch preview<br><strong>${hex} — ${name}</strong></div>`;
+        }
+        
+        // ===== FONT GALLERY =====
+        let currentPhrase = 'The physical page';
+        function applyWeight(el, fontFamily, weight) {
+            const preview = el.closest('.font-preview');
+            preview.querySelectorAll('.font-weights span').forEach(s => s.classList.remove('active-weight'));
+            el.classList.add('active-weight');
+            const sample = preview.querySelector('.font-sample');
+            sample.style.fontFamily = fontFamily;
+            sample.style.fontWeight = weight;
+        }
+        
+        function updateFontPreviews(phrase) {
+            currentPhrase = phrase || 'The physical page';
+            document.querySelectorAll('.font-sample').forEach(el => el.textContent = currentPhrase);
+        }
+        
+        // ===== TYPOGRAPHY PLAYGROUND =====
+        const RANGES = {
+            'head-size':    { min: 16, max: 36, unit: 'px', rec: v => v >= 20 && v <= 36 },
+            'head-spacing': { min: -0.02, max: 0.06, unit: 'em', rec: v => v >= -0.01 && v <= 0.04 },
+            'head-weight':  { min: 400, max: 700, unit: '', rec: v => v <= 700 },
+            'body-size':    { min: 13, max: 16, unit: 'px', rec: v => v >= 13 && v <= 16 },
+            'body-lh':      { min: 1.5, max: 1.8, unit: '', rec: v => v >= 1.5 && v <= 1.8 },
+        };
+        
+        function updatePlayground() {
+            const hs = parseFloat(document.getElementById('head-size').value);
+            const hsp = parseFloat(document.getElementById('head-spacing').value);
+            const hw = parseInt(document.getElementById('head-weight').value);
+            const bs = parseFloat(document.getElementById('body-size').value);
+            const lh = parseFloat(document.getElementById('body-lh').value);
+            const hf = document.getElementById('head-font').value;
+            const bf = document.getElementById('body-font').value;
+            
+            document.getElementById('val-head-size').textContent = hs + 'px';
+            document.getElementById('val-head-spacing').textContent = hsp.toFixed(2) + 'em';
+            document.getElementById('val-head-weight').textContent = hw;
+            document.getElementById('val-body-size').textContent = bs + 'px';
+            document.getElementById('val-body-lh').textContent = lh.toFixed(1);
+            
+            const head = document.getElementById('play-head');
+            const body = document.getElementById('play-body');
+            head.style.fontSize = hs + 'px';
+            head.style.letterSpacing = hsp + 'em';
+            head.style.fontWeight = hw;
+            head.style.fontFamily = hf;
+            body.style.fontSize = bs + 'px';
+            body.style.lineHeight = lh;
+            body.style.fontFamily = bf;
+            
+            // Rec checks
+            const checks = [
+                ['chk-head-size',    RANGES['head-size'].rec(hs)],
+                ['chk-head-spacing', RANGES['head-spacing'].rec(hsp)],
+                ['chk-head-weight',  RANGES['head-weight'].rec(hw)],
+                ['chk-body-size',    RANGES['body-size'].rec(bs)],
+                ['chk-body-lh',      RANGES['body-lh'].rec(lh)],
+            ];
+            
+            let violated = false;
+            checks.forEach(([id, ok]) => {
+                const el = document.getElementById(id);
+                el.classList.toggle('active', ok);
+                if (!ok) violated = true;
+            });
+            
+            const card = document.getElementById('preview-card');
+            const badge = document.getElementById('rule-badge');
+            card.classList.toggle('rule-violated', violated);
+            badge.style.display = violated ? 'inline-block' : 'none';
+            
+            // Spec pills
+            const hfName = document.getElementById('head-font').options[document.getElementById('head-font').selectedIndex].text.split(' (')[0];
+            const bfName = document.getElementById('body-font').options[document.getElementById('body-font').selectedIndex].text.split(' (')[0];
+            document.getElementById('spec-head-pill').textContent = `Head: ${hfName} ${hw} / ${hs}px / ${hsp.toFixed(2)}em`;
+            document.getElementById('spec-body-pill').textContent = `Body: ${bfName} / ${bs}px / ${lh.toFixed(1)}lh`;
+        }
+        
+        function resetPlaygroundPresets() {
+            document.getElementById('head-size').value = 28;
+            document.getElementById('head-spacing').value = 0.01;
+            document.getElementById('head-weight').value = 700;
+            document.getElementById('body-size').value = 15;
+            document.getElementById('body-lh').value = 1.7;
+            document.getElementById('head-font').value = 'Georgia, serif';
+            document.getElementById('body-font').value = "'Courier Prime', monospace";
+            updatePlayground();
+        }
+        
+        // ===== DEMO INTERACTIONS =====
+        const skeuBtn = document.getElementById('skeu-demo-btn');
+        const skeuState = document.getElementById('skeu-btn-state');
+        if (skeuBtn) {
+            skeuBtn.addEventListener('mousedown', () => { skeuState.textContent = 'Pressed (80ms)'; });
+            skeuBtn.addEventListener('mouseup', () => { setTimeout(() => { skeuState.textContent = 'Resting state'; }, 150); });
+        }
+        
+        let pageState = false;
+        function turnPage(el) {
+            pageState = !pageState;
+            el.style.transform = pageState ? 'rotateY(-180deg)' : 'rotateY(0deg)';
+        }
+        
+        let toggleState = false;
+        function toggleSkeu(el) {
+            toggleState = !toggleState;
+            const thumb = document.getElementById('skeu-thumb');
+            thumb.style.transform = toggleState ? 'translateX(34px)' : 'translateX(0)';
+            el.style.background = toggleState 
+                ? 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(255,255,255,0.05) 100%), #7A3820'
+                : 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(255,255,255,0.05) 100%), #8B6249';
+        }
+        
+        // ===== OFFLINE DOWNLOAD =====
+        async function downloadOffline() {
+            if (typeof JSZip === 'undefined') {
+                alert('JSZip library not found. Please ensure jszip.min.js is available at ../../fonts/jszip.min.js');
+                return;
+            }
+            const zip = new JSZip();
+            const htmlContent = document.documentElement.outerHTML;
+            zip.file('mindmap.html', htmlContent);
+            
+            try {
+                const fontBase = '../../fonts/';
+                const fontFiles = ['fonts.css', 'jszip.min.js'];
+                const fontFolder = zip.folder('fonts');
+                
+                for (const f of fontFiles) {
+                    const resp = await fetch(fontBase + f);
+                    if (resp.ok) {
+                        const blob = await resp.blob();
+                        fontFolder.file(f, blob);
+                    }
+                }
+            } catch(e) {
+                console.warn('Could not bundle fonts:', e);
+            }
+            
+            zip.generateAsync({type:'blob'}).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '07_skeuomorphism_mindmap_offline.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Init
+        window.addEventListener('load', () => {
+            drawConnections();
+            updatePlayground();
+        });
+        window.addEventListener('resize', drawConnections);
+    </script>
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lighthouse PWA Audit Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #0cce6b;
+            --red: #ff4e42;
+            --purple: #c084fc;
+            --yellow: #ffa400;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(12, 206, 107, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--green); box-shadow: 0 0 15px rgba(12, 206, 107, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.active { background: var(--green); color: #000; font-weight: bold; }
+        .status-badge.warn { background: var(--yellow); color: #000; font-weight: bold; }
+        .status-badge.fail { background: var(--red); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .code-line.executing { background: rgba(12, 206, 107, 0.2); border-left: 3px solid var(--green); }
+
+        /* Lighthouse UI */
+        .lh-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 8px solid var(--surface2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            transition: all 0.5s ease;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .score-val { font-size: 2.5rem; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); transition: color 0.5s; }
+        .score-label { font-size: 0.8rem; font-weight: bold; color: var(--text-dim); margin-top: 5px; text-transform: uppercase; }
+
+        .score-circle.pass { border-color: var(--green); box-shadow: 0 0 20px rgba(12, 206, 107, 0.3); }
+        .score-circle.pass .score-val, .score-circle.pass .score-label { color: var(--green); }
+        
+        .score-circle.warn { border-color: var(--yellow); box-shadow: 0 0 20px rgba(255, 164, 0, 0.3); }
+        .score-circle.warn .score-val, .score-circle.warn .score-label { color: var(--yellow); }
+
+        .score-circle.fail { border-color: var(--red); box-shadow: 0 0 20px rgba(255, 78, 66, 0.3); }
+        .score-circle.fail .score-val, .score-circle.fail .score-label { color: var(--red); }
+
+        .audit-list { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+        .audit-item {
+            background: var(--surface2);
+            border-radius: 6px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            border-left: 4px solid var(--border);
+            transition: all 0.3s;
+            opacity: 0.5;
+        }
+        .audit-item.active { opacity: 1; border-color: var(--accent); background: rgba(56, 189, 248, 0.1); }
+        .audit-item.pass { opacity: 1; border-color: var(--green); }
+        .audit-item.fail { opacity: 1; border-color: var(--red); }
+
+        .audit-icon { margin-right: 15px; font-weight: bold; }
+        .audit-item.pass .audit-icon { color: var(--green); }
+        .audit-item.fail .audit-icon { color: var(--red); }
+        .audit-item.active .audit-icon { color: var(--accent); }
+
+        .audit-text h4 { margin: 0 0 4px 0; font-size: 0.85rem; color: var(--text); }
+        .audit-text p { margin: 0; font-size: 0.7rem; color: var(--text-dim); }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.3s ease; }
+        .log-entry.cli { border-left-color: var(--purple); color: var(--purple); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+        .log-entry.warn { border-left-color: var(--yellow); color: var(--yellow); }
+        .log-entry.fail { border-left-color: var(--red); color: var(--red); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(12, 206, 107, 0.1); border-color: var(--green); color: var(--green); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(12, 206, 107, 0.15); color: var(--green); border-color: var(--green); box-shadow: 0 0 10px rgba(12, 206, 107, 0.2); }
+
+        .keyword { color: var(--purple); }
+        .string { color: var(--green); }
+        .number { color: var(--orange); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Lighthouse PWA Audit</h1>
+        <p>Progressive Web App Compliance Scoring Engine</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Flow / Architecture -->
+        <div class="panel" id="panel-vis">
+            <div class="panel-title">1. Audit Report UI <span class="status-badge" id="badge-vis">Ready</span></div>
+            <div class="lh-view" id="lh-view">
+                
+                <div class="score-circle" id="score-circle">
+                    <span class="score-val" id="score-val">-</span>
+                    <span class="score-label">PWA</span>
+                </div>
+
+                <div class="audit-list">
+                    <div class="audit-item" id="audit-sw">
+                        <div class="audit-icon" id="icon-sw">?</div>
+                        <div class="audit-text">
+                            <h4>Registers a Service Worker</h4>
+                            <p>Enables offline support and caching</p>
+                        </div>
+                    </div>
+                    <div class="audit-item" id="audit-manifest">
+                        <div class="audit-icon" id="icon-manifest">?</div>
+                        <div class="audit-text">
+                            <h4>Web App Manifest Meets Requirements</h4>
+                            <p>Provides installability metadata (icons, theme, name)</p>
+                        </div>
+                    </div>
+                    <div class="audit-item" id="audit-https">
+                        <div class="audit-icon" id="icon-https">?</div>
+                        <div class="audit-text">
+                            <h4>Redirects HTTP to HTTPS</h4>
+                            <p>Security requirement for Service Workers</p>
+                        </div>
+                    </div>
+                    <div class="audit-item" id="audit-offline">
+                        <div class="audit-icon" id="icon-offline">?</div>
+                        <div class="audit-text">
+                            <h4>Responds with 200 when Offline</h4>
+                            <p>App shell loads without network</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Panel 2: Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Lighthouse Config <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0">{</span>
+<span class="code-line" id="line-1">  <span class="keyword">"extends"</span>: <span class="string">"lighthouse:default"</span>,</span>
+<span class="code-line" id="line-2">  <span class="keyword">"settings"</span>: {</span>
+<span class="code-line" id="line-3">    <span class="keyword">"onlyCategories"</span>: [<span class="string">"pwa"</span>],</span>
+<span class="code-line" id="line-4">    <span class="keyword">"emulatedFormFactor"</span>: <span class="string">"mobile"</span>,</span>
+<span class="code-line" id="line-5">    <span class="keyword">"throttling"</span>: {</span>
+<span class="code-line" id="line-6">      <span class="keyword">"rttMs"</span>: <span class="number">150</span>,</span>
+<span class="code-line" id="line-7">      <span class="keyword">"throughputKbps"</span>: <span class="number">1638.4</span></span>
+<span class="code-line" id="line-8">    }</span>
+<span class="code-line" id="line-9">  },</span>
+<span class="code-line" id="line-10">  <span class="keyword">"audits"</span>: [</span>
+<span class="code-line" id="line-11">    <span class="string">"service-worker"</span>,</span>
+<span class="code-line" id="line-12">    <span class="string">"installable-manifest"</span>,</span>
+<span class="code-line" id="line-13">    <span class="string">"is-on-https"</span>,</span>
+<span class="code-line" id="line-14">    <span class="string">"works-offline"</span></span>
+<span class="code-line" id="line-15">  ]</span>
+<span class="code-line" id="line-16">}</span></div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Headless Chrome CLI Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry cli">$ lighthouse http://localhost:5173 --view</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-run" class="primary">▶ Run PWA Audit</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-step" class="primary" disabled>▶ Step Phase</button>
+            <button id="btn-play" disabled>▶▶ Auto-Play</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnRun = document.getElementById('btn-run');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const logOutput = document.getElementById('log-output');
+        const scoreCircle = document.getElementById('score-circle');
+        const scoreVal = document.getElementById('score-val');
+
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let isExecuting = false;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function highlightLine(lineNumbers) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        function waitForStep() {
+            return new Promise(resolve => {
+                if (isAutoPlaying) {
+                    setTimeout(resolve, 800);
+                } else {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    resolveStep = resolve;
+                }
+            });
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        async function animateScore(targetScore) {
+            let current = 0;
+            const interval = setInterval(() => {
+                current += 2;
+                if(current >= targetScore) {
+                    current = targetScore;
+                    clearInterval(interval);
+                    
+                    scoreCircle.className = 'score-circle';
+                    if (targetScore >= 90) scoreCircle.classList.add('pass');
+                    else if (targetScore >= 50) scoreCircle.classList.add('warn');
+                    else scoreCircle.classList.add('fail');
+                }
+                scoreVal.innerText = current;
+            }, 20);
+            await new Promise(r => setTimeout(r, (targetScore/2)*20 + 200));
+        }
+
+        async function setAuditItem(id, pass) {
+            const el = document.getElementById(`audit-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            el.classList.add('active');
+            await new Promise(r => setTimeout(r, 600)); // processing delay
+            el.classList.remove('active');
+            
+            if (pass) {
+                el.classList.add('pass');
+                icon.innerText = '✓';
+            } else {
+                el.classList.add('fail');
+                icon.innerText = '✕';
+            }
+        }
+
+        async function runAudit() {
+            if (isExecuting) return;
+            isExecuting = true;
+            btnRun.disabled = true;
+
+            document.getElementById('panel-vis').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Auditing';
+
+            log(`Starting Headless Chrome session. Emulating mobile device...`, 'cli');
+            highlightLine([4, 5, 6, 7]);
+            await waitForStep();
+            
+            // HTTPS Audit
+            log(`Auditing 'is-on-https'...`, 'cli');
+            highlightLine([13]);
+            await setAuditItem('https', true);
+            log(`[PASS] Protocol is secure (or localhost).`, 'result');
+            await waitForStep();
+
+            // Service Worker Audit
+            log(`Auditing 'service-worker'...`, 'cli');
+            highlightLine([11]);
+            await setAuditItem('sw', true);
+            log(`[PASS] Valid Service Worker registered in Navigator.`, 'result');
+            await waitForStep();
+
+            // Offline Audit
+            log(`Auditing 'works-offline'. Disconnecting network interface...`, 'warn');
+            highlightLine([14]);
+            await setAuditItem('offline', true);
+            log(`[PASS] App shell responded with HTTP 200 while offline. Cache-first strategy verified.`, 'result');
+            await waitForStep();
+
+            // Manifest Audit
+            log(`Auditing 'installable-manifest'...`, 'cli');
+            highlightLine([12]);
+            await setAuditItem('manifest', false);
+            log(`[FAIL] Web App Manifest is missing required property: 'icons'. Installability rejected.`, 'fail');
+            await waitForStep();
+
+            // Calculate Score
+            log(`Aggregation complete. Computing final PWA score (Weighted 3/4).`, 'cli');
+            highlightLine([]);
+            await animateScore(75);
+            
+            document.getElementById('badge-code').className = 'status-badge done';
+            document.getElementById('badge-code').innerText = 'Finished';
+            document.getElementById('badge-vis').className = 'status-badge warn';
+            document.getElementById('badge-vis').innerText = 'Avg: 75';
+            
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            isAutoPlaying = false;
+        }
+
+        btnRun.addEventListener('click', runAudit);
+
+        btnReset.addEventListener('click', () => {
+            window.location.reload();
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vite Build Pipeline Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --vite-purple: #646cff;
+            --vite-yellow: #ffb830;
+            --green: #4ade80;
+            --glow: 0 0 15px rgba(100, 108, 255, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(100, 108, 255, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--vite-purple);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active {
+            border-color: var(--vite-purple);
+            box-shadow: var(--glow);
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--vite-purple); color: #fff; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .pipeline-stage {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            padding: 10px;
+            position: relative;
+        }
+
+        .arch-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-grow: 1;
+            gap: 15px;
+        }
+
+        .arch-node {
+            background: rgba(0,0,0,0.4);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .arch-node.active {
+            border-color: var(--vite-purple);
+            box-shadow: 0 0 15px rgba(100, 108, 255, 0.4);
+            background: rgba(100, 108, 255, 0.1);
+        }
+        
+        .arch-node.done {
+            border-color: var(--green);
+            opacity: 0.7;
+        }
+
+        .arch-node h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .arch-file {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            background: rgba(255,255,255,0.05);
+            padding: 4px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            text-align: left;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+        }
+        
+        .arch-file.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .arrow {
+            color: var(--border);
+            font-size: 1.5rem;
+            transition: color 0.3s;
+        }
+        .arrow.active { color: var(--vite-yellow); text-shadow: 0 0 10px var(--vite-yellow); }
+
+        .terminal {
+            background: #020617;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        
+        .term-cmd { color: var(--green); }
+        .term-vite { color: var(--vite-purple); font-weight: bold; }
+        .term-info { color: var(--text); }
+        .term-time { color: var(--text-dim); }
+        .term-file { color: var(--accent); }
+        .term-size { color: var(--text-dim); }
+
+        .state-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .module-graph {
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            min-height: 80px;
+        }
+        
+        .graph-node {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            margin: 4px;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+        }
+        .graph-node.analyzed { border-color: var(--vite-yellow); color: var(--vite-yellow); }
+        .graph-node.bundled { border-color: var(--green); color: var(--green); }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background: rgba(100, 108, 255, 0.1);
+            border-color: var(--vite-purple);
+            color: var(--vite-purple);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: rgba(100, 108, 255, 0.15);
+            color: var(--vite-purple);
+            border-color: var(--vite-purple);
+            box-shadow: 0 0 10px rgba(100, 108, 255, 0.2);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Vite Build Pipeline</h1>
+        <p>esbuild pre-bundling + Rollup production chunking</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Architecture -->
+        <div class="panel" id="panel-arch">
+            <div class="panel-title">1. Build Architecture <span class="status-badge" id="badge-arch">Ready</span></div>
+            <div class="pipeline-stage">
+                <div class="arch-row">
+                    <!-- Source Node -->
+                    <div class="arch-node" id="node-src">
+                        <h3>src/ (Input)</h3>
+                        <div class="arch-file" id="f-main">main.js</div>
+                        <div class="arch-file" id="f-map">map.js</div>
+                        <div class="arch-file" id="f-deps">node_modules/leaflet</div>
+                    </div>
+                    
+                    <div class="arrow" id="arr-1">➔</div>
+                    
+                    <!-- Bundler Node -->
+                    <div class="arch-node" id="node-build">
+                        <h3>Vite Core</h3>
+                        <div class="arch-file" id="f-esb" style="border-left: 2px solid var(--vite-yellow)">esbuild (deps)</div>
+                        <div class="arch-file" id="f-rol" style="border-left: 2px solid var(--vite-purple)">Rollup (src)</div>
+                    </div>
+                    
+                    <div class="arrow" id="arr-2">➔</div>
+                    
+                    <!-- Output Node -->
+                    <div class="arch-node" id="node-dist">
+                        <h3>dist/ (Output)</h3>
+                        <div class="arch-file" id="f-outjs">assets/index-[hash].js</div>
+                        <div class="arch-file" id="f-outcss">assets/index-[hash].css</div>
+                        <div class="arch-file" id="f-outhtml">index.html</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Terminal -->
+        <div class="panel" id="panel-term">
+            <div class="panel-title">2. CLI Output <span class="status-badge" id="badge-term">Idle</span></div>
+            <div class="terminal" id="term-output">
+                <span>$ <span class="term-cmd">npm run build</span></span><br>
+            </div>
+        </div>
+
+        <!-- Panel 3: State -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-state">
+            <div class="panel-title">3. Module Graph State <span class="status-badge" id="badge-state">Waiting</span></div>
+            <div class="state-container">
+                <div class="module-graph" id="mod-graph">
+                    <!-- Graph nodes injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Master Controls -->
+        <div class="master-controls">
+            <button id="btn-step" class="primary">▶ Step Pipeline</button>
+            <button id="btn-play">▶▶ Auto-Build</button>
+            <button id="btn-reset">↺ Clean & Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        const term = document.getElementById('term-output');
+        const modGraph = document.getElementById('mod-graph');
+
+        let state = 0; 
+        let autoPlayTimer = null;
+
+        function printTerm(html) {
+            term.innerHTML += html + '<br>';
+            term.scrollTop = term.scrollHeight;
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function initGraph() {
+            modGraph.innerHTML = `
+                <div class="graph-node" id="gn-main">main.js</div>
+                <div class="graph-node" id="gn-map">map.js</div>
+                <div class="graph-node" id="gn-css">style.css</div>
+                <div class="graph-node" id="gn-leaf">leaflet (CJS)</div>
+            `;
+            document.querySelectorAll('.arch-file').forEach(el => el.classList.remove('visible'));
+            document.querySelectorAll('.arch-node').forEach(el => { el.classList.remove('active'); el.classList.remove('done'); });
+            document.querySelectorAll('.arrow').forEach(el => el.classList.remove('active'));
+        }
+
+        async function stepExecution() {
+            document.getElementById('panel-arch').classList.add('active');
+            document.getElementById('badge-arch').className = 'status-badge active';
+            document.getElementById('badge-arch').innerText = 'Building';
+
+            if (state === 0) {
+                // Read Source
+                document.getElementById('node-src').classList.add('active');
+                document.getElementById('f-main').classList.add('visible');
+                document.getElementById('f-map').classList.add('visible');
+                document.getElementById('f-deps').classList.add('visible');
+                
+                printTerm(`> vite v4.0.0 <span class="term-info">building for production...</span>`);
+                document.getElementById('badge-term').className = 'status-badge active';
+                document.getElementById('badge-term').innerText = 'Parsing';
+                
+                state = 1;
+            } 
+            else if (state === 1) {
+                // Dependency Pre-bundling (esbuild)
+                document.getElementById('node-src').classList.remove('active');
+                document.getElementById('node-src').classList.add('done');
+                document.getElementById('arr-1').classList.add('active');
+                
+                document.getElementById('node-build').classList.add('active');
+                document.getElementById('f-esb').classList.add('visible');
+                
+                printTerm(`<span class="term-info">transforming...</span>`);
+                
+                const gnLeaf = document.getElementById('gn-leaf');
+                gnLeaf.classList.add('analyzed');
+                gnLeaf.innerText = 'leaflet (ESM Cached)';
+                
+                await sleep(400);
+                printTerm(`<span class="term-info">✓ 1 modules transformed.</span>`);
+                
+                state = 2;
+            }
+            else if (state === 2) {
+                // Rollup Tree Shaking & Bundling
+                document.getElementById('f-rol').classList.add('visible');
+                
+                const gnMain = document.getElementById('gn-main');
+                const gnMap = document.getElementById('gn-map');
+                const gnCss = document.getElementById('gn-css');
+                
+                gnMain.classList.add('bundled');
+                gnMap.classList.add('bundled');
+                gnCss.classList.add('bundled');
+                
+                printTerm(`<span class="term-info">rendering chunks...</span>`);
+                await sleep(500);
+                printTerm(`<span class="term-info">computing gzip size...</span>`);
+                
+                state = 3;
+            }
+            else if (state === 3) {
+                // Output Generation
+                document.getElementById('node-build').classList.remove('active');
+                document.getElementById('node-build').classList.add('done');
+                document.getElementById('arr-2').classList.add('active');
+                
+                document.getElementById('node-dist').classList.add('active');
+                document.getElementById('f-outjs').classList.add('visible');
+                await sleep(200);
+                document.getElementById('f-outcss').classList.add('visible');
+                await sleep(200);
+                document.getElementById('f-outhtml').classList.add('visible');
+                
+                printTerm(`<span class="term-file">dist/index.html</span> <span class="term-size">0.45 kB</span>`);
+                printTerm(`<span class="term-file">dist/assets/index-4f2c01.css</span> <span class="term-size">1.20 kB │ gzip: 0.60 kB</span>`);
+                printTerm(`<span class="term-file">dist/assets/index-9a8b7c.js</span>  <span class="term-size">45.5 kB │ gzip: 14.2 kB</span>`);
+                printTerm(`<span class="term-green">✓ built in 1.25s</span>`);
+                
+                document.getElementById('badge-arch').className = 'status-badge done';
+                document.getElementById('badge-arch').innerText = 'Complete';
+                document.getElementById('badge-term').className = 'status-badge done';
+                document.getElementById('badge-term').innerText = 'Exit 0';
+                
+                btnStep.disabled = true;
+                btnPlay.disabled = true;
+                if(autoPlayTimer) clearInterval(autoPlayTimer);
+            }
+        }
+
+        btnStep.addEventListener('click', stepExecution);
+        
+        btnPlay.addEventListener('click', () => {
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            autoPlayTimer = setInterval(() => {
+                if(state <= 3) stepExecution();
+            }, 1000);
+        });
+
+        btnReset.addEventListener('click', () => {
+            if(autoPlayTimer) clearInterval(autoPlayTimer);
+            state = 0;
+            term.innerHTML = '<span>$ <span class="term-cmd">npm run build</span></span><br>';
+            initGraph();
+            btnStep.disabled = false;
+            btnPlay.disabled = false;
+            document.getElementById('panel-arch').classList.remove('active');
+            document.getElementById('badge-arch').className = 'status-badge';
+            document.getElementById('badge-arch').innerText = 'Ready';
+            document.getElementById('badge-term').className = 'status-badge';
+            document.getElementById('badge-term').innerText = 'Idle';
+        });
+
+        // Bootstrap
+        initGraph();
+
+    </script>
+</body>
+</html>

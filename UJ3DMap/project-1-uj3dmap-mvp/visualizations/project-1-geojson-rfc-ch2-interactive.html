@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoJSON Standard Map - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #8b5cf6;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --lng: #38bdf8;
+            --lat: #f87171;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, var(--blue), var(--lng));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status-badge.active { background: rgba(56, 189, 248, 0.2); color: var(--lng); font-weight: bold; }
+        .status-badge.warn { background: rgba(245, 158, 11, 0.2); color: var(--yellow); font-weight: bold; }
+        .status-badge.done { background: rgba(16, 185, 129, 0.2); color: var(--green); font-weight: bold; }
+        .status-badge.fail { background: rgba(239, 68, 68, 0.2); color: var(--red); font-weight: bold; }
+
+        /* Coordinate Flow Vis */
+        .flow-vis {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .stage-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            width: 80%;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .stage-box.highlight {
+            border-color: var(--blue);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .stage-box.fail-hl {
+            border-color: var(--red);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .stage-box.pass-hl {
+            border-color: var(--green);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .stage-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .coord-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .c-val { padding: 4px 8px; border-radius: 4px; border: 1px solid transparent; transition: all 0.5s ease; }
+        .c-val.v-lng { color: var(--lng); }
+        .c-val.v-lat { color: var(--lat); }
+
+        .swap-animation-layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            z-index: 10;
+            opacity: 0;
+        }
+        
+        .swap-node { background: var(--surface2); border: 1px solid; padding: 4px 8px; border-radius: 4px; transition: all 1s ease; }
+
+        /* Map Engine */
+        .map-engine {
+            flex-grow: 1;
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .map-grid {
+            position: absolute;
+            width: 200%; height: 200%;
+            background-image: linear-gradient(rgba(51,65,85,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(51,65,85,0.4) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: center;
+        }
+
+        .equator {
+            position: absolute;
+            top: 50%; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.3);
+            border-top: 1px dashed rgba(255,255,255,0.5);
+        }
+        .prime-meridian {
+            position: absolute;
+            left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.3);
+            border-left: 1px dashed rgba(255,255,255,0.5);
+        }
+        
+        .axis-label { position: absolute; font-size: 0.65rem; color: var(--text-dim); }
+        .label-x { right: 10px; top: calc(50% + 5px); }
+        .label-y { top: 10px; left: calc(50% + 5px); }
+
+        .target-marker {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            transition: all 1s ease;
+            opacity: 0;
+            z-index: 10;
+        }
+
+        .target-marker.success { background: var(--green); box-shadow: 0 0 15px var(--green); }
+        .target-marker.error { background: var(--red); box-shadow: 0 0 15px var(--red); }
+
+        /* Code & Log */
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text);
+            flex-grow: 1;
+            margin-bottom: 15px;
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.info { border-left-color: var(--blue); color: var(--blue); }
+        .log-entry.fail { border-left-color: var(--red); color: var(--red); }
+        .log-entry.pass { border-left-color: var(--green); color: var(--green); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        button.primary { background: rgba(59, 130, 246, 0.15); color: var(--blue); border-color: var(--blue); }
+        button.primary:hover:not(:disabled) { background: rgba(59, 130, 246, 0.25); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+
+        button.danger { background: rgba(239, 68, 68, 0.15); color: var(--red); border-color: var(--red); }
+        button.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.3); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+        button.success { background: rgba(16, 185, 129, 0.15); color: var(--green); border-color: var(--green); }
+        button.success:hover:not(:disabled) { background: rgba(16, 185, 129, 0.3); box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+
+        .kw { color: var(--accent); }
+        .str { color: var(--green); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>GeoJSON Standard & Mapping</h1>
+        <p>RFC 7946 [Lng, Lat] vs Mapping Engine [Lat, Lng]</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Data Flow -->
+        <div class="panel" style="grid-row: 1 / span 1;">
+            <div class="panel-title">1. Coordinate Pipeline <span class="status-badge" id="badge-flow">Awaiting API</span></div>
+            <div class="flow-vis">
+                <div class="stage-box" id="box-api">
+                    <div class="stage-title">Remote GeoJSON (RFC 7946)</div>
+                    <div class="coord-display">
+                        [<span class="c-val v-lng">9.950</span>, <span class="c-val v-lat">8.892</span>]
+                    </div>
+                </div>
+
+                <div style="width: 2px; height: 30px; background: var(--border);"></div>
+
+                <div class="stage-box" id="box-js">
+                    <div class="stage-title">JavaScript Memory (Raw Array)</div>
+                    <div class="coord-display" id="js-array">
+                        [<span class="c-val v-lng" id="a-lng">9.950</span>, <span class="c-val v-lat" id="a-lat">8.892</span>]
+                    </div>
+                </div>
+                
+                <div class="swap-animation-layer" id="swap-layer">
+                    <div class="swap-node" id="sn-lng" style="border-color: var(--lng); color: var(--lng)">9.950</div>
+                    <div class="swap-node" id="sn-lat" style="border-color: var(--lat); color: var(--lat)">8.892</div>
+                </div>
+
+                <div style="width: 2px; height: 30px; background: var(--border);"></div>
+
+                <div class="stage-box" id="box-engine">
+                    <div class="stage-title">Leaflet Rendering Engine</div>
+                    <div class="coord-display">
+                        <span style="font-size:0.75rem; color:var(--text-dim); margin-top:5px;">Expects: </span>
+                        [<span class="c-val" style="color:var(--lat)">Lat</span>, <span class="c-val" style="color:var(--lng)">Lng</span>]
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Engine Render -->
+        <div class="panel">
+            <div class="panel-title">2. Map Projection Output <span class="status-badge" id="badge-map">No Data</span></div>
+            <div class="map-engine">
+                <div class="map-grid"></div>
+                <div class="equator"></div>
+                <div class="prime-meridian"></div>
+                <div class="axis-label label-x">X (Longitude)</div>
+                <div class="axis-label label-y">Y (Latitude)</div>
+                
+                <div class="target-marker" id="target"></div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Code & Log -->
+        <div class="panel" style="grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 0; background: transparent; border: none; box-shadow: none;">
+            <div class="panel" style="margin:0;">
+                <div class="panel-title">3. Implementation Code</div>
+                <div class="code-block" id="code-view">
+<span style="color:var(--text-dim)">// Fetch standard GeoJSON point</span>
+<span class="kw">const</span> feature = {
+  type: <span class="str">"Point"</span>,
+  coordinates: [<span class="str">9.950</span>, <span class="str">8.892</span>] <span style="color:var(--text-dim)">// [Lng, Lat]</span>
+};
+
+<span style="color:var(--text-dim)">// Awaiting Injection Strategy...</span>
+                </div>
+            </div>
+            
+            <div class="panel" style="margin:0;">
+                <div class="panel-title">4. Engine Log</div>
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">Engine initialized. Awaiting geometry.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-raw" class="danger">▶ Inject Raw GeoJSON</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-swap" class="success" disabled>▶ Map coordinates.reverse()</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            boxApi: document.getElementById('box-api'),
+            boxJs: document.getElementById('box-js'),
+            boxEngine: document.getElementById('box-engine'),
+            target: document.getElementById('target'),
+            log: document.getElementById('log-output'),
+            code: document.getElementById('code-view'),
+            btnRaw: document.getElementById('btn-raw'),
+            btnSwap: document.getElementById('btn-swap'),
+            badgeFlow: document.getElementById('badge-flow'),
+            badgeMap: document.getElementById('badge-map'),
+            
+            jsArray: document.getElementById('js-array'),
+            swapLayer: document.getElementById('swap-layer'),
+            snLng: document.getElementById('sn-lng'),
+            snLat: document.getElementById('sn-lat')
+        };
+
+        let isPaused = false; let pauseResolve = null;
+        const btnPause = document.getElementById('btn-pause');
+        if (btnPause) {
+            btnPause.addEventListener('click', () => {
+                if (!isPaused) {
+                    isPaused = true;
+                    btnPause.innerText = '▶ Resume';
+                } else {
+                    isPaused = false;
+                    btnPause.innerText = '⏸ Pause';
+                    if (pauseResolve) pauseResolve();
+                }
+            });
+        }
+
+        const sleep = async (ms) => {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            return new Promise(r => setTimeout(r, ms));
+        };
+
+        function log(msg, type='info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${msg}`;
+            UI.log.appendChild(entry);
+            UI.log.scrollTop = UI.log.scrollHeight;
+        }
+
+        UI.btnRaw.addEventListener('click', async () => {
+            UI.btnRaw.disabled = true;
+            UI.btnSwap.disabled = true;
+            if (btnPause) btnPause.disabled = false;
+
+            UI.badgeFlow.className = 'status-badge warn';
+            UI.badgeFlow.innerText = 'Processing Raw';
+            UI.boxApi.classList.add('highlight');
+            
+            log('Fetched [Lng: 9.950, Lat: 8.892] from API', 'info');
+            await sleep(800);
+            
+            UI.boxApi.classList.remove('highlight');
+            UI.boxJs.classList.add('highlight');
+            log('Array loaded into JS memory as [9.950, 8.892]', 'info');
+            
+            UI.code.innerHTML = `
+<span style="color:var(--text-dim)">// Direct injection to Leaflet</span>
+<span class="kw">const</span> coords = feature.coordinates;
+L.marker(coords).addTo(map);
+`;
+            await sleep(800);
+            
+            UI.boxJs.classList.remove('highlight');
+            UI.boxEngine.classList.add('fail-hl');
+            
+            log('Leaflet interprets array as [Lat: 9.950, Lng: 8.892]', 'fail');
+            
+            // Render flipped
+            UI.target.style.top = '20%'; // Should be 8.8 (lat) -> mapped to y
+            UI.target.style.left = '80%'; // Should be 9.9 (lng) -> mapped to x
+            // However, it's flipped. So Lat=9.9, Lng=8.8. 
+            // visually placing it wrong
+            UI.target.style.transform = 'translate(-50%, -50%) translate(-60px, 80px)';
+            UI.target.className = 'target-marker error';
+            UI.target.style.opacity = '1';
+
+            UI.badgeMap.className = 'status-badge fail';
+            UI.badgeMap.innerText = 'Flipped Coords';
+
+            log('ERROR: Point rendered in ocean! Axis misalignment.', 'fail');
+            
+            await sleep(1000);
+            UI.boxEngine.classList.remove('fail-hl');
+            UI.btnSwap.disabled = false;
+            if (btnPause) btnPause.disabled = true;
+        });
+
+        UI.btnSwap.addEventListener('click', async () => {
+            UI.btnSwap.disabled = true;
+            UI.btnRaw.disabled = true;
+            if (btnPause) btnPause.disabled = false;
+
+            // Reset vis
+            UI.target.style.opacity = '0';
+            UI.target.className = 'target-marker';
+            UI.target.style.transform = 'translate(-50%, -50%)';
+            
+            UI.badgeFlow.className = 'status-badge active';
+            UI.badgeFlow.innerText = 'Swapping';
+
+            log('Executing explicit coordinate swap mapping...', 'info');
+
+            UI.code.innerHTML = `
+<span style="color:var(--text-dim)">// Explicit mapping array to reverse order</span>
+<span class="kw">const</span> engineCoords = [
+  feature.coordinates[<span class="str">1</span>], <span style="color:var(--text-dim)">// Lat</span>
+  feature.coordinates[<span class="str">0</span>]  <span style="color:var(--text-dim)">// Lng</span>
+];
+L.marker(engineCoords).addTo(map);
+`;
+
+            // Animate swap
+            UI.boxJs.classList.add('highlight');
+            UI.jsArray.style.opacity = '0.2';
+            UI.swapLayer.style.opacity = '1';
+            
+            await sleep(800);
+            
+            UI.snLng.style.transform = 'translateX(100px)';
+            UI.snLat.style.transform = 'translateX(-100px)';
+            
+            await sleep(800);
+            
+            UI.jsArray.innerHTML = `[<span class="c-val v-lat">8.892</span>, <span class="c-val v-lng">9.950</span>]`;
+            UI.jsArray.style.opacity = '1';
+            UI.swapLayer.style.opacity = '0';
+            
+            log('Array mutated to [Lat: 8.892, Lng: 9.950]', 'pass');
+            
+            await sleep(800);
+            UI.boxJs.classList.remove('highlight');
+            UI.boxEngine.classList.add('pass-hl');
+            
+            // Render correct
+            UI.target.style.left = '60%'; 
+            UI.target.style.top = '40%';
+            UI.target.className = 'target-marker success';
+            UI.target.style.opacity = '1';
+
+            UI.badgeMap.className = 'status-badge done';
+            UI.badgeMap.innerText = 'Correct Render';
+
+            log('Leaflet successfully renders point on land geometry.', 'pass');
+            
+            await sleep(1000);
+            UI.boxEngine.classList.remove('pass-hl');
+            if (btnPause) btnPause.disabled = true;
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => location.reload());
+
+    </script>
+</body>
+</html>

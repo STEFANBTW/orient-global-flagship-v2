@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Min Priority Queue (Binary Heap) Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active {
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .code-line.executing {
+            background: rgba(56, 189, 248, 0.2);
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Visualization Panel */
+        .stage-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        .array-vis {
+            display: flex;
+            align-items: center;
+            min-height: 50px;
+            gap: 5px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px dashed var(--border);
+            overflow-x: auto;
+        }
+
+        .array-slot {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 0.85rem;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .array-slot.active {
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.2);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        .array-slot.swapping {
+            border-color: var(--yellow);
+            color: var(--yellow);
+            background: rgba(250, 204, 21, 0.2);
+        }
+
+        .array-index {
+            position: absolute;
+            bottom: -18px;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            font-weight: normal;
+        }
+
+        .tree-vis {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px dashed var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tree-node {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transform: translate(-50%, -50%);
+            transition: all 0.4s ease;
+            z-index: 2;
+        }
+
+        .tree-node.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        .tree-node.swapping {
+            border-color: var(--yellow);
+            color: var(--yellow);
+            box-shadow: 0 0 10px var(--yellow);
+        }
+
+        .tree-edge {
+            position: absolute;
+            height: 2px;
+            background: var(--border);
+            transform-origin: 0 50%;
+            z-index: 1;
+            transition: background 0.4s;
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry {
+            border-left: 2px solid var(--border);
+            padding-left: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        .log-entry.math { border-left-color: var(--purple); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+        
+        button.danger {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--red);
+            border-color: var(--red);
+        }
+        button.danger:hover:not(:disabled) { background: rgba(248, 113, 113, 0.25); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .number { color: var(--yellow); }
+        .function { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input[type="number"] {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            width: 80px;
+            outline: none;
+        }
+        input[type="number"]:focus { border-color: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Min Priority Queue Simulation</h1>
+        <p>Binary Heap Array & Tree Synchronization State Machine</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: State Visualization -->
+        <div class="panel" id="panel-stage">
+            <div class="panel-title">1. Memory Map <span class="status-badge" id="badge-stage">Ready</span></div>
+            <div class="stage-container">
+                <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Array Buffer (Contiguous Memory)</div>
+                <div class="array-vis" id="array-vis">
+                    <!-- Array slots injected via JS -->
+                </div>
+                
+                <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Binary Tree Mapping (Conceptual)</div>
+                <div class="tree-vis" id="tree-vis">
+                    <!-- Nodes and Edges injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Source Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Heap Operations <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="keyword">function</span> <span class="function">heapifyUp</span>(idx) {</span>
+<span class="code-line" id="line-1">  <span class="keyword">if</span> (idx === <span class="number">0</span>) <span class="keyword">return</span>;</span>
+<span class="code-line" id="line-2">  <span class="keyword">const</span> parent = Math.floor((idx - <span class="number">1</span>) / <span class="number">2</span>);</span>
+<span class="code-line" id="line-3">  <span class="keyword">if</span> (heap[parent] > heap[idx]) {</span>
+<span class="code-line" id="line-4">    swap(parent, idx);</span>
+<span class="code-line" id="line-5">    <span class="function">heapifyUp</span>(parent);</span>
+<span class="code-line" id="line-6">  }</span>
+<span class="code-line" id="line-7">}</span>
+<span class="code-line" id="line-8"></span>
+<span class="code-line" id="line-9"><span class="keyword">function</span> <span class="function">heapifyDown</span>(idx) {</span>
+<span class="code-line" id="line-10">  <span class="keyword">let</span> min = idx;</span>
+<span class="code-line" id="line-11">  <span class="keyword">const</span> l = <span class="number">2</span> * idx + <span class="number">1</span>;</span>
+<span class="code-line" id="line-12">  <span class="keyword">const</span> r = <span class="number">2</span> * idx + <span class="number">2</span>;</span>
+<span class="code-line" id="line-13">  <span class="keyword">if</span> (l < heap.length && heap[l] < heap[min]) min = l;</span>
+<span class="code-line" id="line-14">  <span class="keyword">if</span> (r < heap.length && heap[r] < heap[min]) min = r;</span>
+<span class="code-line" id="line-15">  <span class="keyword">if</span> (min !== idx) {</span>
+<span class="code-line" id="line-16">    swap(min, idx);</span>
+<span class="code-line" id="line-17">    <span class="function">heapifyDown</span>(min);</span>
+<span class="code-line" id="line-18">  }</span>
+<span class="code-line" id="line-19">}</span></div>
+        </div>
+
+        <!-- Panel 3: System Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Pointer Traversal Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Heap initialized. Awaiting operations...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Master Controls -->
+        <div class="master-controls">
+            <div class="input-group">
+                <input type="number" id="val-input" value="10">
+                <button id="btn-insert" class="primary">Insert</button>
+            </div>
+            <button id="btn-extract" class="danger">Extract Min</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-step" class="primary" disabled>▶ Step</button>
+            <button id="btn-play" disabled>▶▶ Auto-Play</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        const btnInsert = document.getElementById('btn-insert');
+        const btnExtract = document.getElementById('btn-extract');
+        const valInput = document.getElementById('val-input');
+        
+        const arrayVis = document.getElementById('array-vis');
+        const treeVis = document.getElementById('tree-vis');
+        const logOutput = document.getElementById('log-output');
+
+        let heap = [2, 5, 12, 8, 7]; // Initial state
+        
+        // Concurrency / Stepping Lock
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let autoPlayTimer = null;
+        let isExecuting = false;
+
+        function waitForStep() {
+            return new Promise(resolve => {
+                if (isAutoPlaying) {
+                    setTimeout(resolve, 800);
+                } else {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    resolveStep = resolve;
+                }
+            });
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearHighlight() {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+        }
+
+        function highlightLine(lineNumbers) {
+            clearHighlight();
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        function getTreePos(idx) {
+            const level = Math.floor(Math.log2(idx + 1));
+            const nodesInLevel = Math.pow(2, level);
+            const posInLevel = (idx + 1) - nodesInLevel;
+            const w = treeVis.clientWidth;
+            const spacing = w / (nodesInLevel + 1);
+            
+            return {
+                x: spacing * (posInLevel + 1),
+                y: 30 + level * 50
+            };
+        }
+
+        function renderHeap() {
+            // Render Array
+            arrayVis.innerHTML = '';
+            heap.forEach((val, idx) => {
+                const slot = document.createElement('div');
+                slot.className = 'array-slot';
+                slot.id = `arr-${idx}`;
+                slot.innerText = val;
+                
+                const span = document.createElement('span');
+                span.className = 'array-index';
+                span.innerText = idx;
+                slot.appendChild(span);
+                
+                arrayVis.appendChild(slot);
+            });
+
+            // Render Tree
+            treeVis.innerHTML = '';
+            
+            // Draw Edges First
+            heap.forEach((_, idx) => {
+                if (idx === 0) return;
+                const pIdx = Math.floor((idx - 1) / 2);
+                const pPos = getTreePos(pIdx);
+                const cPos = getTreePos(idx);
+                
+                const dx = cPos.x - pPos.x;
+                const dy = cPos.y - pPos.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                const edge = document.createElement('div');
+                edge.className = 'tree-edge';
+                edge.style.width = `${dist}px`;
+                edge.style.left = `${pPos.x}px`;
+                edge.style.top = `${pPos.y}px`;
+                edge.style.transform = `rotate(${angle}deg)`;
+                
+                treeVis.appendChild(edge);
+            });
+
+            // Draw Nodes
+            heap.forEach((val, idx) => {
+                const pos = getTreePos(idx);
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+                node.id = `tree-${idx}`;
+                node.innerText = val;
+                node.style.left = `${pos.x}px`;
+                node.style.top = `${pos.y}px`;
+                treeVis.appendChild(node);
+            });
+        }
+
+        function highlightNodes(idx1, idx2, cssClass) {
+            document.querySelectorAll('.array-slot, .tree-node').forEach(el => {
+                el.classList.remove('active', 'swapping');
+            });
+            if (idx1 !== null) {
+                document.getElementById(`arr-${idx1}`)?.classList.add(cssClass);
+                document.getElementById(`tree-${idx1}`)?.classList.add(cssClass);
+            }
+            if (idx2 !== null) {
+                document.getElementById(`arr-${idx2}`)?.classList.add(cssClass);
+                document.getElementById(`tree-${idx2}`)?.classList.add(cssClass);
+            }
+        }
+
+        async function heapifyUp(idx) {
+            highlightLine(1);
+            highlightNodes(idx, null, 'active');
+            log(`heapifyUp(idx: ${idx})`);
+            await waitForStep();
+
+            if (idx === 0) {
+                log(`Root reached. Validated.`, 'result');
+                return;
+            }
+
+            highlightLine(2);
+            const parent = Math.floor((idx - 1) / 2);
+            highlightNodes(idx, parent, 'active');
+            log(`Parent index: floor((${idx}-1)/2) = ${parent}`, 'math');
+            await waitForStep();
+
+            highlightLine(3);
+            log(`Compare: heap[parent] (${heap[parent]}) > heap[idx] (${heap[idx]})?`);
+            await waitForStep();
+
+            if (heap[parent] > heap[idx]) {
+                highlightLine(4);
+                log(`Yes. Swap needed.`, 'math');
+                highlightNodes(idx, parent, 'swapping');
+                await waitForStep();
+
+                // Swap
+                let temp = heap[parent];
+                heap[parent] = heap[idx];
+                heap[idx] = temp;
+                renderHeap();
+                highlightNodes(parent, idx, 'swapping');
+                await waitForStep();
+
+                highlightLine(5);
+                log(`Recursing up...`);
+                await waitForStep();
+                await heapifyUp(parent);
+            } else {
+                log(`No swap needed. Heap property restored.`, 'result');
+            }
+        }
+
+        async function heapifyDown(idx) {
+            highlightLine(10);
+            let min = idx;
+            highlightNodes(idx, null, 'active');
+            log(`heapifyDown(idx: ${idx}). Assume min = ${idx}`);
+            await waitForStep();
+
+            highlightLine([11,12]);
+            const l = 2 * idx + 1;
+            const r = 2 * idx + 2;
+            log(`Children indices: l=${l}, r=${r}`, 'math');
+            await waitForStep();
+
+            highlightLine(13);
+            if (l < heap.length) {
+                log(`Compare left child: heap[${l}] (${heap[l]}) < heap[min] (${heap[min]})?`);
+                await waitForStep();
+                if (heap[l] < heap[min]) {
+                    min = l;
+                    log(`Yes. New min = ${l}`, 'math');
+                } else { log(`No.`); }
+            }
+
+            highlightLine(14);
+            if (r < heap.length) {
+                log(`Compare right child: heap[${r}] (${heap[r]}) < heap[min] (${heap[min]})?`);
+                await waitForStep();
+                if (heap[r] < heap[min]) {
+                    min = r;
+                    log(`Yes. New min = ${r}`, 'math');
+                } else { log(`No.`); }
+            }
+
+            highlightLine(15);
+            await waitForStep();
+
+            if (min !== idx) {
+                highlightLine(16);
+                log(`min (${min}) != idx (${idx}). Swap needed.`);
+                highlightNodes(idx, min, 'swapping');
+                await waitForStep();
+
+                // Swap
+                let temp = heap[min];
+                heap[min] = heap[idx];
+                heap[idx] = temp;
+                renderHeap();
+                highlightNodes(min, idx, 'swapping');
+                await waitForStep();
+
+                highlightLine(17);
+                log(`Recursing down...`);
+                await waitForStep();
+                await heapifyDown(min);
+            } else {
+                log(`min === idx. Heap property restored.`, 'result');
+            }
+        }
+
+        async function runOperation(opFn) {
+            if (isExecuting) return;
+            isExecuting = true;
+            btnInsert.disabled = true;
+            btnExtract.disabled = true;
+            document.getElementById('panel-code').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Executing';
+
+            await opFn();
+
+            isExecuting = false;
+            isAutoPlaying = false;
+            btnInsert.disabled = false;
+            btnExtract.disabled = false;
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            clearHighlight();
+            highlightNodes(null, null, '');
+            document.getElementById('panel-code').classList.remove('active');
+            document.getElementById('badge-code').className = 'status-badge done';
+            document.getElementById('badge-code').innerText = 'Idle';
+        }
+
+        btnInsert.addEventListener('click', () => {
+            const val = parseInt(valInput.value);
+            if(isNaN(val)) return;
+            
+            runOperation(async () => {
+                log(`Starting INSERT operation for ${val}`);
+                heap.push(val);
+                renderHeap();
+                log(`Appended ${val} to end of array (idx: ${heap.length-1})`);
+                await waitForStep();
+                await heapifyUp(heap.length - 1);
+            });
+        });
+
+        btnExtract.addEventListener('click', () => {
+            if(heap.length === 0) return;
+            runOperation(async () => {
+                log(`Starting EXTRACT MIN operation`);
+                if(heap.length === 1) {
+                    const val = heap.pop();
+                    renderHeap();
+                    log(`Extracted sole element: ${val}`, 'result');
+                    return;
+                }
+                
+                const min = heap[0];
+                const last = heap.pop();
+                heap[0] = last;
+                renderHeap();
+                
+                log(`Extracted Min: ${min}. Moved last element (${last}) to root (idx: 0).`, 'math');
+                await waitForStep();
+                
+                await heapifyDown(0);
+            });
+        });
+
+        btnReset.addEventListener('click', () => {
+            heap = [2, 5, 12, 8, 7];
+            isExecuting = false;
+            isAutoPlaying = false;
+            if(resolveStep) resolveStep();
+            resolveStep = null;
+            
+            btnInsert.disabled = false;
+            btnExtract.disabled = false;
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            
+            clearHighlight();
+            document.getElementById('panel-code').classList.remove('active');
+            document.getElementById('badge-code').className = 'status-badge';
+            document.getElementById('badge-code').innerText = 'Idle';
+            logOutput.innerHTML = '<div class="log-entry">Heap reset.</div>';
+            
+            renderHeap();
+        });
+
+        // Init
+        // Need to wait slightly for layout to calculate widths for tree nodes
+        setTimeout(() => renderHeap(), 100);
+        window.addEventListener('resize', renderHeap);
+
+    </script>
+</body>
+</html>

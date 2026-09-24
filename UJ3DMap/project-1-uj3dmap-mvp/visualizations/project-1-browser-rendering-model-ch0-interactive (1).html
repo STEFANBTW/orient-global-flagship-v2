@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Rendering Model - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #8b5cf6;
+            --green: #10b981;
+            --blue: #3b82f6;
+            --yellow: #f59e0b;
+            --pink: #ec4899;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, var(--accent), var(--pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status-badge.active { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); }
+
+        /* Pipeline Scroll */
+        .pipeline-v {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            overflow-y: auto;
+            padding-right: 5px;
+            flex-grow: 1;
+        }
+        
+        .pipeline-v::-webkit-scrollbar { width: 6px; }
+        .pipeline-v::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .phase {
+            background: var(--surface2);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s;
+            opacity: 0.5;
+        }
+
+        .phase.active-phase {
+            border-color: var(--accent);
+            background: rgba(139, 92, 246, 0.1);
+            opacity: 1;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+        }
+
+        .phase.done-phase {
+            border-color: var(--green);
+            background: rgba(16, 185, 129, 0.05);
+            opacity: 0.8;
+        }
+
+        .phase-num {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .phase.active-phase .phase-num { background: var(--accent); border-color: var(--accent); color: white; }
+        .phase.done-phase .phase-num { background: var(--green); border-color: var(--green); color: white; }
+
+        .phase-body { flex: 1; }
+        .phase-name { font-weight: 700; font-size: 0.9rem; }
+        .phase-detail { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.2rem; }
+        
+        .phase-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            padding: 0.4rem;
+            margin-top: 0.5rem;
+            color: #c4b5fd;
+            display: none;
+        }
+        .phase.active-phase .phase-code { display: block; }
+
+        .down-arrow { text-align: center; color: var(--border); font-size: 1rem; margin: -0.25rem 0; }
+
+        /* DOM Tree Panel */
+        .dom-tree {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .dom-node {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            opacity: 0.3;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .dom-node.visible { opacity: 1; }
+        .dom-node.element { color: var(--blue); }
+        .dom-node.text { color: var(--green); }
+        .dom-node.script { color: var(--yellow); }
+        .dom-node.highlight { background: rgba(139, 92, 246, 0.2); }
+
+        .dom-indent { padding-left: calc(var(--d,0) * 1.5rem); }
+
+        /* V8 Log Panel */
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.v8 { border-left-color: var(--yellow); color: var(--yellow); }
+        .log-entry.event { border-left-color: var(--pink); color: var(--pink); font-weight: bold; }
+        .log-entry.paint { border-left-color: var(--green); color: var(--green); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        button.primary { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border-color: var(--accent); }
+        button.primary:hover:not(:disabled) { background: rgba(139, 92, 246, 0.3); box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Browser Rendering Pipeline</h1>
+        <p>Bytes → Tokens → DOM → CSSOM → Layout → Paint</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Pipeline -->
+        <div class="panel" id="panel-pipeline" style="grid-row: 1 / span 1;">
+            <div class="panel-title">1. The 7-Phase Architecture <span class="status-badge" id="badge-pipeline">Idle</span></div>
+            <div class="pipeline-v" id="pipeline-container">
+                <div class="phase" id="ph-0"><div class="phase-num">1</div><div class="phase-body"><div class="phase-name">Bytes → Characters</div><div class="phase-detail">TCP socket delivers raw bytes. Decoded via UTF-8.</div><div class="phase-code">GET /index.html → 4,301 raw bytes</div></div></div>
+                <div class="down-arrow">↓</div>
+                <div class="phase" id="ph-1"><div class="phase-num">2</div><div class="phase-body"><div class="phase-name">Tokens → DOM Nodes</div><div class="phase-detail">Blink HTML parser builds the DOM tree.</div><div class="phase-code">&lt;div id="map"&gt; → HTMLDivElement</div></div></div>
+                <div class="down-arrow">↓</div>
+                <div class="phase" id="ph-2"><div class="phase-num">3</div><div class="phase-body"><div class="phase-name">CSS → CSSOM</div><div class="phase-detail">CSS parsed into a tree of StyleRule objects.</div><div class="phase-code">#map { height: 100vh } → LayoutBox</div></div></div>
+                <div class="down-arrow">↓</div>
+                <div class="phase" id="ph-3"><div class="phase-num">4</div><div class="phase-body"><div class="phase-name">Render Tree</div><div class="phase-detail">DOM + CSSOM merge. Invisible nodes excluded.</div><div class="phase-code">HTMLDivElement + {height:100vh} → LayoutBlock</div></div></div>
+                <div class="down-arrow">↓</div>
+                <div class="phase" id="ph-4"><div class="phase-num">5</div><div class="phase-body"><div class="phase-name">Layout (Reflow)</div><div class="phase-detail">Calculate exact pixel dimensions/positions.</div><div class="phase-code">div#map → x:0 y:56 w:1440 h:956</div></div></div>
+                <div class="down-arrow">↓</div>
+                <div class="phase" id="ph-5"><div class="phase-num">6</div><div class="phase-body"><div class="phase-name">Paint + Composite</div><div class="phase-detail">GPU Process rasterizes display lists.</div><div class="phase-code">drawRect(0,56,1440,956,#090b10)</div></div></div>
+                <div class="down-arrow">↓</div>
+                <div class="phase" id="ph-6"><div class="phase-num">7</div><div class="phase-body"><div class="phase-name">V8 Execution</div><div class="phase-detail">DOMContentLoaded triggers V8 JS engine.</div><div class="phase-code">L.map('map') → map instance</div></div></div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Panel 2: DOM Tree -->
+            <div class="panel" id="panel-dom" style="flex: 1;">
+                <div class="panel-title">2. DOM Construction (Blink) <span class="status-badge" id="badge-dom">Awaiting HTML</span></div>
+                <div class="dom-tree" id="dom-tree">
+                    <div class="dom-node element dom-indent" style="--d:0;" id="dn-0">&lt;html&gt;</div>
+                    <div class="dom-node element dom-indent" style="--d:1;" id="dn-1">&lt;head&gt;</div>
+                    <div class="dom-node element dom-indent" style="--d:2;" id="dn-2">&lt;link rel="stylesheet" href="style.css"&gt;</div>
+                    <div class="dom-node element dom-indent" style="--d:1;" id="dn-3">&lt;body&gt;</div>
+                    <div class="dom-node element dom-indent" style="--d:2;" id="dn-4">&lt;div id="map"&gt;&lt;/div&gt;</div>
+                    <div class="dom-node script dom-indent" style="--d:2;" id="dn-5">&lt;script type="module" src="app.js"&gt;</div>
+                </div>
+            </div>
+
+            <!-- Panel 3: V8 Log -->
+            <div class="panel" id="panel-log" style="flex: 1;">
+                <div class="panel-title">3. Execution Log <span class="status-badge" id="badge-log">Waiting</span></div>
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">Awaiting page request...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-step" class="primary">▶ Step Pipeline</button>
+            <button id="btn-auto">▶▶ Auto-Run</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnStep = document.getElementById('btn-step');
+        const btnAuto = document.getElementById('btn-auto');
+        const btnReset = document.getElementById('btn-reset');
+        const logOutput = document.getElementById('log-output');
+        
+        let currentPhase = -1;
+        let isAuto = false;
+
+        function log(msg, type='normal') {
+            const el = document.createElement('div');
+            el.className = `log-entry ${type}`;
+            el.innerHTML = `> ${msg}`;
+            logOutput.appendChild(el);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function updatePhases(n) {
+            for(let i=0; i<7; i++) {
+                const ph = document.getElementById(`ph-${i}`);
+                ph.className = 'phase';
+                if(i < n) ph.classList.add('done-phase');
+                else if(i === n) {
+                    ph.classList.add('active-phase');
+                    ph.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+            document.getElementById('badge-pipeline').className = 'status-badge active';
+            document.getElementById('badge-pipeline').innerText = `Phase ${n+1}/7`;
+        }
+
+        function updateDOMNode(idx) {
+            document.querySelectorAll('.dom-node').forEach(n => n.classList.remove('highlight'));
+            if(idx >= 0 && idx <= 5) {
+                const node = document.getElementById(`dn-${idx}`);
+                node.classList.add('visible', 'highlight');
+                if(idx === 2) log(`Found <link>. Dispatching parallel CSS network request.`, 'normal');
+                if(idx === 5) {
+                    log(`Found <script type="module">. Parser pauses.`, 'v8');
+                    document.getElementById('badge-dom').className = 'status-badge done';
+                    document.getElementById('badge-dom').innerText = 'Paused';
+                }
+            }
+        }
+
+        async function stepPipeline() {
+            if(currentPhase >= 6) return;
+            currentPhase++;
+            
+            updatePhases(currentPhase);
+            
+            switch(currentPhase) {
+                case 0:
+                    log(`TCP Handshake complete. Receiving bytes...`);
+                    break;
+                case 1:
+                    document.getElementById('badge-dom').className = 'status-badge active';
+                    document.getElementById('badge-dom').innerText = 'Parsing';
+                    log(`Tokenizing HTML stream...`);
+                    for(let i=0; i<=5; i++) {
+                        updateDOMNode(i);
+                        await new Promise(r => setTimeout(r, isAuto ? 300 : 800));
+                        if(!isAuto && i < 5) return; // Wait for next click if not auto (simplified: auto steps sub-phases)
+                    }
+                    break;
+                case 2:
+                    log(`style.css received. Building CSSOM tree.`, 'normal');
+                    break;
+                case 3:
+                    log(`Merging DOM and CSSOM into Render Tree.`, 'normal');
+                    break;
+                case 4:
+                    log(`Calculating geometry. Layout box generated for #map.`, 'normal');
+                    break;
+                case 5:
+                    log(`GPU rasterizing pixels to frame buffer.`, 'paint');
+                    log(`First Contentful Paint (FCP) fired!`, 'event');
+                    break;
+                case 6:
+                    log(`DOMContentLoaded Event Fired!`, 'event');
+                    log(`V8 Ignition interpreting app.js bytecode...`, 'v8');
+                    log(`L.map('map') executed. Leaflet attached.`, 'v8');
+                    
+                    document.getElementById('badge-pipeline').className = 'status-badge done';
+                    document.getElementById('badge-pipeline').innerText = 'Rendered';
+                    document.getElementById('badge-log').className = 'status-badge done';
+                    document.getElementById('badge-log').innerText = 'Interactive';
+                    btnStep.disabled = true;
+                    btnAuto.disabled = true;
+                    break;
+            }
+        }
+
+        btnStep.addEventListener('click', stepPipeline);
+        
+        btnAuto.addEventListener('click', async () => {
+            isAuto = true;
+            btnStep.disabled = true;
+            btnAuto.disabled = true;
+            while(currentPhase < 6) {
+                await stepPipeline();
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        });
+
+        btnReset.addEventListener('click', () => window.location.reload());
+
+    </script>
+</body>
+</html>

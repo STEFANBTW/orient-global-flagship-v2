@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A* Pathfinding Visualization - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.active { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+        .status-badge.warn { background: var(--orange); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Canvas Graph */
+        .graph-view {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .legend {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.7rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
+        .legend-color { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* Priority Queue Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { color: var(--text-dim); font-weight: 600; text-transform: uppercase; }
+        
+        .pq-row { transition: all 0.3s; opacity: 0.5; }
+        .pq-row.active { opacity: 1; background: rgba(56, 189, 248, 0.1); border-left: 2px solid var(--accent); }
+        .val-g { color: var(--green); }
+        .val-h { color: var(--purple); }
+        .val-f { color: var(--yellow); font-weight: bold; }
+
+        .eval-box {
+            background: var(--surface2);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.process { border-left-color: var(--accent); color: var(--accent); }
+        .log-entry.update { border-left-color: var(--green); color: var(--green); }
+        .log-entry.skip { border-left-color: var(--border); color: var(--text-dim); }
+        .log-entry.result { border-left-color: var(--yellow); color: var(--yellow); font-weight: bold;}
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(56, 189, 248, 0.1); border-color: var(--accent); color: var(--accent); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(56, 189, 248, 0.15); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>A* Pathfinding Optimization</h1>
+        <p>Heuristic Search f(n) = g(n) + h(n)</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Graph Vis -->
+        <div class="panel" id="panel-vis" style="grid-row: 1 / span 2;">
+            <div class="panel-title">1. Campus Spatial Graph <span class="status-badge" id="badge-vis">Ready</span></div>
+            <div class="graph-view" id="graph-container">
+                <canvas id="graphCanvas"></canvas>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: var(--purple)"></div> Start (Gate)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--red)"></div> Goal (ICT)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--accent)"></div> Open Set</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--green)"></div> Closed Set</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--yellow)"></div> Final Path</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Priority Queue -->
+        <div class="panel" id="panel-queue">
+            <div class="panel-title">2. Priority Queue (Min-Heap) <span class="status-badge" id="badge-queue">Idle</span></div>
+            <div class="eval-box" id="eval-box">
+                <span class="val-f">f(n)</span> = <span class="val-g">g(n)</span> + <span class="val-h">h(n)</span>
+            </div>
+            <div class="code-block" style="padding: 0; background: transparent; border: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node</th>
+                            <th>g(n) <span style="font-size:0.6rem;text-transform:none">Cost</span></th>
+                            <th>h(n) <span style="font-size:0.6rem;text-transform:none">Heur.</span></th>
+                            <th>f(n) <span style="font-size:0.6rem;text-transform:none">Total</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="pq-body">
+                        <!-- Injected via JS -->
+                        <tr><td colspan="4" style="text-align:center; color:var(--text-dim); border:none; padding-top:20px;">Queue Empty</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" id="panel-log">
+            <div class="panel-title">3. Pointer Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Waiting to initialize A* search...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-run" class="primary">▶ Run A*</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-step" class="primary" disabled>▶ Step State</button>
+            <button id="btn-play" disabled>▶▶ Auto-Play</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const nodes = {
+            'Gate': { x: 100, y: 350 },
+            'SU': { x: 250, y: 300 },
+            'Senate': { x: 150, y: 150 },
+            'Library': { x: 350, y: 200 },
+            'Science': { x: 500, y: 320 },
+            'ICT': { x: 550, y: 100 }
+        };
+
+        const edges = [
+            { u: 'Gate', v: 'SU', weight: 10 },
+            { u: 'Gate', v: 'Senate', weight: 15 },
+            { u: 'SU', v: 'Senate', weight: 12 },
+            { u: 'SU', v: 'Science', weight: 25 },
+            { u: 'Senate', v: 'Library', weight: 10 },
+            { u: 'Library', v: 'ICT', weight: 15 },
+            { u: 'Library', v: 'Science', weight: 20 },
+            { u: 'Science', v: 'ICT', weight: 18 }
+        ];
+
+        // Euclidean heuristic
+        const calculateH = (nodeId) => {
+            const dx = nodes['ICT'].x - nodes[nodeId].x;
+            const dy = nodes['ICT'].y - nodes[nodeId].y;
+            return Math.floor(Math.sqrt(dx*dx + dy*dy) / 10);
+        };
+        const hScores = {};
+        for(let key in nodes) hScores[key] = calculateH(key);
+
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('graph-container');
+        const pqBody = document.getElementById('pq-body');
+        const evalBox = document.getElementById('eval-box');
+        const logOutput = document.getElementById('log-output');
+
+        const btnRun = document.getElementById('btn-run');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let isExecuting = false;
+
+        let isPaused = false; let pauseResolve = null;
+        const btnPause = document.getElementById('btn-pause');
+        if (btnPause) {
+            btnPause.addEventListener('click', () => {
+                if (!isPaused) {
+                    isPaused = true;
+                    btnPause.innerText = '▶ Resume';
+                } else {
+                    isPaused = false;
+                    btnPause.innerText = '⏸ Pause';
+                    if (pauseResolve) pauseResolve();
+                }
+            });
+        }
+
+        let openSet = [];
+        let closedSet = new Set();
+        let gScores = {};
+        let fScores = {};
+        let cameFrom = {};
+        let finalPath = [];
+        let currentlyProcessing = null;
+        let evaluatingNeighbor = null;
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawGraph();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function waitForStep() {
+            return new Promise(resolve => {
+                if (isAutoPlaying) {
+                    setTimeout(resolve, 800);
+                } else {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    resolveStep = resolve;
+                }
+            });
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            if (btnPause) btnPause.disabled = false;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Edges
+            ctx.lineWidth = 3;
+            edges.forEach(edge => {
+                const u = nodes[edge.u];
+                const v = nodes[edge.v];
+                
+                let color = 'rgba(51, 65, 85, 0.5)';
+                if (finalPath.length > 0) {
+                    let inPath = false;
+                    for(let i=0; i<finalPath.length-1; i++) {
+                        if ((finalPath[i] === edge.u && finalPath[i+1] === edge.v) || (finalPath[i] === edge.v && finalPath[i+1] === edge.u)) {
+                            inPath = true; break;
+                        }
+                    }
+                    if (inPath) color = 'var(--yellow)';
+                } else if (evaluatingNeighbor && ((evaluatingNeighbor.u === edge.u && evaluatingNeighbor.v === edge.v) || (evaluatingNeighbor.u === edge.v && evaluatingNeighbor.v === edge.u))) {
+                    color = 'var(--orange)';
+                    ctx.lineWidth = 5;
+                } else if (cameFrom[edge.v] === edge.u || cameFrom[edge.u] === edge.v) {
+                    color = 'rgba(74, 222, 128, 0.4)';
+                }
+
+                ctx.strokeStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(u.x, u.y);
+                ctx.lineTo(v.x, v.y);
+                ctx.stroke();
+
+                const mx = (u.x + v.x) / 2;
+                const my = (u.y + v.y) / 2;
+                ctx.fillStyle = 'var(--surface2)';
+                ctx.fillRect(mx - 12, my - 10, 24, 20);
+                ctx.fillStyle = 'var(--text-dim)';
+                if(color === 'var(--yellow)') ctx.fillStyle = 'var(--yellow)';
+                ctx.font = '12px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(edge.weight, mx, my);
+                ctx.lineWidth = 3;
+            });
+
+            // Nodes
+            for(let key in nodes) {
+                const node = nodes[key];
+                let bgColor = 'var(--surface2)';
+                let bColor = 'var(--border)';
+                
+                if (key === 'Gate') { bColor = 'var(--purple)'; bgColor = 'rgba(192, 132, 252, 0.2)'; }
+                else if (key === 'ICT') { bColor = 'var(--red)'; bgColor = 'rgba(248, 113, 113, 0.2)'; }
+                else if (finalPath.includes(key)) { bColor = 'var(--yellow)'; bgColor = 'rgba(250, 204, 21, 0.2)'; }
+                else if (closedSet.has(key)) { bColor = 'var(--green)'; bgColor = 'rgba(74, 222, 128, 0.2)'; }
+                else if (openSet.some(n => n.id === key)) { bColor = 'var(--accent)'; bgColor = 'rgba(56, 189, 248, 0.2)'; }
+                
+                if (currentlyProcessing === key) {
+                    ctx.shadowColor = 'var(--accent)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = 'var(--accent)';
+                    ctx.lineWidth = 4;
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = bColor;
+                    ctx.lineWidth = 2;
+                }
+
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+                ctx.fillStyle = bgColor;
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = 'var(--text)';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText(key, node.x, node.y - 3);
+                
+                ctx.fillStyle = 'var(--purple)';
+                ctx.font = '9px JetBrains Mono';
+                ctx.fillText(`h:${hScores[key]}`, node.x, node.y + 9);
+
+                if (gScores[key] !== undefined) {
+                    ctx.fillStyle = 'var(--green)';
+                    ctx.fillText(`g:${gScores[key]}`, node.x, node.y + 19);
+                }
+            }
+        }
+
+        function updateQueue() {
+            pqBody.innerHTML = '';
+            const displaySet = [...openSet].sort((a, b) => a.f - b.f);
+            
+            displaySet.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                if (index === 0) tr.className = 'pq-row active';
+                else tr.className = 'pq-row';
+                
+                tr.innerHTML = `
+                    <td>${item.id}</td>
+                    <td class="val-g">${gScores[item.id]}</td>
+                    <td class="val-h">${hScores[item.id]}</td>
+                    <td class="val-f">${item.f}</td>
+                `;
+                pqBody.appendChild(tr);
+            });
+
+            if (displaySet.length === 0) {
+                pqBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-dim); border:none; padding-top:20px;">Queue Empty</td></tr>';
+            }
+        }
+
+        async function runAStar() {
+            if (isExecuting) return;
+            isExecuting = true;
+            btnRun.disabled = true;
+
+            document.getElementById('panel-vis').classList.add('active');
+            document.getElementById('badge-queue').className = 'status-badge active';
+            document.getElementById('badge-queue').innerText = 'Processing';
+
+            gScores = { 'Gate': 0 };
+            fScores = { 'Gate': hScores['Gate'] };
+            openSet = [{ id: 'Gate', f: fScores['Gate'] }];
+            closedSet = new Set();
+            cameFrom = {};
+            finalPath = [];
+
+            drawGraph();
+            updateQueue();
+
+            log(`Initialization: Inserted 'Gate' into Min-Heap (f=${fScores['Gate']}).`, 'process');
+            await waitForStep();
+
+            while (openSet.length > 0) {
+                if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+                openSet.sort((a, b) => a.f - b.f);
+                const current = openSet.shift();
+                currentlyProcessing = current.id;
+                
+                log(`Popped <strong>${currentlyProcessing}</strong> from heap. Evaluating neighbors...`, 'process');
+                
+                if (currentlyProcessing === 'ICT') {
+                    // Reconstruct path
+                    let curr = 'ICT';
+                    finalPath = [curr];
+                    while(cameFrom[curr]) {
+                        curr = cameFrom[curr];
+                        finalPath.unshift(curr);
+                    }
+                    currentlyProcessing = null;
+                    evaluatingNeighbor = null;
+                    drawGraph();
+                    updateQueue();
+                    log(`Optimal Path found! ${finalPath.join(' -> ')}`, 'result');
+                    break;
+                }
+
+                closedSet.add(currentlyProcessing);
+                drawGraph();
+                updateQueue();
+                await waitForStep();
+
+                const neighbors = [];
+                edges.forEach(e => {
+                    if (e.u === currentlyProcessing) neighbors.push({ node: e.v, weight: e.weight });
+                    else if (e.v === currentlyProcessing) neighbors.push({ node: e.u, weight: e.weight });
+                });
+
+                for (let neighbor of neighbors) {
+                    const neighborId = neighbor.node;
+                    evaluatingNeighbor = { u: currentlyProcessing, v: neighborId };
+                    drawGraph();
+
+                    if (closedSet.has(neighborId)) {
+                        log(`Skipping <strong>${neighborId}</strong> (already in closed set).`, 'skip');
+                        await waitForStep();
+                        continue;
+                    }
+
+                    const tentativeG = gScores[currentlyProcessing] + neighbor.weight;
+                    const h = hScores[neighborId];
+                    const f = tentativeG + h;
+                    
+                    evalBox.innerHTML = `Evaluate <strong>${neighborId}</strong>: <span class="val-f">${f}</span> = <span class="val-g">${tentativeG}</span> + <span class="val-h">${h}</span>`;
+
+                    let isBetter = false;
+                    if (gScores[neighborId] === undefined || tentativeG < gScores[neighborId]) {
+                        isBetter = true;
+                        cameFrom[neighborId] = currentlyProcessing;
+                        gScores[neighborId] = tentativeG;
+                        fScores[neighborId] = f;
+                        
+                        const existingIdx = openSet.findIndex(n => n.id === neighborId);
+                        if (existingIdx === -1) {
+                            openSet.push({ id: neighborId, f: fScores[neighborId] });
+                            log(`Added <strong>${neighborId}</strong> to heap. (f=${fScores[neighborId]})`, 'update');
+                        } else {
+                            openSet[existingIdx].f = fScores[neighborId];
+                            log(`Updated <strong>${neighborId}</strong> in heap. (f=${fScores[neighborId]})`, 'update');
+                        }
+                    } else {
+                        log(`Path to <strong>${neighborId}</strong> via ${currentlyProcessing} is sub-optimal. Discard.`, 'skip');
+                    }
+
+                    updateQueue();
+                    await waitForStep();
+                }
+
+                evaluatingNeighbor = null;
+                drawGraph();
+            }
+
+            document.getElementById('badge-queue').className = 'status-badge done';
+            document.getElementById('badge-queue').innerText = 'Complete';
+            document.getElementById('badge-vis').className = 'status-badge done';
+            document.getElementById('badge-vis').innerText = 'Finished';
+            
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            isAutoPlaying = false;
+            if (btnPause) btnPause.disabled = true;
+        }
+
+        btnRun.addEventListener('click', runAStar);
+
+        btnReset.addEventListener('click', () => {
+            window.location.reload();
+        });
+
+        setTimeout(() => {
+            resizeCanvas();
+        }, 100);
+
+    </script>
+</body>
+</html>

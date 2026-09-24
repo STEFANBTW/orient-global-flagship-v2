@@ -36,6 +36,7 @@ import { useNotifications } from '@/context/NotificationContext';
 import { useToast } from '@/hooks/use-toast';
 import { orderService, CustomerOrder } from '@/services/orderService';
 import { getActiveConsumerUser, AppUser } from '@/services/userService';
+import { OrderTracker } from './OrderTracker';
 
 interface TableReservation {
   id: string;
@@ -77,7 +78,7 @@ export default function UserDashboard() {
   // Account State - Strictly empty for new accounts
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [reservations, setReservations] = useState<TableReservation[]>([]);
-  const [activeTab, setActiveTab] = useState<'orders' | 'reservations' | 'notifications'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'tracking' | 'reservations' | 'notifications'>('orders');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
@@ -325,8 +326,7 @@ export default function UserDashboard() {
         {/* Action 3: Track Active Kitchen Order */}
         <button
           onClick={() => {
-            setActiveTab('orders');
-            setHistoryFilter('active');
+            setActiveTab('tracking');
           }}
           className="p-4 rounded-xl bg-[#FFFFFF] hover:bg-slate-50 dark:bg-[#232323] dark:hover:bg-[#2a2a2a] border-none shadow-xs transition-all text-left group cursor-pointer flex items-center justify-between h-20"
         >
@@ -507,7 +507,9 @@ export default function UserDashboard() {
             <div className="flex items-center gap-2">
               <Utensils className="w-5 h-5 text-muted-foreground" />
               <CardTitle className="text-base font-bold text-foreground">
-                {activeTab === 'orders' ? 'Order History' : activeTab === 'reservations' ? 'Table Bookings' : 'Notifications'}
+                {activeTab === 'orders' ? 'Order History' : 
+                 activeTab === 'tracking' ? 'Track Order' :
+                 activeTab === 'reservations' ? 'Table Bookings' : 'Notifications'}
               </CardTitle>
             </div>
 
@@ -522,6 +524,16 @@ export default function UserDashboard() {
                 }`}
               >
                 Order History ({orders.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('tracking')}
+                className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                  activeTab === 'tracking'
+                    ? 'bg-background text-foreground shadow-xs font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Track Order
               </button>
               <button
                 onClick={() => setActiveTab('reservations')}
@@ -683,6 +695,13 @@ export default function UserDashboard() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TRACKING TAB */}
+          {activeTab === 'tracking' && (
+            <div className="space-y-4 pt-2">
+              <OrderTracker orders={activeOrders} />
             </div>
           )}
 

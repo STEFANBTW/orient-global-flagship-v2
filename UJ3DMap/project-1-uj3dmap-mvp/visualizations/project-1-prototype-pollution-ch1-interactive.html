@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototype Pollution - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #c084fc;
+            --c-obj: #38bdf8;
+            --c-proto: #c084fc;
+            --c-hack: #ef4444;
+            --c-freeze: #3b82f6;
+            --c-good: #10b981;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(192, 132, 252, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status-badge.vuln { background: rgba(239, 68, 68, 0.2); color: var(--c-hack); font-weight: bold; }
+        .status-badge.safe { background: rgba(59, 130, 246, 0.2); color: var(--c-freeze); font-weight: bold; }
+
+        /* Panel 1: Memory Chain */
+        .memory-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            padding: 20px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+        }
+
+        .memory-obj {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            width: 80%;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transition: all 0.5s ease;
+        }
+
+        .obj-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--c-obj);
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .obj-title.proto { color: var(--c-proto); }
+
+        .prop-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .prop {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .prop.hacked {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--c-hack);
+            animation: pulse-hack 1s infinite;
+        }
+
+        .chain-link {
+            width: 2px;
+            height: 30px;
+            background: var(--border);
+            position: relative;
+        }
+
+        .chain-link::after {
+            content: '[[Prototype]]';
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .glass-case {
+            position: absolute;
+            top: -10px; left: -10px; right: -10px; bottom: -10px;
+            border: 2px solid rgba(59, 130, 246, 0.6);
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 12px;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s ease;
+            box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 5px;
+        }
+
+        .glass-case::after {
+            content: '[[Writable]]: false';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--c-freeze);
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .frozen .glass-case { opacity: 1; }
+
+        @keyframes pulse-hack {
+            0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+            100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+        }
+
+        /* Panel 2: Attack Vector */
+        .attack-area {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-snippet {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: var(--surface2);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 2px solid var(--c-hack);
+            margin-bottom: 20px;
+        }
+
+        .hacker-payload {
+            align-self: flex-start;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px dashed var(--c-hack);
+            padding: 10px;
+            border-radius: 6px;
+            opacity: 0.3;
+            transition: all 0.5s;
+            position: relative;
+            transform: translateX(0);
+        }
+
+        .hacker-payload.attacking {
+            opacity: 1;
+            transform: translateX(200px);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .hacker-payload.rejected {
+            animation: bounceBack 0.5s forwards;
+        }
+
+        @keyframes bounceBack {
+            0% { transform: translateX(200px); }
+            50% { transform: translateX(180px); }
+            100% { transform: translateX(0px); opacity: 0.3; }
+        }
+
+        .v8-error {
+            position: absolute;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            border: 1px solid var(--c-hack);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .v8-error.visible { opacity: 1; }
+
+        /* Panel 3: Instance Inspection */
+        .inspection-grid { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; }
+        
+        .eval-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .eval-expr { color: var(--text-dim); }
+        .eval-result { font-weight: bold; }
+        .eval-result.undef { color: var(--text-dim); }
+        .eval-result.hack { color: var(--c-hack); }
+        
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            height: 80px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.hack { border-left-color: var(--c-hack); color: var(--c-hack); }
+        .log-entry.freeze { border-left-color: var(--c-freeze); color: var(--c-freeze); }
+        .log-entry.safe { border-left-color: var(--c-good); color: var(--c-good); }
+
+        /* Panel 4: Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        button.hack { background: rgba(239, 68, 68, 0.15); color: var(--c-hack); border-color: var(--c-hack); }
+        button.hack:hover:not(:disabled) { background: rgba(239, 68, 68, 0.25); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+        button.freeze { background: rgba(59, 130, 246, 0.15); color: var(--c-freeze); border-color: var(--c-freeze); }
+        button.freeze:hover:not(:disabled) { background: rgba(59, 130, 246, 0.25); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Prototype Pollution Security</h1>
+        <p>Global Object Modification vs V8 Internal Descriptors</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Memory Chain -->
+        <div class="panel" style="grid-row: 1 / span 2;">
+            <div class="panel-title">1. V8 Memory Space <span class="status-badge vuln" id="badge-mem">Vulnerable</span></div>
+            <div class="memory-area">
+                
+                <div class="memory-obj" id="obj-proto">
+                    <div class="glass-case"></div>
+                    <div class="obj-title proto"><span>Object.prototype</span><span>[Root]</span></div>
+                    <div class="prop-list" id="proto-props">
+                        <div class="prop"><span>toString</span><span>[Function]</span></div>
+                        <div class="prop"><span>hasOwnProperty</span><span>[Function]</span></div>
+                    </div>
+                </div>
+
+                <div class="chain-link"></div>
+
+                <div class="memory-obj" id="obj-inst-1">
+                    <div class="obj-title"><span>leafletMap</span><span>[Instance]</span></div>
+                    <div class="prop-list">
+                        <div class="prop"><span>zoom</span><span>12</span></div>
+                    </div>
+                </div>
+                
+                <div class="memory-obj" id="obj-inst-2">
+                    <div class="obj-title"><span>userConfig</span><span>[Instance]</span></div>
+                    <div class="prop-list">
+                        <div class="prop"><span>theme</span><span>"dark"</span></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Panel 2: Attack Vector -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">2. Execution Vector</div>
+                <div class="attack-area">
+                    <div class="code-snippet">
+<span style="color:var(--text-dim)">// Parsing untrusted JSON data...</span>
+<span style="color:#c084fc">let</span> payload = JSON.parse(maliciousInput);
+Object.assign({}, payload);
+                    </div>
+                    
+                    <div class="hacker-payload" id="hacker">
+                        <div style="color:var(--c-hack); font-family:'JetBrains Mono'; font-weight:bold; font-size:0.75rem;">__proto__.isAdmin = true</div>
+                    </div>
+                    
+                    <div class="v8-error" id="v8-error">
+                        TypeError: Cannot add property isAdmin, object is not extensible
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Instance Inspection -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">3. Runtime State</div>
+                <div class="inspection-grid">
+                    <div class="eval-box">
+                        <span class="eval-expr">leafletMap.isAdmin</span>
+                        <span class="eval-result undef" id="res-1">undefined</span>
+                    </div>
+                    <div class="eval-box">
+                        <span class="eval-expr">userConfig.isAdmin</span>
+                        <span class="eval-result undef" id="res-2">undefined</span>
+                    </div>
+                </div>
+                
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">V8 initialized. Prototype chain established.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-hack1" class="hack">▶ Execute Attack (Unprotected)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-freeze" class="freeze" disabled>▶ Apply Object.freeze()</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-hack2" class="hack" disabled>▶ Execute Attack (Frozen)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            hacker: document.getElementById('hacker'),
+            objProto: document.getElementById('obj-proto'),
+            protoProps: document.getElementById('proto-props'),
+            v8Error: document.getElementById('v8-error'),
+            res1: document.getElementById('res-1'),
+            res2: document.getElementById('res-2'),
+            log: document.getElementById('log-output'),
+            btnHack1: document.getElementById('btn-hack1'),
+            btnFreeze: document.getElementById('btn-freeze'),
+            btnHack2: document.getElementById('btn-hack2'),
+            badgeMem: document.getElementById('badge-mem'),
+            btnPause: document.getElementById('btn-pause')
+        };
+
+        let isPaused = false;
+        let pauseResolve = null;
+        let isPlaying = false;
+
+        UI.btnPause.addEventListener('click', () => {
+            if (!isPaused) {
+                isPaused = true;
+                UI.btnPause.innerText = '▶ Resume';
+            } else {
+                isPaused = false;
+                UI.btnPause.innerText = '⏸ Pause';
+                if (pauseResolve) pauseResolve();
+            }
+        });
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function log(msg, type='normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${msg}`;
+            UI.log.appendChild(entry);
+            UI.log.scrollTop = UI.log.scrollHeight;
+        }
+
+        UI.btnHack1.addEventListener('click', async () => {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            UI.btnHack1.disabled = true;
+            UI.btnPause.disabled = false;
+            isPlaying = true;
+            UI.btnFreeze.disabled = true;
+            
+            log('Injecting malicious payload into runtime...', 'hack');
+            UI.hacker.classList.add('attacking');
+            
+            await sleep(600);
+            
+            // Pollute
+            const newProp = document.createElement('div');
+            newProp.className = 'prop hacked';
+            newProp.innerHTML = `<span>isAdmin</span><span>true</span>`;
+            UI.protoProps.appendChild(newProp);
+            
+            log('CRITICAL: Object.prototype successfully polluted.', 'hack');
+            log('All descendant objects now inherit isAdmin = true via prototype chain resolution.', 'hack');
+            
+            UI.res1.innerText = 'true';
+            UI.res1.className = 'eval-result hack';
+            UI.res2.innerText = 'true';
+            UI.res2.className = 'eval-result hack';
+            
+            await sleep(1000);
+            UI.hacker.classList.remove('attacking');
+            UI.btnFreeze.disabled = false;
+            UI.btnPause.disabled = true;
+            isPlaying = false;
+        });
+
+        UI.btnFreeze.addEventListener('click', async () => {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            UI.btnFreeze.disabled = true;
+            UI.btnPause.disabled = false;
+            isPlaying = true;
+            
+            // Reset state
+            if (UI.protoProps.lastChild.classList.contains('hacked')) {
+                UI.protoProps.removeChild(UI.protoProps.lastChild);
+            }
+            UI.res1.innerText = 'undefined';
+            UI.res1.className = 'eval-result undef';
+            UI.res2.innerText = 'undefined';
+            UI.res2.className = 'eval-result undef';
+            
+            log('Applying Object.freeze(Object.prototype)...', 'freeze');
+            UI.objProto.classList.add('frozen');
+            
+            UI.badgeMem.className = 'status-badge safe';
+            UI.badgeMem.innerText = 'Protected';
+            
+            log('V8 Descriptor updated: [[Writable]]: false, [[Configurable]]: false.', 'freeze');
+            
+            await sleep(500);
+            UI.btnHack2.disabled = false;
+            UI.btnPause.disabled = true;
+            isPlaying = false;
+        });
+
+        UI.btnHack2.addEventListener('click', async () => {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            UI.btnHack2.disabled = true;
+            UI.btnPause.disabled = false;
+            isPlaying = true;
+            
+            log('Re-injecting malicious payload...', 'hack');
+            UI.hacker.classList.remove('rejected');
+            UI.hacker.classList.add('attacking');
+            
+            await sleep(600);
+            
+            // Blocked
+            UI.v8Error.classList.add('visible');
+            UI.hacker.classList.add('rejected');
+            
+            log('V8 ENGINE EXCEPTION: Attempted to mutate non-extensible object.', 'safe');
+            log('Prototype chain integrity maintained. Injection failed.', 'safe');
+            
+            await sleep(2500);
+            UI.v8Error.classList.remove('visible');
+            UI.hacker.classList.remove('attacking', 'rejected');
+            UI.btnPause.disabled = true;
+            isPlaying = false;
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            isPlaying = false;
+            isPaused = false;
+            if (pauseResolve) pauseResolve();
+            UI.btnPause.innerText = '⏸ Pause';
+            location.reload();
+        });
+
+    </script>
+</body>
+</html>

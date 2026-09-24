@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>06 — Neumorphism | Interactive Mindmap</title>
+    <!-- Use Google Fonts link as fallback for online rendering -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Poppins:wght@400;500;600&family=Quicksand:wght@400;500;600&family=Comfortaa:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Local offline font links mapping -->
+    <link rel="stylesheet" href="../../fonts/fonts.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #E0E5EC;
+            color: #4A5568;
+            overflow: auto; /* Single page level scrolling */
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #E0E5EC;
+            box-shadow: 6px 0 20px rgba(163, 177, 198, 0.3), -6px 0 20px rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2D3748;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        
+        .header h1 .family-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: #E0E5EC;
+            color: #4A80C4;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .controls { display: flex; gap: 16px; }
+        
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            background: #E0E5EC;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4A5568;
+            box-shadow: 4px 4px 8px #a3b1c6, -4px -4px 8px #ffffff;
+            transition: all 150ms ease;
+            outline: none;
+        }
+        
+        .btn:hover {
+            color: #2D3748;
+            box-shadow: 2px 2px 5px #a3b1c6, -2px -2px 5px #ffffff;
+        }
+        
+        .btn:active {
+            box-shadow: inset 3px 3px 6px #a3b1c6, inset -3px -3px 6px #ffffff;
+        }
+        
+        .main {
+            padding: 40px;
+            max-width: 100%;
+            overflow: visible;
+        }
+        
+        .mindmap-container {
+            background: #E0E5EC;
+            border-radius: 24px;
+            padding: 48px;
+            margin-bottom: 40px;
+            position: relative;
+            box-shadow: inset 6px 6px 12px #a3b1c6, inset -6px -6px 12px #ffffff;
+            overflow: visible; /* Dynamic auto-width expansion */
+            width: max-content;
+            min-width: 100%;
+            min-height: 650px;
+        }
+        
+        .tree { position: relative; padding-left: 0; }
+        .tree ul { list-style: none; padding-left: 56px; display: flex; flex-direction: column; gap: 16px; position: relative; }
+        .tree > ul { padding-left: 0; }
+        .node { display: flex; align-items: center; position: relative; }
+        
+        /* Node capsule buttons */
+        .node-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 200ms ease;
+            font-size: 13px;
+            font-weight: 500;
+            background: #E0E5EC;
+            color: #4A5568;
+            box-shadow: 4px 4px 8px #a3b1c6, -4px -4px 8px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            user-select: none;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .node-content:hover {
+            box-shadow: 6px 6px 12px #a3b1c6, -6px -6px 12px #ffffff;
+            color: #2D3748;
+        }
+        
+        .node-content:active {
+            box-shadow: inset 3px 3px 6px #a3b1c6, inset -3px -3px 6px #ffffff;
+        }
+        
+        .node.category > .node-content {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 22px;
+            border-radius: 24px;
+        }
+        
+        /* Category-specific text colors */
+        .node.category-industries > .node-content { color: #4A80C4; }
+        .node.category-psych > .node-content { color: #805AD5; }
+        .node.category-color > .node-content { color: #ED8936; }
+        .node.category-type > .node-content { color: #38B2AC; }
+        .node.category-spacing > .node-content { color: #4A80C4; }
+        .node.category-borders > .node-content { color: #805AD5; }
+        .node.category-components > .node-content { color: #ED8936; }
+        .node.category-imagery > .node-content { color: #38B2AC; }
+        .node.category-anim > .node-content { color: #4A80C4; }
+        .node.category-avoid > .node-content { color: #e53e3e; }
+        
+        .node.sub > .node-content {
+            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 16px;
+        }
+        
+        .node.leaf > .node-content {
+            font-size: 12px;
+            padding: 6px 14px;
+            font-weight: 400;
+            border-radius: 12px;
+            cursor: default !important;
+            transform: none !important;
+            box-shadow: 4px 4px 8px #a3b1c6, -4px -4px 8px #ffffff !important;
+        }
+        
+        .node.leaf > .node-content:hover {
+            color: #4A5568 !important;
+        }
+        
+        .node.collapsed > ul { display: none; }
+        
+        /* Top SVG canvas for connections */
+        #mindmap-svg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Color Swatches and Galleries */
+        .swatch-label { display: inline-flex; align-items: center; gap: 8px; font-family: monospace; font-size: 11px; }
+        
+        .color-swatch {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.15);
+            vertical-align: middle;
+            position: relative;
+            cursor: pointer !important;
+            transition: all 150ms ease;
+        }
+        
+        .color-swatch:hover {
+            transform: scale(1.15);
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1);
+        }
+        
+        .color-swatch.active-compare::after {
+            content: '✓';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #4A80C4;
+            color: white;
+            font-size: 8px;
+            font-weight: bold;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .color-swatch.large {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            box-shadow: 2px 2px 5px #a3b1c6, -2px -2px 5px #ffffff;
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        
+        .color-swatch.large.active-compare::after {
+            top: -6px;
+            right: -6px;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+        }
+        
+        .color-card {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 12px;
+            background: #E0E5EC;
+            border-radius: 12px;
+            box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            margin: 4px;
+        }
+        
+        .color-card .color-name { font-size: 11px; font-weight: 500; color: #4A5568; }
+        .color-card .color-hex { font-family: monospace; font-size: 10px; color: #718096; }
+        .color-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 0; }
+        
+        /* Font Gallery - Horizontal Flex layout */
+        .font-gallery {
+            display: flex;
+            flex-direction: row;
+            gap: 16px;
+            margin: 20px 0;
+            overflow-x: auto;
+            width: 100%;
+            padding: 12px 4px;
+            scroll-behavior: smooth;
+        }
+        
+        .font-preview {
+            flex: 0 0 280px;
+            background: #E0E5EC;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 4px 4px 8px #a3b1c6, -4px -4px 8px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 200ms ease;
+        }
+        
+        .font-preview:hover {
+            box-shadow: 6px 6px 12px #a3b1c6, -6px -6px 12px #ffffff;
+        }
+        
+        .font-preview .font-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+        }
+        
+        .font-preview .font-category { font-size: 11px; color: #a0aec0; margin-bottom: 12px; }
+        .font-preview .font-sample { font-size: 24px; color: #2D3748; line-height: 1.3; margin-bottom: 8px; }
+        
+        .font-weights { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .font-weights span {
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #E0E5EC;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 2px 2px 4px #a3b1c6, -2px -2px 4px #ffffff;
+            transition: all 150ms ease;
+            font-size: 11px;
+            display: inline-block;
+            color: #4A5568;
+            user-select: none;
+        }
+        .font-weights span:hover {
+            color: #2D3748;
+            box-shadow: 1px 1px 3px #a3b1c6, -1px -1px 3px #ffffff;
+        }
+        .font-weights span.active-weight {
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff !important;
+            font-weight: 600;
+            color: #4A80C4;
+        }
+        
+        /* Interactive Animation Studio - Horizontal Flex Row */
+        .demo-grid {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 16px;
+            text-align: left;
+            padding: 12px 4px;
+            scroll-behavior: smooth;
+        }
+        
+        .demo-studio {
+            flex: 0 0 300px;
+            background: #E0E5EC;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 4px 4px 8px #a3b1c6, -4px -4px 8px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .demo-studio h3 { color: #2D3748; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+        
+        .demo-stage {
+            background: #E0E5EC;
+            box-shadow: inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff;
+            border-radius: 14px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .demo-controls { display: flex; gap: 8px; }
+        
+        .demo-btn {
+            padding: 6px 14px;
+            border: none;
+            background: #E0E5EC;
+            color: #4A5568;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+            transition: all 150ms ease;
+        }
+        
+        .demo-btn:hover {
+            color: #2D3748;
+            box-shadow: 1px 1px 4px #a3b1c6, -1px -1px 4px #ffffff;
+        }
+        
+        .demo-btn:active {
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff;
+        }
+        
+        .demo-specs { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #718096; }
+        
+        .demo-spec {
+            background: #E0E5EC;
+            padding: 6px 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff;
+        }
+        
+        .demo-spec strong { color: #2D3748; font-weight: 600; }
+        
+        /* Neumorphic interactive elements inside stages */
+        .neu-stage-button {
+            width: 120px;
+            height: 48px;
+            background: #E0E5EC;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4A5568;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 4px 4px 8px #a3b1c6, -4px -4px 8px #ffffff;
+            border: 1px solid rgba(255,255,255,0.4);
+            user-select: none;
+            transition: all 150ms ease;
+        }
+        
+        .neu-stage-button.pressed {
+            box-shadow: inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff !important;
+            color: #4A80C4;
+        }
+        
+        .neu-stage-toggle {
+            width: 64px;
+            height: 32px;
+            background: #E0E5EC;
+            box-shadow: inset 3px 3px 6px #a3b1c6, inset -3px -3px 6px #ffffff;
+            border-radius: 16px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 3px;
+            transition: background 200ms ease;
+        }
+        .neu-stage-toggle.active {
+            background: #4A80C4;
+        }
+        .neu-stage-thumb {
+            width: 26px;
+            height: 26px;
+            background: #E0E5EC;
+            box-shadow: 2px 2px 5px #a3b1c6, -2px -2px 5px #ffffff;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 50%;
+            position: absolute;
+            left: 3px;
+            transition: left 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .neu-stage-toggle.active .neu-stage-thumb {
+            left: 35px;
+        }
+        
+        .neu-stage-card {
+            width: 140px;
+            height: 80px;
+            background: #E0E5EC;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4A5568;
+            font-weight: 500;
+            font-size: 12px;
+            box-shadow: 4px 4px 8px #a3b1c6, -4px -4px 8px #ffffff;
+            border: 1px solid rgba(255,255,255,0.4);
+            transition: box-shadow 200ms ease-out;
+        }
+        .neu-stage-card:hover {
+            box-shadow: 8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff;
+        }
+        
+        .neu-stage-input {
+            width: 160px;
+            padding: 8px 14px;
+            border: none;
+            background: #E0E5EC;
+            border-radius: 8px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 12px;
+            color: #4A5568;
+            box-shadow: inset 3px 3px 6px #a3b1c6, inset -3px -3px 6px #ffffff;
+            outline: none;
+            transition: box-shadow 150ms ease;
+        }
+        .neu-stage-input:focus {
+            box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+        }
+        
+        .neu-stage-slider {
+            width: 160px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .neu-stage-slider-track {
+            height: 10px;
+            background: #E0E5EC;
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff;
+            border-radius: 5px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .neu-stage-slider-fill {
+            height: 100%;
+            width: 50%;
+            background: #4A80C4;
+            border-radius: 5px;
+        }
+        .neu-stage-slider-thumb {
+            width: 20px;
+            height: 20px;
+            background: #E0E5EC;
+            box-shadow: 2px 2px 4px #a3b1c6, -2px -2px 4px #ffffff;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 50%;
+            position: absolute;
+            left: calc(50% - 10px);
+        }
+        
+        .neu-stage-cta {
+            width: 130px;
+            height: 48px;
+            background: #4A80C4;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 3px 3px 6px rgba(58, 97, 149, 0.4), -3px -3px 6px rgba(255, 255, 255, 0.7);
+            user-select: none;
+            transition: all 150ms ease;
+        }
+        .neu-stage-cta.pressed {
+            box-shadow: inset 3px 3px 6px rgba(58, 97, 149, 0.6), inset -3px -3px 6px rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        /* Translucent, blurred scrollbar for flex containers */
+        .demo-grid::-webkit-scrollbar,
+        .font-gallery::-webkit-scrollbar {
+            height: 6px;
+        }
+        .demo-grid::-webkit-scrollbar-track,
+        .font-gallery::-webkit-scrollbar-track {
+            background: rgba(163, 177, 198, 0.1);
+            border-radius: 3px;
+        }
+        .demo-grid::-webkit-scrollbar-thumb,
+        .font-gallery::-webkit-scrollbar-thumb {
+            background: rgba(163, 177, 198, 0.4);
+            border-radius: 3px;
+        }
+        .demo-grid::-webkit-scrollbar-thumb:hover,
+        .font-gallery::-webkit-scrollbar-thumb:hover {
+            background: rgba(163, 177, 198, 0.6);
+        }
+        
+        /* Section Title */
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2D3748;
+            margin: 40px 0 20px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(163, 177, 198, 0.3);
+            display: inline-block;
+        }
+        
+        /* Typography Playground Layout */
+        .typo-playground {
+            display: flex;
+            gap: 32px;
+            background: #E0E5EC;
+            border-radius: 20px;
+            padding: 28px;
+            margin-top: 16px;
+            color: #4A5568;
+            text-align: left;
+            box-shadow: 6px 6px 12px #a3b1c6, -6px -6px 12px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        
+        @media (max-width: 992px) {
+            .typo-playground { flex-direction: column; }
+        }
+        
+        .playground-controls {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .control-group label {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            color: #2D3748;
+            align-items: center;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: #4A80C4;
+            height: 6px;
+            background: rgba(163, 177, 198, 0.3);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .control-group select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            background: #E0E5EC;
+            box-shadow: inset 2px 2px 5px #a3b1c6, inset -2px -2px 5px #ffffff;
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            color: #4A5568;
+        }
+        
+        .rec-check {
+            font-size: 12px;
+            color: #10b981;
+            font-weight: bold;
+            opacity: 0.15;
+            transition: all 150ms ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+        
+        .rec-check::after {
+            content: 'Recommended';
+            font-size: 9px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+        
+        .rec-check.active {
+            opacity: 1;
+        }
+        
+        /* Simulated Blog Post Card */
+        .playground-preview-container {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 380px;
+        }
+        
+        .playground-preview-card {
+            background: #E0E5EC;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 6px 6px 12px #a3b1c6, -6px -6px 12px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            text-align: left;
+            transition: all 250ms ease;
+            position: relative;
+        }
+        
+        .playground-preview-card.rule-violated {
+            box-shadow: inset 4px 4px 10px rgba(239, 68, 68, 0.15), 0 0 16px rgba(239, 68, 68, 0.35);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        
+        /* Mock Blog Card Content Styling */
+        .mock-cat {
+            color: #4A80C4;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+            transition: all 150ms ease;
+        }
+        
+        .mock-title {
+            color: #2D3748;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            font-size: 28px;
+            line-height: 1.25;
+            margin-bottom: 8px;
+            transition: all 150ms ease;
+        }
+        
+        .mock-meta {
+            font-size: 11px;
+            color: #718096;
+            margin-bottom: 12px;
+            font-family: 'DM Sans', sans-serif;
+        }
+        
+        .mock-divider {
+            height: 6px;
+            background: #E0E5EC;
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff;
+            border-radius: 3px;
+            margin-bottom: 14px;
+            width: 100%;
+        }
+        
+        .mock-sub {
+            color: #2D3748;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 500;
+            font-size: 18px;
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+        
+        .mock-body {
+            color: #4A5568;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 400;
+            font-size: 14px;
+            line-height: 1.7;
+            transition: all 150ms ease;
+        }
+        
+        .playground-warning {
+            color: #ef4444;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.5;
+            min-height: 20px;
+        }
+        
+        /* Translucent Frosted sliding panel */
+        .comparison-panel {
+            position: fixed;
+            top: 0;
+            right: -510px;
+            width: 500px;
+            height: 100dvh;
+            background: rgba(224, 229, 236, 0.425);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transition: right 300ms cubic-bezier(0.4, 0, 0.2, 1), width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            color: #4A5568;
+        }
+        
+        .comparison-panel.open {
+            right: 0;
+        }
+        
+        .comparison-panel.expanded {
+            width: 100vw;
+            right: 0;
+            border-left: none;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(163, 177, 198, 0.3);
+            padding-bottom: 16px;
+        }
+        
+        .panel-header h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2D3748;
+        }
+        
+        .panel-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .panel-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #E0E5EC;
+            box-shadow: 2px 2px 4px #a3b1c6, -2px -2px 4px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            color: #4A5568;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 150ms ease;
+        }
+        
+        .panel-action-btn:hover {
+            color: #2D3748;
+            box-shadow: 1px 1px 3px #a3b1c6, -1px -1px 3px #ffffff;
+            transform: scale(1.05);
+        }
+        
+        .panel-action-btn:active {
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff;
+        }
+        
+        .panel-subtitle {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .comparison-slots {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            padding-right: 8px;
+            transition: all 300ms ease;
+        }
+        
+        .comparison-panel.expanded .comparison-slots {
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+        }
+        
+        .comparison-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: #E0E5EC;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+            animation: slideIn 200ms ease-out;
+            transition: all 300ms ease;
+            width: 100%;
+        }
+        
+        .comparison-panel.expanded .comparison-card {
+            flex-direction: column;
+            padding: 32px;
+            width: 260px;
+            box-shadow: 6px 6px 16px #a3b1c6, -6px -6px 16px #ffffff;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .comparison-color-box {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 300ms ease;
+        }
+        
+        .comparison-panel.expanded .comparison-color-box {
+            width: 200px;
+            height: 200px;
+            border-radius: 16px;
+        }
+        
+        .comparison-info {
+            flex-grow: 1;
+            transition: all 300ms ease;
+        }
+        
+        .comparison-panel.expanded .comparison-info {
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        .comparison-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2D3748;
+            margin-bottom: 4px;
+        }
+        
+        .comparison-panel.expanded .comparison-name {
+            font-size: 18px;
+        }
+        
+        .comparison-hex {
+            font-family: monospace;
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .comparison-panel.expanded .comparison-hex {
+            font-size: 14px;
+        }
+        
+        .comparison-remove-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #e53e3e;
+            padding: 4px;
+            opacity: 0.7;
+            transition: opacity 150ms ease;
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .comparison-remove-btn:hover { opacity: 1; }
+        
+        .comparison-panel.expanded .comparison-remove-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            margin-left: 0;
+        }
+        
+        .panel-footer {
+            margin-top: 24px;
+            border-top: 1px solid rgba(163, 177, 198, 0.3);
+            padding-top: 20px;
+        }
+        
+        .clear-btn {
+            width: 100%;
+            text-align: center;
+            background: #E0E5EC;
+            color: #e53e3e;
+            border: 1px solid rgba(229, 62, 62, 0.3);
+            box-shadow: 3px 3px 6px #a3b1c6, -3px -3px 6px #ffffff;
+            border-radius: 12px;
+            padding: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 200ms ease;
+        }
+        
+        .clear-btn:hover {
+            box-shadow: 1px 1px 3px #a3b1c6, -1px -1px 3px #ffffff;
+            background: rgba(229, 62, 62, 0.05);
+        }
+        
+        .clear-btn:active {
+            box-shadow: inset 2px 2px 4px #a3b1c6, inset -2px -2px 4px #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1><span class="family-num">06</span><span>Neumorphism — Interactive Studio</span></h1>
+        <div class="controls">
+            <button class="btn" onclick="expandAll()">Expand All</button>
+            <button class="btn" onclick="collapseAll()">Collapse All</button>
+            <button class="btn" id="download-fonts-btn" onclick="downloadFontsZip()">📥 Download Fonts (.ZIP)</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="mindmap-container" id="mindmap-container">
+            <svg id="mindmap-svg-canvas"></svg>
+            <div class="tree" id="mindmap">
+                <ul>
+                    <li class="node">
+                        <div class="node-content" onclick="toggleNode(this)">
+                            <span>Neumorphism Aesthetic Style</span>
+                        </div>
+                        <ul>
+                            <!-- Category 1: Ranked Industries -->
+                            <li class="node category category-industries">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Ranked Industries</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>1. Consumer Finance / Banking</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Tactile surfaces make abstract numbers feel tangible and controllable.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>2. Health & Wellness Apps</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Gentle, soft styles match the calm, nurturing tone of wellness products.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>3. Smart Home Control Panels</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">References physical dials, switches, and consoles accurately.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>4. Meditation & Mental Health</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Quiet, monochromatic soft visual language reduces stress.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>5. Music Players / Audio Apps</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Satisfying volume knobs, equalizer sliders, and play triggers.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 2: Psychological Foundation -->
+                            <li class="node category category-psych">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Psychological Foundation</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Embodied Cognition</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Digital triggers behave physically to trigger brain click satisfaction.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Dual-Shadow Light System</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Upper-left light shadow highlight + lower-right dark shadow.</div></li>
+                                            <li class="node leaf"><div class="node-content">Calibrated to human evolution under sun lighting above us.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Accessibility Risk</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Relies on subtle shadow differences. Test contrast obsessively.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 3: Color System -->
+                            <li class="node category category-color">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Color System</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Background Palette Logic</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Must sit exactly between light and dark shadow tones.</div></li>
+                                            <li class="node leaf">
+                                                <div class="node-content" style="display:block;">
+                                                    <div class="color-grid">
+                                                        <div class="color-card">
+                                                            <span class="color-swatch large" style="background:#E0E5EC;" onclick="selectColor('Soft Grey', '#E0E5EC')"></span>
+                                                            <div class="color-name">Soft Grey (Classic)</div>
+                                                            <div class="color-hex">#E0E5EC</div>
+                                                        </div>
+                                                        <div class="color-card">
+                                                            <span class="color-swatch large" style="background:#EDE4D8;" onclick="selectColor('Warm Beige', '#EDE4D8')"></span>
+                                                            <div class="color-name">Warm Beige</div>
+                                                            <div class="color-hex">#EDE4D8</div>
+                                                        </div>
+                                                        <div class="color-card">
+                                                            <span class="color-swatch large" style="background:#1E2030;" onclick="selectColor('Dark Neumorphism', '#1E2030')"></span>
+                                                            <div class="color-name">Dark Neumorphic</div>
+                                                            <div class="color-hex">#1E2030</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Single Accent Palette</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Exactly one saturated accent color to break monochrome styles.</div></li>
+                                            <li class="node leaf">
+                                                <div class="node-content" style="display:block;">
+                                                    <div class="color-grid">
+                                                        <div class="color-card">
+                                                            <span class="color-swatch large" style="background:#4A80C4;" onclick="selectColor('Classic Blue', '#4A80C4')"></span>
+                                                            <div class="color-name">Classic Blue</div>
+                                                            <div class="color-hex">#4A80C4</div>
+                                                        </div>
+                                                        <div class="color-card">
+                                                            <span class="color-swatch large" style="background:#38B2AC;" onclick="selectColor('Teal', '#38B2AC')"></span>
+                                                            <div class="color-name">Teal</div>
+                                                            <div class="color-hex">#38B2AC</div>
+                                                        </div>
+                                                        <div class="color-card">
+                                                            <span class="color-swatch large" style="background:#ED8936;" onclick="selectColor('Orange', '#ED8936')"></span>
+                                                            <div class="color-name">Warm Orange</div>
+                                                            <div class="color-hex">#ED8936</div>
+                                                        </div>
+                                                        <div class="color-card">
+                                                            <span class="color-swatch large" style="background:#805AD5;" onclick="selectColor('Purple', '#805AD5')"></span>
+                                                            <div class="color-name">Purple Accent</div>
+                                                            <div class="color-hex">#805AD5</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 4: Typography -->
+                            <li class="node category category-type">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Typography</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Font Classification</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Rounded geometries mirror the soft extrusion curves.</div></li>
+                                            <li class="node leaf">
+                                                <div class="node-content" style="display:block; width:100%;">
+                                                    <div class="font-gallery">
+                                                        <div class="font-preview">
+                                                            <div class="font-name">Nunito</div>
+                                                            <div class="font-category">Definitive Rounded Sans</div>
+                                                            <div class="font-sample" style="font-family: 'Nunito', sans-serif;">The soft interface</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this, 'Nunito', 300)">300</span>
+                                                                <span onclick="applyWeight(this, 'Nunito', 400)">400</span>
+                                                                <span class="active-weight" onclick="applyWeight(this, 'Nunito', 500)">500</span>
+                                                                <span onclick="applyWeight(this, 'Nunito', 600)">600</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="font-preview">
+                                                            <div class="font-name">Poppins</div>
+                                                            <div class="font-category">Geometric — Dashboard UI</div>
+                                                            <div class="font-sample" style="font-family: 'Poppins', sans-serif;">The soft interface</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this, 'Poppins', 400)">400</span>
+                                                                <span class="active-weight" onclick="applyWeight(this, 'Poppins', 500)">500</span>
+                                                                <span onclick="applyWeight(this, 'Poppins', 600)">600</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="font-preview">
+                                                            <div class="font-name">Quicksand</div>
+                                                            <div class="font-category">Warm Rounded Terminals</div>
+                                                            <div class="font-sample" style="font-family: 'Quicksand', sans-serif;">The soft interface</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this, 'Quicksand', 400)">400</span>
+                                                                <span class="active-weight" onclick="applyWeight(this, 'Quicksand', 500)">500</span>
+                                                                <span onclick="applyWeight(this, 'Quicksand', 600)">600</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="font-preview">
+                                                            <div class="font-name">Comfortaa</div>
+                                                            <div class="font-category">Approachability Sans</div>
+                                                            <div class="font-sample" style="font-family: 'Comfortaa', sans-serif;">The soft interface</div>
+                                                            <div class="font-weights">
+                                                                <span onclick="applyWeight(this, 'Comfortaa', 400)">400</span>
+                                                                <span class="active-weight" onclick="applyWeight(this, 'Comfortaa', 500)">500</span>
+                                                                <span onclick="applyWeight(this, 'Comfortaa', 600)">600</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Sizing & Weights</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Max weight is 600 (SemiBold). Bold (700) or Black (900) feel too aggressive.</div></li>
+                                            <li class="node leaf"><div class="node-content">Titles: 28px–36px. Card titles: 18px–22px. Body: 14px–16px. Line height: 1.6–1.8.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 5: Spacing & Layout -->
+                            <li class="node category category-spacing">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Spacing & Layout</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Shadow Clearance Rule</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Clearance between elements must be at least equal to the blur radius (16px–24px).</div></li>
+                                            <li class="node leaf"><div class="node-content">Card padding: 24px–32px minimum. Card gaps: 24px–32px. Grid: 8-point system.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Layout Scoping</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Works best in dashboards and app screens. Marketing pages become monotonous.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 6: Borders & Shapes -->
+                            <li class="node category category-borders">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Borders & Shapes</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Shadow Formulas</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Raised: 6px 6px 12px [dark shadow], -6px -6px 12px [light shadow].</div></li>
+                                            <li class="node leaf"><div class="node-content">Pressed: inset 6px 6px 12px [dark shadow], inset -6px -6px 12px [light shadow].</div></li>
+                                            <li class="node leaf"><div class="node-content">No outlines. Outlines ruin the extrusion. 1px top-left light border is optional.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Border Radius</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Cards: 16px–24px. Buttons: 12px or pill-shaped. Toggles: 50% rounded.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 7: UI Components -->
+                            <li class="node category category-components">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>UI Components</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Inputs & Toggles</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Inputs use inset shadows, appearing pressed into background. Focus deepens recess.</div></li>
+                                            <li class="node leaf"><div class="node-content">Toggles feature inset track groove holding raised button thumb slider.</div></li>
+                                        </ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Classic Buttons</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Resting: raised. Press: inset. Transition 100ms–150ms. No scale transform.</div></li>
+                                            <li class="node leaf"><div class="node-content">Primary: Accent background with accent-shaded shadows. White text.</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 8: Animation & Motion -->
+                            <li class="node category category-anim">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>Animation & Motion</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub">
+                                        <div class="node-content" onclick="toggleNode(this)">
+                                            <span>Tactile Micro-Animations</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf"><div class="node-content">Restrained, physically accurate movement. Shadow swaps. No scale transforms.</div></li>
+                                            <li class="node leaf">
+                                                <div class="node-content" style="display:block; width:100%;">
+                                                    <div class="demo-grid">
+                                                        <!-- Demo 1: Button Press -->
+                                                        <div class="demo-studio">
+                                                            <h3>🔘 Button Press</h3>
+                                                            <div class="demo-stage">
+                                                                <div class="neu-stage-button" id="demo1-el" onclick="toggleDemoBtn1()">Press Me</div>
+                                                            </div>
+                                                            <div class="demo-controls">
+                                                                <button class="demo-btn" onclick="playDemo1()">Play</button>
+                                                                <button class="demo-btn" onclick="pauseDemo1()">Pause</button>
+                                                                <button class="demo-btn" onclick="resetDemo1()">Reset</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><strong>Duration</strong>120ms ease-in</div>
+                                                                <div class="demo-spec"><strong>Effect</strong>Raised ⇋ Inset</div>
+                                                                <div class="demo-spec"><strong>Scale</strong>100% (No shrink)</div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Demo 2: Recessed Toggle -->
+                                                        <div class="demo-studio">
+                                                            <h3>toggle Recessed Toggle</h3>
+                                                            <div class="demo-stage">
+                                                                <div class="neu-stage-toggle" id="demo2-el" onclick="toggleDemoToggle2()">
+                                                                    <div class="neu-stage-thumb"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="demo-controls">
+                                                                <button class="demo-btn" onclick="playDemo2()">Play</button>
+                                                                <button class="demo-btn" onclick="pauseDemo2()">Pause</button>
+                                                                <button class="demo-btn" onclick="resetDemo2()">Reset</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><strong>Duration</strong>220ms ease-in-out</div>
+                                                                <div class="demo-spec"><strong>Overshoot</strong>cubic-bezier</div>
+                                                                <div class="demo-spec"><strong>Fill</strong>Classic Blue Accent</div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Demo 3: Card Hover Lift -->
+                                                        <div class="demo-studio">
+                                                            <h3>🗂️ Card Hover Lift</h3>
+                                                            <div class="demo-stage">
+                                                                <div class="neu-stage-card" id="demo3-el">Card Hover</div>
+                                                            </div>
+                                                            <div class="demo-controls">
+                                                                <button class="demo-btn" onclick="playDemo3()">Play</button>
+                                                                <button class="demo-btn" onclick="pauseDemo3()">Pause</button>
+                                                                <button class="demo-btn" onclick="resetDemo3()">Reset</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><strong>Duration</strong>200ms ease-out</div>
+                                                                <div class="demo-spec"><strong>Shadow</strong>Offset 6px ➜ 8px</div>
+                                                                <div class="demo-spec"><strong>Height</strong>No translateY</div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Demo 4: Input Recess Focus -->
+                                                        <div class="demo-studio">
+                                                            <h3>✏️ Input Focus</h3>
+                                                            <div class="demo-stage">
+                                                                <input type="text" class="neu-stage-input" id="demo4-el" placeholder="Focus me..." />
+                                                            </div>
+                                                            <div class="demo-controls">
+                                                                <button class="demo-btn" onclick="playDemo4()">Play</button>
+                                                                <button class="demo-btn" onclick="pauseDemo4()">Pause</button>
+                                                                <button class="demo-btn" onclick="resetDemo4()">Reset</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><strong>Duration</strong>150ms ease</div>
+                                                                <div class="demo-spec"><strong>Effect</strong>Deepen inset shadow</div>
+                                                                <div class="demo-spec"><strong>Style</strong>Groove recess</div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Demo 5: Slider Track -->
+                                                        <div class="demo-studio">
+                                                            <h3>🎚️ Slider Control</h3>
+                                                            <div class="demo-stage">
+                                                                <div class="neu-stage-slider" id="demo5-el">
+                                                                    <div class="neu-stage-slider-track" onclick="moveStageSlider(event)">
+                                                                        <div class="neu-stage-slider-fill" id="stage-slider-fill"></div>
+                                                                        <div class="neu-stage-slider-thumb" id="stage-slider-thumb"></div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="demo-controls">
+                                                                <button class="demo-btn" onclick="playDemo5()">Play</button>
+                                                                <button class="demo-btn" onclick="pauseDemo5()">Pause</button>
+                                                                <button class="demo-btn" onclick="resetDemo5()">Reset</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><strong>Track</strong>Inset shadow</div>
+                                                                <div class="demo-spec"><strong>Thumb</strong>Raised circle</div>
+                                                                <div class="demo-spec"><strong>Fill</strong>Classic Blue</div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Demo 6: Primary CTA -->
+                                                        <div class="demo-studio">
+                                                            <h3>🚀 Primary CTA</h3>
+                                                            <div class="demo-stage">
+                                                                <div class="neu-stage-cta" id="demo6-el" onclick="toggleDemoCta6()">Submit</div>
+                                                            </div>
+                                                            <div class="demo-controls">
+                                                                <button class="demo-btn" onclick="playDemo6()">Play</button>
+                                                                <button class="demo-btn" onclick="pauseDemo6()">Pause</button>
+                                                                <button class="demo-btn" onclick="resetDemo6()">Reset</button>
+                                                            </div>
+                                                            <div class="demo-specs">
+                                                                <div class="demo-spec"><strong>Background</strong>#4A80C4</div>
+                                                                <div class="demo-spec"><strong>Shadows</strong>Accent gradients</div>
+                                                                <div class="demo-spec"><strong>Aesthetic</strong>Tactile breakout</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Category 9: What to Strictly Avoid -->
+                            <li class="node category category-avoid">
+                                <div class="node-content" onclick="toggleNode(this)">
+                                    <span>What to Strictly Avoid</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub"><div class="node-content">❌ Highly saturated backgrounds — they collapse the shadow contrast.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Multiple shadow directions — all elements must use upper-left highlight logic.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Squeezing buttons together — clips shadow boundaries.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Scale transforms or rotation on press — non-physical motion.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Pure white or pure black surfaces — everything must be soft-tinted.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Traditional CSS borders — outlines ruin the extrusion look.</div></li>
+                                    <li class="node sub"><div class="node-content">❌ Animations faster than 100ms — doesn't register the transition.</div></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Typography Studio Section -->
+        <div class="section-title">Neumorphism Typography Studio</div>
+        
+        <!-- Live Phrase Input -->
+        <div style="margin-bottom: 20px; width: 100%; display: flex; align-items: center; gap: 12px;">
+            <label style="font-size: 14px; font-weight: 600; color: #2D3748;">Custom Phrase:</label>
+            <input type="text" class="neu-stage-input" style="flex-grow: 1; padding: 10px 16px; font-size: 13px;" 
+                   placeholder="Type custom sentence to test typography..." oninput="updateFontPreviews(this.value)">
+        </div>
+
+        <div class="typo-playground">
+            <!-- Left Panel: Slider Controls -->
+            <div class="playground-controls">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600; font-size: 14px; color: #2D3748;">Design Guidelines</span>
+                    <button class="btn" style="padding: 6px 14px; font-size: 11px;" onclick="resetPlaygroundPresets()">Reset Presets</button>
+                </div>
+                
+                <!-- Headline Sizing -->
+                <div class="control-group">
+                    <label>
+                        <span>Headline Font Size</span>
+                        <strong id="val-head-size">32px</strong>
+                        <span class="rec-check" id="chk-head-size"></span>
+                    </label>
+                    <input type="range" id="head-size" min="20" max="60" value="32" oninput="updatePlayground()">
+                </div>
+                
+                <!-- Headline Letter Spacing -->
+                <div class="control-group">
+                    <label>
+                        <span>Headline Letter Spacing</span>
+                        <strong id="val-head-spacing">0.02em</strong>
+                        <span class="rec-check" id="chk-head-spacing"></span>
+                    </label>
+                    <input type="range" id="head-spacing" min="-0.05" max="0.10" step="0.01" value="0.02" oninput="updatePlayground()">
+                </div>
+                
+                <!-- Headline Font Weight -->
+                <div class="control-group">
+                    <label>
+                        <span>Headline Font Weight</span>
+                        <strong id="val-head-weight">600</strong>
+                        <span class="rec-check" id="chk-head-weight"></span>
+                    </label>
+                    <input type="range" id="head-weight" min="300" max="900" step="100" value="600" oninput="updatePlayground()">
+                </div>
+                
+                <!-- Body Font Sizing -->
+                <div class="control-group">
+                    <label>
+                        <span>Body Font Size</span>
+                        <strong id="val-body-size">14px</strong>
+                        <span class="rec-check" id="chk-body-size"></span>
+                    </label>
+                    <input type="range" id="body-size" min="10" max="22" value="14" oninput="updatePlayground()">
+                </div>
+                
+                <!-- Body Font Weight -->
+                <div class="control-group">
+                    <label>
+                        <span>Body Font Weight (Max 600)</span>
+                        <strong id="val-body-weight">400</strong>
+                        <span class="rec-check" id="chk-body-weight"></span>
+                    </label>
+                    <input type="range" id="body-weight" min="300" max="900" step="100" value="400" oninput="updatePlayground()">
+                </div>
+                
+                <!-- Body Line Height -->
+                <div class="control-group">
+                    <label>
+                        <span>Body Line Height</span>
+                        <strong id="val-body-height">1.70</strong>
+                        <span class="rec-check" id="chk-body-height"></span>
+                    </label>
+                    <input type="range" id="body-height" min="1.3" max="2.2" step="0.05" value="1.70" oninput="updatePlayground()">
+                </div>
+
+                <!-- Label Font Sizing -->
+                <div class="control-group">
+                    <label>
+                        <span>Label Size</span>
+                        <strong id="val-lbl-size">13px</strong>
+                        <span class="rec-check" id="chk-lbl-size"></span>
+                    </label>
+                    <input type="range" id="lbl-size" min="9" max="18" value="13" oninput="updatePlayground()">
+                </div>
+
+                <!-- Label Letter Spacing -->
+                <div class="control-group">
+                    <label>
+                        <span>Label Letter Spacing</span>
+                        <strong id="val-lbl-spacing">0.06em</strong>
+                        <span class="rec-check" id="chk-lbl-spacing"></span>
+                    </label>
+                    <input type="range" id="lbl-spacing" min="0.00" max="0.15" step="0.01" value="0.06" oninput="updatePlayground()">
+                </div>
+            </div>
+            
+            <!-- Right Panel: Full Simulated Blog Post Card -->
+            <div class="playground-preview-container">
+                <div class="playground-preview-card" id="playground-preview-card">
+                    <div class="mock-cat" id="play-lbl">Consumer Finance</div>
+                    <h2 class="mock-title" id="play-head">Designing soft tactile dashboards</h2>
+                    <div class="mock-meta">By Sarah Jenkins &bull; July 4, 2026</div>
+                    <div class="mock-divider"></div>
+                    <div class="mock-sub">Why physical skeuomorphic feedback makes financial metrics intuitive</div>
+                    <p class="mock-body" id="play-body">
+                        Tactile extruded interfaces create an illusion that elements are extruded from the background. 
+                        By casting soft dual shadows (light upper-left, dark lower-right), they trigger the satisfy response 
+                        of physical buttons. Generous padding clearances and rounded sans type like Nunito are necessary to 
+                        ensure these soft shadows are legible and contrast properly on the grey screen.
+                    </p>
+                </div>
+                <div class="playground-warning" id="playground-warning"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frosted translucent side panel -->
+    <div class="comparison-panel" id="comparison-panel">
+        <div class="panel-header">
+            <h2>Color Palette Comparison</h2>
+            <div class="panel-actions">
+                <button class="panel-action-btn" title="Toggle Fullscreen" onclick="togglePanelExpand()">⛶</button>
+                <button class="panel-action-btn" title="Close Panel" onclick="closePanel()">✕</button>
+            </div>
+        </div>
+        <div class="panel-subtitle">Select up to 5 colors from the mindmap to compare side-by-side.</div>
+        <div class="comparison-slots" id="comparison-slots">
+            <!-- Empty state placeholder -->
+            <div style="text-align: center; padding: 40px 20px; color: #718096; width: 100%;" id="empty-slots-msg">
+                No colors selected. Click swatches in the mindmap to add them here!
+            </div>
+        </div>
+        <div class="panel-footer">
+            <button class="clear-btn" onclick="clearComparison()">Clear All Colors</button>
+        </div>
+    </div>
+
+    <!-- Include JSZip for client-side packaging -->
+    <script src="../../fonts/jszip.min.js"></script>
+    
+    <script>
+        // Node collapsibility
+        function toggleNode(el) {
+            const node = el.closest('.node');
+            if (!node) return;
+            node.classList.toggle('collapsed');
+            animateConnections();
+        }
+        
+        function expandAll() {
+            document.querySelectorAll('.node.collapsed').forEach(node => {
+                node.classList.remove('collapsed');
+            });
+            animateConnections();
+        }
+        
+        function collapseAll() {
+            document.querySelectorAll('.node:not(.node > ul > .node) .node').forEach(node => {
+                if (node.querySelector('ul')) {
+                    node.classList.add('collapsed');
+                }
+            });
+            animateConnections();
+        }
+
+        // SVG curves color mapping
+        const categoryColors = {
+            'category-industries': '#4A80C4',
+            'category-psych': '#805AD5',
+            'category-color': '#ED8936',
+            'category-type': '#38B2AC',
+            'category-spacing': '#4A80C4',
+            'category-borders': '#805AD5',
+            'category-components': '#ED8936',
+            'category-anim': '#38B2AC',
+            'category-avoid': '#e53e3e'
+        };
+
+        function drawConnections() {
+            const container = document.getElementById('mindmap-container');
+            const canvas = document.getElementById('mindmap-svg-canvas');
+            if (!container || !canvas) return;
+            
+            canvas.setAttribute('width', container.scrollWidth);
+            canvas.setAttribute('height', container.scrollHeight);
+            canvas.innerHTML = '';
+            
+            const containerRect = container.getBoundingClientRect();
+            
+            document.querySelectorAll('.node').forEach(parent => {
+                if (parent.classList.contains('collapsed')) return;
+                
+                const parentContent = parent.querySelector(':scope > .node-content');
+                const childList = parent.querySelector(':scope > ul');
+                
+                if (parentContent && childList && childList.style.display !== 'none') {
+                    const children = childList.querySelectorAll(':scope > .node');
+                    const parentRect = parentContent.getBoundingClientRect();
+                    
+                    const x1 = parentRect.right - containerRect.left;
+                    const y1 = parentRect.top + (parentRect.height / 2) - containerRect.top;
+                    
+                    children.forEach(child => {
+                        const childContent = child.querySelector(':scope > .node-content');
+                        if (childContent) {
+                            const childRect = childContent.getBoundingClientRect();
+                            const x2 = childRect.left - containerRect.left;
+                            const y2 = childRect.top + (childRect.height / 2) - containerRect.top;
+                            const cx = (x1 + x2) / 2;
+                            
+                            let strokeColor = 'rgba(163, 177, 198, 0.4)';
+                            let isColored = false;
+                            
+                            for (const [cls, color] of Object.entries(categoryColors)) {
+                                if (child.classList.contains(cls) || child.closest('.' + cls)) {
+                                    strokeColor = color;
+                                    isColored = true;
+                                    break;
+                                }
+                            }
+                            
+                            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                            path.setAttribute("d", `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`);
+                            path.setAttribute("stroke", strokeColor);
+                            path.setAttribute("stroke-width", "2.5");
+                            path.setAttribute("fill", "none");
+                            path.setAttribute("opacity", isColored ? "0.65" : "0.3");
+                            canvas.appendChild(path);
+                            
+                            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                            circle.setAttribute("cx", x1);
+                            circle.setAttribute("cy", y1);
+                            circle.setAttribute("r", "3.5");
+                            circle.setAttribute("fill", strokeColor);
+                            circle.setAttribute("opacity", isColored ? "0.8" : "0.4");
+                            canvas.appendChild(circle);
+                        }
+                    });
+                }
+            });
+        }
+
+        function animateConnections() {
+            let start = null;
+            function step(timestamp) {
+                if (!start) start = timestamp;
+                drawConnections();
+                if (timestamp - start < 350) {
+                    requestAnimationFrame(step);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        // Demo Actions (Tactile Neumorphic animations)
+        function toggleDemoBtn1() {
+            document.getElementById('demo1-el').classList.toggle('pressed');
+        }
+        function playDemo1() {
+            document.getElementById('demo1-el').classList.add('pressed');
+        }
+        function pauseDemo1() {
+            // Static pressed state represents paused click
+        }
+        function resetDemo1() {
+            document.getElementById('demo1-el').classList.remove('pressed');
+        }
+
+        function toggleDemoToggle2() {
+            document.getElementById('demo2-el').classList.toggle('active');
+        }
+        function playDemo2() {
+            document.getElementById('demo2-el').classList.add('active');
+        }
+        function pauseDemo2() {
+            // Remains active
+        }
+        function resetDemo2() {
+            document.getElementById('demo2-el').classList.remove('active');
+        }
+
+        function playDemo3() {
+            document.getElementById('demo3-el').style.boxShadow = '8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff';
+        }
+        function pauseDemo3() {
+            // Keep lifted shadow
+        }
+        function resetDemo3() {
+            document.getElementById('demo3-el').style.boxShadow = '';
+        }
+
+        function playDemo4() {
+            document.getElementById('demo4-el').focus();
+        }
+        function pauseDemo4() {
+            document.getElementById('demo4-el').blur();
+        }
+        function resetDemo4() {
+            document.getElementById('demo4-el').blur();
+            document.getElementById('demo4-el').value = '';
+        }
+
+        function moveStageSlider(e) {
+            const track = e.currentTarget;
+            const fill = document.getElementById('stage-slider-fill');
+            const thumb = document.getElementById('stage-slider-thumb');
+            const rect = track.getBoundingClientRect();
+            let pct = ((e.clientX - rect.left) / rect.width) * 100;
+            if (pct < 0) pct = 0;
+            if (pct > 100) pct = 100;
+            
+            fill.style.width = pct + '%';
+            thumb.style.left = `calc(${pct}% - 10px)`;
+        }
+        function playDemo5() {
+            const fill = document.getElementById('stage-slider-fill');
+            const thumb = document.getElementById('stage-slider-thumb');
+            fill.style.width = '80%';
+            thumb.style.left = 'calc(80% - 10px)';
+        }
+        function pauseDemo5() {}
+        function resetDemo5() {
+            const fill = document.getElementById('stage-slider-fill');
+            const thumb = document.getElementById('stage-slider-thumb');
+            fill.style.width = '50%';
+            thumb.style.left = 'calc(50% - 10px)';
+        }
+
+        function toggleDemoCta6() {
+            document.getElementById('demo6-el').classList.toggle('pressed');
+        }
+        function playDemo6() {
+            document.getElementById('demo6-el').classList.add('pressed');
+        }
+        function pauseDemo6() {}
+        function resetDemo6() {
+            document.getElementById('demo6-el').classList.remove('pressed');
+        }
+
+        // Live Custom Phrase preview update
+        function updateFontPreviews(val) {
+            document.querySelectorAll('.font-sample').forEach(el => {
+                el.textContent = val || "The soft interface";
+            });
+        }
+
+        // Apply weight immediately on click in preview cards
+        function applyWeight(el, fontName, weight) {
+            const previewCard = el.closest('.font-preview');
+            const sample = previewCard.querySelector('.font-sample');
+            
+            previewCard.querySelectorAll('.font-weights span').forEach(s => s.classList.remove('active-weight'));
+            el.classList.add('active-weight');
+            
+            sample.style.fontWeight = weight;
+            
+            // If it is the Nunito card, also update the simulated playground weights if it is matching
+            if (fontName === 'Nunito') {
+                document.getElementById('body-weight').value = weight;
+                updatePlayground();
+            }
+        }
+
+        // Typography playground validation check
+        function updatePlayground() {
+            const headSize = document.getElementById('head-size').value;
+            const headSpacing = document.getElementById('head-spacing').value;
+            const headWeight = document.getElementById('head-weight').value;
+            
+            const bodySize = document.getElementById('body-size').value;
+            const bodyWeight = document.getElementById('body-weight').value;
+            const bodyHeight = document.getElementById('body-height').value;
+            
+            const lblSize = document.getElementById('lbl-size').value;
+            const lblSpacing = document.getElementById('lbl-spacing').value;
+            
+            document.getElementById('val-head-size').textContent = headSize + 'px';
+            document.getElementById('val-head-spacing').textContent = headSpacing + 'em';
+            document.getElementById('val-head-weight').textContent = headWeight;
+            
+            document.getElementById('val-body-size').textContent = bodySize + 'px';
+            document.getElementById('val-body-weight').textContent = bodyWeight;
+            document.getElementById('val-body-height').textContent = parseFloat(bodyHeight).toFixed(2);
+            
+            document.getElementById('val-lbl-size').textContent = lblSize + 'px';
+            document.getElementById('val-lbl-spacing').textContent = lblSpacing + 'em';
+            
+            const playHead = document.getElementById('play-head');
+            const playBody = document.getElementById('play-body');
+            const playLbl = document.getElementById('play-lbl');
+            
+            playHead.style.fontSize = headSize + 'px';
+            playHead.style.letterSpacing = headSpacing + 'em';
+            playHead.style.fontWeight = headWeight;
+            
+            playBody.style.fontSize = bodySize + 'px';
+            playBody.style.fontWeight = bodyWeight;
+            playBody.style.lineHeight = bodyHeight;
+            
+            playLbl.style.fontSize = lblSize + 'px';
+            playLbl.style.letterSpacing = lblSpacing + 'em';
+            
+            let isViolated = false;
+            let warnings = [];
+            
+            // Validate Headline Size (28px - 36px)
+            if (headSize >= 28 && headSize <= 36) {
+                document.getElementById('chk-head-size').classList.add('active');
+            } else {
+                document.getElementById('chk-head-size').classList.remove('active');
+                isViolated = true;
+                warnings.push("Headline size must be between 28px and 36px for soft neumorphic layouts.");
+            }
+            
+            // Validate Headline Spacing (0em - 0.02em)
+            if (headSpacing >= 0.00 && headSpacing <= 0.02) {
+                document.getElementById('chk-head-spacing').classList.add('active');
+            } else {
+                document.getElementById('chk-head-spacing').classList.remove('active');
+                isViolated = true;
+                warnings.push("Headline letter spacing must be slightly open: between 0em and 0.02em.");
+            }
+            
+            // Validate Headline Weight (max 600 - SemiBold)
+            if (headWeight <= 600) {
+                document.getElementById('chk-head-weight').classList.add('active');
+            } else {
+                document.getElementById('chk-head-weight').classList.remove('active');
+                isViolated = true;
+                warnings.push("Neumorphic text must NOT exceed SemiBold (600) to keep the aesthetic soft.");
+            }
+            
+            // Validate Body Size (14px - 16px)
+            if (bodySize >= 14 && bodySize <= 16) {
+                document.getElementById('chk-body-size').classList.add('active');
+            } else {
+                document.getElementById('chk-body-size').classList.remove('active');
+                isViolated = true;
+                warnings.push("Body text size must be between 14px and 16px.");
+            }
+            
+            // Validate Body Weight (max 600)
+            if (bodyWeight <= 600) {
+                document.getElementById('chk-body-weight').classList.add('active');
+            } else {
+                document.getElementById('chk-body-weight').classList.remove('active');
+                isViolated = true;
+                warnings.push("Body text weight must not exceed SemiBold (600) weight.");
+            }
+            
+            // Validate Body Line Height (1.6 - 1.8)
+            if (bodyHeight >= 1.6 && bodyHeight <= 1.8) {
+                document.getElementById('chk-body-height').classList.add('active');
+            } else {
+                document.getElementById('chk-body-height').classList.remove('active');
+                isViolated = true;
+                warnings.push("Line height must be generous (1.6 to 1.8) for an open, calm texture.");
+            }
+
+            // Validate Label Size (13px - 15px)
+            if (lblSize >= 13 && lblSize <= 15) {
+                document.getElementById('chk-lbl-size').classList.add('active');
+            } else {
+                document.getElementById('chk-lbl-size').classList.remove('active');
+                isViolated = true;
+                warnings.push("Label size should be between 13px and 15px.");
+            }
+
+            // Validate Label Spacing (0.05em - 0.08em)
+            if (lblSpacing >= 0.05 && lblSpacing <= 0.08) {
+                document.getElementById('chk-lbl-spacing').classList.add('active');
+            } else {
+                document.getElementById('chk-lbl-spacing').classList.remove('active');
+                isViolated = true;
+                warnings.push("Label letter spacing must be loose: between 0.05em and 0.08em.");
+            }
+            
+            const previewCard = document.getElementById('playground-preview-card');
+            const warningEl = document.getElementById('playground-warning');
+            if (isViolated) {
+                previewCard.classList.add('rule-violated');
+                warningEl.innerHTML = "⚠️ " + warnings.join("<br>⚠️ ");
+            } else {
+                previewCard.classList.remove('rule-violated');
+                warningEl.textContent = "";
+            }
+        }
+
+        function resetPlaygroundPresets() {
+            document.getElementById('head-size').value = 32;
+            document.getElementById('head-spacing').value = 0.01;
+            document.getElementById('head-weight').value = 600;
+            
+            document.getElementById('body-size').value = 14;
+            document.getElementById('body-weight').value = 400;
+            document.getElementById('body-height').value = 1.70;
+            
+            document.getElementById('lbl-size').value = 13;
+            document.getElementById('lbl-spacing').value = 0.06;
+            
+            updatePlayground();
+        }
+
+        // Color comparison panel state
+        const selectedColors = new Set();
+
+        function selectColor(name, hex) {
+            const key = name + '|' + hex;
+            const swatchElements = document.querySelectorAll(`.color-swatch[style*="${hex.toUpperCase()}"]`);
+            
+            if (selectedColors.has(key)) {
+                selectedColors.delete(key);
+                swatchElements.forEach(s => s.classList.remove('active-compare'));
+            } else {
+                if (selectedColors.size >= 5) {
+                    alert("You can compare up to 5 colors simultaneously.");
+                    return;
+                }
+                selectedColors.add(key);
+                swatchElements.forEach(s => s.classList.add('active-compare'));
+            }
+            
+            updateComparisonPanel();
+        }
+
+        function updateComparisonPanel() {
+            const panel = document.getElementById('comparison-panel');
+            const slotsContainer = document.getElementById('comparison-slots');
+            const emptyMsg = document.getElementById('empty-slots-msg');
+            
+            // Clear existing comparison cards except placeholder
+            slotsContainer.innerHTML = '';
+            
+            if (selectedColors.size === 0) {
+                slotsContainer.appendChild(emptyMsg);
+                panel.classList.remove('open');
+                panel.classList.remove('expanded');
+                return;
+            }
+            
+            panel.classList.add('open');
+            
+            selectedColors.forEach(item => {
+                const [name, hex] = item.split('|');
+                const card = document.createElement('div');
+                card.className = 'comparison-card';
+                
+                card.innerHTML = `
+                    <div class="comparison-color-box" style="background: ${hex};"></div>
+                    <div class="comparison-info">
+                        <div class="comparison-name">${name}</div>
+                        <div class="comparison-hex">${hex}</div>
+                    </div>
+                    <button class="comparison-remove-btn" onclick="removeComparisonColor('${name}', '${hex}')">✕</button>
+                `;
+                slotsContainer.appendChild(card);
+            });
+        }
+
+        function removeComparisonColor(name, hex) {
+            selectColor(name, hex);
+        }
+
+        function clearComparison() {
+            selectedColors.clear();
+            document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active-compare'));
+            updateComparisonPanel();
+        }
+
+        function togglePanelExpand() {
+            document.getElementById('comparison-panel').classList.toggle('expanded');
+        }
+
+        function closePanel() {
+            document.getElementById('comparison-panel').classList.remove('open');
+            document.getElementById('comparison-panel').classList.remove('expanded');
+        }
+
+        // Offline Fonts Caching & ZIP Compiler
+        const fontsCache = {};
+        const fontFilesList = [
+            "fonts.css",
+            "xn7gYHE41ni1AdIRggOxSuXd.woff2",
+            "xn7gYHE41ni1AdIRggSxSuXd.woff2",
+            "xn7gYHE41ni1AdIRggexSg.woff2",
+            "xn7gYHE41ni1AdIRggixSuXd.woff2",
+            "xn7gYHE41ni1AdIRggmxSuXd.woff2",
+            "xn7gYHE41ni1AdIRggqxSuXd.woff2",
+            "XRXV3I6Li01BKofIMeaBXso.woff2",
+            "XRXV3I6Li01BKofINeaB.woff2",
+            "XRXV3I6Li01BKofIO-aBXso.woff2",
+            "XRXV3I6Li01BKofIOOaBXso.woff2",
+            "XRXV3I6Li01BKofIOuaBXso.woff2",
+            "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa0ZL7SUc.woff2",
+            "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+            "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1pL7SUc.woff2",
+            "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+            "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2JL7SUc.woff2",
+            "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2ZL7SUc.woff2",
+            "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2pL7SUc.woff2",
+            "rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K4.woff2",
+            "rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu6-K6h9Q.woff2"
+        ];
+
+        async function fetchAndCacheFont(filename, url) {
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    fontsCache[filename] = await res.blob();
+                    return true;
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+            return false;
+        }
+
+        async function initFontsDownloader() {
+            const promises = fontFilesList.map(async (filename) => {
+                if (filename === "fonts.css") {
+                    try {
+                        const res = await fetch("../../fonts/fonts.css");
+                        if (res.ok) fontsCache["fonts.css"] = await res.blob();
+                    } catch(e) {}
+                    return;
+                }
+                
+                let success = await fetchAndCacheFont(filename, "../../fonts/" + filename);
+                
+                // Fallback to Google CDN if local files are missing
+                if (!success) {
+                    const googleFontsBase = "https://fonts.gstatic.com/s/";
+                    let onlineFallback = "";
+                    if (filename.startsWith("xn7gYH")) onlineFallback = googleFontsBase + "nunito/v26/" + filename;
+                    else if (filename.startsWith("XRXV3I")) onlineFallback = googleFontsBase + "manrope/v15/" + filename;
+                    else if (filename.startsWith("UcC73F")) onlineFallback = googleFontsBase + "inter/v18/" + filename;
+                    else if (filename.startsWith("rP2Yp2")) onlineFallback = googleFontsBase + "dmsans/v15/" + filename;
+                    
+                    if (onlineFallback) {
+                        await fetchAndCacheFont(filename, onlineFallback);
+                    }
+                }
+            });
+
+            await Promise.all(promises);
+            console.log("Cached " + Object.keys(fontsCache).length + " woff2 binaries in memory.");
+        }
+
+        async function downloadFontsZip() {
+            const btn = document.getElementById('download-fonts-btn');
+            if (!btn) return;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '📥 Packaging zip...';
+            btn.disabled = true;
+            
+            try {
+                if (typeof JSZip === 'undefined') {
+                    throw new Error("JSZip library is not loaded.");
+                }
+                
+                const zip = new JSZip();
+                const packagePromises = fontFilesList.map(async (filename) => {
+                    let fileBlob = fontsCache[filename];
+                    
+                    if (!fileBlob) {
+                        try {
+                            const res = await fetch("../../fonts/" + filename);
+                            if (res.ok) {
+                                fileBlob = await res.blob();
+                                fontsCache[filename] = fileBlob;
+                            }
+                        } catch(e) {}
+                    }
+                    
+                    if (fileBlob) {
+                        zip.file(filename, fileBlob);
+                    }
+                });
+                
+                await Promise.all(packagePromises);
+                
+                const content = await zip.generateAsync({type: "blob"});
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = "fonts.zip";
+                link.click();
+                URL.revokeObjectURL(link.href);
+            } catch (err) {
+                console.error(err);
+                alert("Packaging fonts.zip failed. Please ensure you are online or connected to local server.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Collapse nodes by default on load
+            document.querySelectorAll('.node .node .node').forEach(node => {
+                if (node.querySelector('ul')) {
+                    node.classList.add('collapsed');
+                }
+            });
+            
+            setTimeout(drawConnections, 100);
+            window.addEventListener('resize', drawConnections);
+            
+            // Run background asynchronous font downloader
+            initFontsDownloader();
+            
+            // Initialize sliders presets
+            resetPlaygroundPresets();
+        });
+    </script>
+</body>
+</html>

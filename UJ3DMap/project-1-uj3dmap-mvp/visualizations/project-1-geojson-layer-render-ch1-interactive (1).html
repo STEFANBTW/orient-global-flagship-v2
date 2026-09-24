@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoJSON Layer Render Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--green); box-shadow: 0 0 15px rgba(74, 222, 128, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--green); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--accent); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .code-line.executing { background: rgba(74, 222, 128, 0.2); border-left: 3px solid var(--green); }
+
+        /* Map and DOM Architecture */
+        .map-architecture {
+            display: flex;
+            gap: 10px;
+            flex-grow: 1;
+            height: 200px;
+        }
+        
+        .geo-data {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            overflow-y: auto;
+        }
+        
+        .geo-hl { color: var(--yellow); transition: all 0.3s; }
+        .geo-hl.active { color: #fff; background: var(--yellow); padding: 0 4px; border-radius: 2px; }
+
+        .map-view {
+            flex: 1;
+            background: #2a2a2a;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                linear-gradient(#333 1px, transparent 1px),
+                linear-gradient(90deg, #333 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        .dom-tree {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--border);
+            padding: 5px;
+            font-size: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-dim);
+            border-radius: 4px;
+        }
+        .dom-tree span { display: block; padding-left: 10px; }
+        .dom-svg { color: var(--orange); opacity: 0.3; transition: all 0.5s; }
+        .dom-svg.active { opacity: 1; font-weight: bold; }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.3s ease; }
+        .log-entry.math { border-left-color: var(--purple); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+        .log-entry.warn { border-left-color: var(--yellow); color: var(--yellow); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* SVG Path Animation */
+        .draw-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 2s forwards ease-in-out;
+        }
+        
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(74, 222, 128, 0.1); border-color: var(--green); color: var(--green); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(74, 222, 128, 0.15); color: var(--green); border-color: var(--green); box-shadow: 0 0 10px rgba(74, 222, 128, 0.2); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+        .function { color: var(--yellow); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>GeoJSON Rendering Pipeline</h1>
+        <p>Parsing, Web Mercator Projection, and SVG DOM Injection</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Map Architecture -->
+        <div class="panel" id="panel-vis">
+            <div class="panel-title">1. Map Overlay Pane <span class="status-badge" id="badge-vis">Ready</span></div>
+            <div class="map-architecture">
+                <div class="geo-data">
+                    <span style="color: var(--purple)">const</span> data = {<br>
+                    &nbsp;&nbsp;<span class="string">"type"</span>: <span class="string">"Feature"</span>,<br>
+                    &nbsp;&nbsp;<span class="string">"geometry"</span>: {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"type"</span>: <span class="string">"Polygon"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"coordinates"</span>: [[<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="geo-hl" id="c0">-0.11</span>, <span class="geo-hl" id="c1">51.51</span>],<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="geo-hl" id="c2">-0.12</span>, <span class="geo-hl" id="c3">51.51</span>],<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="geo-hl" id="c4">-0.12</span>, <span class="geo-hl" id="c5">51.50</span>],<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="geo-hl" id="c6">-0.11</span>, <span class="geo-hl" id="c7">51.50</span>]<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;]]<br>
+                    &nbsp;&nbsp;}<br>
+                    };
+                </div>
+                <div class="map-view">
+                    <svg class="map-overlay" id="map-svg" width="100%" height="100%"></svg>
+                    <div class="dom-tree">
+                        &lt;div class="leaflet-overlay-pane"&gt;
+                        <span class="dom-svg" id="dom-svg-node">&lt;svg&gt;...&lt;/svg&gt;</span>
+                        &lt;/div&gt;
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Leaflet Render Loop <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="function">L.geoJSON</span>(data).addTo(map);</span>
+<span class="code-line" id="line-1"></span>
+<span class="code-line" id="line-2"><span class="comment">// 1. V8 JSON Parsing -> Object</span></span>
+<span class="code-line" id="line-3"><span class="keyword">const</span> coords = feature.geometry.coordinates[<span class="number">0</span>];</span>
+<span class="code-line" id="line-4"></span>
+<span class="code-line" id="line-5"><span class="comment">// 2. Projection (Lat/Lon to Pixels)</span></span>
+<span class="code-line" id="line-6"><span class="keyword">const</span> points = coords.map(latlng => {</span>
+<span class="code-line" id="line-7">  <span class="keyword">return</span> map.latLngToLayerPoint(latlng);</span>
+<span class="code-line" id="line-8">});</span>
+<span class="code-line" id="line-9"></span>
+<span class="code-line" id="line-10"><span class="comment">// 3. SVG Path Generation</span></span>
+<span class="code-line" id="line-11"><span class="keyword">let</span> pathStr = <span class="string">"M"</span> + points[<span class="number">0</span>].x + <span class="string">","</span> + points[<span class="number">0</span>].y;</span>
+<span class="code-line" id="line-12"><span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">1</span>; i < points.length; i++) {</span>
+<span class="code-line" id="line-13">  pathStr += <span class="string">" L"</span> + points[i].x + <span class="string">","</span> + points[i].y;</span>
+<span class="code-line" id="line-14">}</span>
+<span class="code-line" id="line-15">pathStr += <span class="string">" Z"</span>; <span class="comment">// Close path</span></span>
+<span class="code-line" id="line-16"></span>
+<span class="code-line" id="line-17"><span class="comment">// 4. DOM Injection</span></span>
+<span class="code-line" id="line-18">pathElement.setAttribute(<span class="string">'d'</span>, pathStr);</span>
+<span class="code-line" id="line-19">overlayPane.appendChild(svgElement);</span></div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Projection Math Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Awaiting GeoJSON injection...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-render" class="primary">▶ Render Layer</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-step" class="primary" disabled>▶ Step State</button>
+            <button id="btn-play" disabled>▶▶ Auto-Play</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnRender = document.getElementById('btn-render');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const logOutput = document.getElementById('log-output');
+        const mapSvg = document.getElementById('map-svg');
+        const domSvgNode = document.getElementById('dom-svg-node');
+
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let isExecuting = false;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function highlightLine(lineNumbers) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+        
+        function clearHL() {
+            document.querySelectorAll('.geo-hl').forEach(el => el.classList.remove('active'));
+        }
+        function activateHL(ids) {
+            clearHL();
+            ids.forEach(id => document.getElementById(`c${id}`).classList.add('active'));
+        }
+
+        function waitForStep() {
+            return new Promise(resolve => {
+                if (isAutoPlaying) {
+                    setTimeout(resolve, 1000);
+                } else {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    resolveStep = resolve;
+                }
+            });
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        // Mock spherical mercator projection logic for visual UI purposes
+        function latLngToPoint(lat, lng, width, height) {
+            // Simplified projection for demo box
+            const x = ((lng - (-0.125)) / 0.02) * width;
+            const y = height - (((lat - 51.495) / 0.02) * height);
+            return { x: Math.round(x), y: Math.round(y) };
+        }
+
+        async function runRender() {
+            if (isExecuting) return;
+            isExecuting = true;
+            btnRender.disabled = true;
+
+            document.getElementById('panel-vis').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Executing';
+
+            highlightLine([0, 2, 3]);
+            log(`V8 traverses JSON tree, finding "Polygon" with 4 vertices.`, 'result');
+            await waitForStep();
+            
+            // Loop through coordinates
+            highlightLine([5, 6]);
+            log(`Starting Spherical Mercator projection loop...`);
+            await waitForStep();
+
+            const rawCoords = [
+                [-0.11, 51.51],
+                [-0.12, 51.51],
+                [-0.12, 51.50],
+                [-0.11, 51.50]
+            ];
+            
+            const w = mapSvg.clientWidth;
+            const h = mapSvg.clientHeight;
+            let projectedPoints = [];
+            
+            for(let i=0; i<4; i++) {
+                highlightLine([7]);
+                activateHL([i*2, i*2+1]);
+                
+                const p = latLngToPoint(rawCoords[i][1], rawCoords[i][0], w, h);
+                projectedPoints.push(p);
+                
+                log(`latLngToLayerPoint([${rawCoords[i][1]}, ${rawCoords[i][0]}]) => Point(x:${p.x}, y:${p.y})`, 'math');
+                
+                // Draw intermediate point
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", p.x);
+                circle.setAttribute("cy", p.y);
+                circle.setAttribute("r", 4);
+                circle.setAttribute("fill", "var(--accent)");
+                mapSvg.appendChild(circle);
+                
+                await waitForStep();
+            }
+            clearHL();
+
+            highlightLine([10, 11, 12, 13, 14, 15]);
+            let pathStr = `M${projectedPoints[0].x},${projectedPoints[0].y} `;
+            for(let i=1; i<4; i++) {
+                pathStr += `L${projectedPoints[i].x},${projectedPoints[i].y} `;
+            }
+            pathStr += "Z";
+            log(`Constructing SVG Path String: "${pathStr}"`, 'math');
+            await waitForStep();
+
+            highlightLine([17, 18]);
+            log(`Injecting <path> into DOM Overlay Pane...`, 'warn');
+            
+            // Draw Polygon
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", pathStr);
+            path.setAttribute("fill", "rgba(74, 222, 128, 0.4)");
+            path.setAttribute("stroke", "var(--green)");
+            path.setAttribute("stroke-width", "2");
+            path.setAttribute("class", "draw-path");
+            mapSvg.appendChild(path);
+            
+            domSvgNode.classList.add('active');
+            await waitForStep();
+            
+            log(`SVG painted on screen via GPU Compositing.`, 'result');
+            document.getElementById('badge-code').className = 'status-badge done';
+            document.getElementById('badge-code').innerText = 'Idle';
+            document.getElementById('badge-vis').className = 'status-badge done';
+            document.getElementById('badge-vis').innerText = 'Rendered';
+            
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            isAutoPlaying = false;
+        }
+
+        btnRender.addEventListener('click', runRender);
+
+        btnReset.addEventListener('click', () => {
+            window.location.reload();
+        });
+
+    </script>
+</body>
+</html>

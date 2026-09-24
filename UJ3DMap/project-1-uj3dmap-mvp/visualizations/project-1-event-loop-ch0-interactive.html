@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Loop Simulator - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+
+            --c-sync: #facc15;
+            --c-macro: var(--accent);
+            --c-micro: var(--purple);
+            --c-webapi: var(--green);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--c-webapi);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 100px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .canvas-area {
+            display: flex;
+            gap: 15px;
+            height: 100%;
+        }
+        
+        .col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .box-container {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow-y: auto;
+        }
+
+        .box-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .task {
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #000;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s;
+        }
+        .task.macro { background: var(--c-macro); }
+        .task.micro { background: var(--c-micro); color: #fff; }
+        .task.executing { box-shadow: 0 0 10px #fff; transform: scale(1.05); }
+
+        .code-display {
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            overflow-y: auto;
+            flex: 1;
+            color: var(--text-dim);
+        }
+        .code-line { margin: 0; padding: 2px 5px; border-radius: 3px; }
+        .code-line.active { background: rgba(56, 189, 248, 0.2); color: #fff; border-left: 3px solid var(--accent); }
+
+        .console-out {
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            overflow-y: auto;
+            flex: 1;
+            color: var(--text);
+        }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-play { color: var(--green); border-color: var(--green); }
+        .btn-pause { color: var(--red); border-color: var(--red); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Event Loop Architecture</h1>
+    </header>
+
+    <div class="container">
+        <!-- Canvas -->
+        <div class="panel">
+            <div class="panel-title">Canvas (V8 & Queues)</div>
+            <div class="canvas-area">
+                <div class="col">
+                    <div class="box-container" id="call-stack">
+                        <div class="box-title">Call Stack</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="box-container" id="micro-queue" style="border-color: var(--c-micro);">
+                        <div class="box-title" style="color: var(--c-micro);">Microtask Queue</div>
+                    </div>
+                    <div class="box-container" id="macro-queue" style="border-color: var(--c-macro);">
+                        <div class="box-title" style="color: var(--c-macro);">Macrotask Queue</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code -->
+        <div class="panel">
+            <div class="panel-title">Code Display</div>
+            <div class="code-display" id="code-display">
+<div class="code-line" id="line-1">while (true) {</div>
+<div class="code-line" id="line-2">  if (macrotaskQueue.length > 0) {</div>
+<div class="code-line" id="line-3">    executeTask(macrotaskQueue.shift());</div>
+<div class="code-line" id="line-4">  }</div>
+<div class="code-line" id="line-5">  while (microtaskQueue.length > 0) {</div>
+<div class="code-line" id="line-6">    executeTask(microtaskQueue.shift());</div>
+<div class="code-line" id="line-7">  }</div>
+<div class="code-line" id="line-8">}</div>
+            </div>
+        </div>
+
+        <!-- Log -->
+        <div class="panel" style="grid-column: 1 / -1;">
+            <div class="panel-title">System Log</div>
+            <div class="console-out" id="console-out"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="master-controls">
+            <button onclick="addMicro()">+ Microtask</button>
+            <button onclick="addMacro()">+ Macrotask</button>
+            <div style="width: 20px;"></div>
+            <button class="btn-play" id="btn-play" onclick="play()">▶ Play</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-step" onclick="step()">⏭ Step</button>
+            <button onclick="location.reload()">↺ Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const UI = {
+            stack: document.getElementById('call-stack'),
+            micro: document.getElementById('micro-queue'),
+            macro: document.getElementById('macro-queue'),
+            console: document.getElementById('console-out'),
+            lines: {
+                1: document.getElementById('line-1'),
+                2: document.getElementById('line-2'),
+                3: document.getElementById('line-3'),
+                4: document.getElementById('line-4'),
+                5: document.getElementById('line-5'),
+                6: document.getElementById('line-6'),
+                7: document.getElementById('line-7'),
+                8: document.getElementById('line-8')
+            }
+        };
+
+        let isPaused = false; let pauseResolve = null;
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnPause = document.getElementById('btn-pause');
+            if (btnPause) {
+                btnPause.addEventListener('click', () => {
+                    if (!isPaused) {
+                        isPaused = true;
+                        btnPause.innerText = '▶ Resume';
+                    } else {
+                        isPaused = false;
+                        btnPause.innerText = '⏸ Pause';
+                        if (pauseResolve) pauseResolve();
+                    }
+                });
+            }
+        });
+
+        const state = {
+            paused: true,
+            resolveStep: null,
+            taskId: 1,
+            microtasks: [],
+            macrotasks: []
+        };
+
+        function log(msg, color = '#fff') {
+            const div = document.createElement('div');
+            div.style.color = color;
+            div.innerText = `> ${msg}`;
+            UI.console.appendChild(div);
+            UI.console.scrollTop = UI.console.scrollHeight;
+        }
+
+        function highlight(line) {
+            Object.values(UI.lines).forEach(el => el.classList.remove('active'));
+            if (line && UI.lines[line]) {
+                UI.lines[line].classList.add('active');
+            }
+        }
+
+        async function waitStep() {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            if (state.paused) {
+                await new Promise(r => state.resolveStep = r);
+            } else {
+                await new Promise(r => setTimeout(r, 800));
+            }
+        }
+
+        function play() {
+            state.paused = false;
+            const btnPause = document.getElementById('btn-pause');
+            if(btnPause) btnPause.disabled = false;
+            if (state.resolveStep) {
+                state.resolveStep();
+                state.resolveStep = null;
+            }
+        }
+
+        function pause() {
+            state.paused = true;
+        }
+
+        function step() {
+            state.paused = true;
+            if (state.resolveStep) {
+                state.resolveStep();
+                state.resolveStep = null;
+            }
+        }
+
+        function addMicro() {
+            const id = state.taskId++;
+            state.microtasks.push(id);
+            const el = document.createElement('div');
+            el.className = 'task micro';
+            el.id = `micro-${id}`;
+            el.innerText = `Microtask(${id})`;
+            UI.micro.appendChild(el);
+            log(`Added Microtask(${id})`, 'var(--c-micro)');
+        }
+
+        function addMacro() {
+            const id = state.taskId++;
+            state.macrotasks.push(id);
+            const el = document.createElement('div');
+            el.className = 'task macro';
+            el.id = `macro-${id}`;
+            el.innerText = `Macrotask(${id})`;
+            UI.macro.appendChild(el);
+            log(`Added Macrotask(${id})`, 'var(--c-macro)');
+        }
+
+        async function eventLoop() {
+            while (true) {
+                highlight(1);
+                await waitStep();
+
+                highlight(2);
+                await waitStep();
+                
+                if (state.macrotasks.length > 0) {
+                    highlight(3);
+                    const id = state.macrotasks.shift();
+                    const el = document.getElementById(`macro-${id}`);
+                    if (el) {
+                        UI.stack.appendChild(el);
+                        el.classList.add('executing');
+                        log(`Executing Macrotask(${id})`, 'var(--c-macro)');
+                        await waitStep();
+                        el.remove();
+                    }
+                }
+
+                highlight(5);
+                await waitStep();
+                
+                while (state.microtasks.length > 0) {
+                    highlight(6);
+                    const id = state.microtasks.shift();
+                    const el = document.getElementById(`micro-${id}`);
+                    if (el) {
+                        UI.stack.appendChild(el);
+                        el.classList.add('executing');
+                        log(`Executing Microtask(${id})`, 'var(--c-micro)');
+                        await waitStep();
+                        el.remove();
+                    }
+                    highlight(5);
+                    await waitStep();
+                }
+            }
+        }
+
+        // Initialize with some tasks
+        addMacro();
+        addMicro();
+        addMicro();
+
+        eventLoop();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AbortController & TCP Memory Leaks - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #ef4444;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fbbf24;
+            --pipe: #475569;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--red);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--red); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.active { background: var(--red); color: #fff; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .code-line.executing { background: rgba(239, 68, 68, 0.2); border-left: 3px solid var(--red); }
+
+        /* Network Architecture Scene */
+        .network-area {
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            overflow: hidden;
+        }
+
+        .net-node {
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            width: 130px;
+            text-align: center;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .node-title {
+            font-weight: bold;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .memory-heap {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            height: 90px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 5px;
+            gap: 2px;
+        }
+
+        .promise-obj {
+            background: var(--accent);
+            color: #000;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            border-radius: 2px;
+            height: fit-content;
+        }
+        .promise-obj.leaked { background: var(--orange); }
+
+        .tcp-pipe {
+            position: absolute;
+            top: 50%; left: 200px; right: 200px;
+            height: 30px;
+            transform: translateY(-50%);
+            background: var(--pipe);
+            border-radius: 15px;
+            border: 2px solid #64748b;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+
+        .packet {
+            width: 10px; height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            position: absolute;
+            left: -20px;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .flowing .packet { animation: flowRight 1.5s linear infinite; }
+        .flowing .packet:nth-child(2) { animation-delay: 0.5s; }
+        .flowing .packet:nth-child(3) { animation-delay: 1.0s; }
+
+        @keyframes flowRight {
+            0% { left: -20px; opacity: 1; }
+            90% { left: 100%; opacity: 1; }
+            100% { left: 100%; opacity: 0; }
+        }
+
+        .server-hung { border-color: var(--orange); background: rgba(251, 191, 36, 0.1); }
+        .server-hung .node-title { color: var(--orange); }
+        
+        .blade {
+            position: absolute;
+            top: -100px; left: 50%;
+            width: 4px; height: 100px;
+            background: var(--red);
+            box-shadow: 0 0 20px var(--red);
+            transform: translateX(-50%);
+            z-index: 20;
+            transition: top 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cut .blade { top: 30%; height: 200px; }
+        .cut .tcp-pipe { 
+            clip-path: polygon(0 0, 48% 0, 48% 100%, 0 100%);
+            border-right-color: var(--red);
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.process { border-left-color: var(--accent); color: var(--accent); }
+        .log-entry.warn { border-left-color: var(--orange); color: var(--orange); font-weight: bold;}
+        .log-entry.abort { border-left-color: var(--red); color: var(--red); font-weight: bold;}
+        .log-entry.done { border-left-color: var(--green); color: var(--green); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(239, 68, 68, 0.1); border-color: var(--red); color: var(--red); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(56, 189, 248, 0.15); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+        button.danger { background: rgba(239, 68, 68, 0.15); color: var(--red); border-color: var(--red); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .function { color: var(--yellow); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>AbortController & Memory Leaks</h1>
+        <p>Severing TCP connections to trigger Garbage Collection</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Network Architecture -->
+        <div class="panel" id="panel-vis">
+            <div class="panel-title">1. TCP Pipeline & V8 Heap <span class="status-badge" id="badge-vis">Ready</span></div>
+            <div class="network-area" id="network">
+                <div class="blade" id="blade"></div>
+                
+                <div class="net-node" id="client">
+                    <div class="node-title">Browser Client</div>
+                    <div style="font-size:0.6rem; color:var(--text-dim);">V8 Promise Heap</div>
+                    <div class="memory-heap" id="heap"></div>
+                </div>
+
+                <div class="tcp-pipe" id="pipe">
+                    <div class="packet"></div>
+                    <div class="packet"></div>
+                    <div class="packet"></div>
+                </div>
+
+                <div class="net-node" id="server">
+                    <div class="node-title">API Server</div>
+                    <div style="font-size:0.6rem; color:var(--text-dim);">Database Thread</div>
+                    <div class="memory-heap" style="display:flex; justify-content:center; align-items:center;">
+                        <span id="server-status" style="color:var(--green); font-size: 0.75rem;">200 OK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Abort Controller Signal <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="keyword">const</span> controller = <span class="keyword">new</span> <span class="function">AbortController</span>();</span>
+<span class="code-line" id="line-1"><span class="keyword">const</span> signal = controller.signal;</span>
+<span class="code-line" id="line-2"></span>
+<span class="code-line" id="line-3"><span class="keyword">try</span> {</span>
+<span class="code-line" id="line-4">  <span class="keyword">const</span> response = <span class="keyword">await</span> <span class="function">fetch</span>(<span class="string">'/api/data'</span>, {</span>
+<span class="code-line" id="line-5">    <span class="variable">signal</span>: signal</span>
+<span class="code-line" id="line-6">  });</span>
+<span class="code-line" id="line-7">  <span class="comment">// Process data</span></span>
+<span class="code-line" id="line-8">} <span class="keyword">catch</span> (err) {</span>
+<span class="code-line" id="line-9">  <span class="keyword">if</span> (err.name === <span class="string">'AbortError'</span>) {</span>
+<span class="code-line" id="line-10">    <span class="function">console</span>.log(<span class="string">'Fetch aborted'</span>);</span>
+<span class="code-line" id="line-11">  }</span>
+<span class="code-line" id="line-12">}</span>
+<span class="code-line" id="line-13"></span>
+<span class="code-line" id="line-14"><span class="comment">// Later...</span></span>
+<span class="code-line" id="line-15"><span class="function">controller.abort</span>(); <span class="comment">// Severs TCP connection</span></span></div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Execution & GC Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Awaiting user interaction...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-fetch" class="primary">1. Initiate Fetch</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 5px;"></div>
+            <button id="btn-hang" style="border-color:var(--orange); color:var(--orange);" disabled>2. Server Deadlock (Leak)</button>
+            <button id="btn-abort" class="danger" disabled>3. controller.abort()</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 5px;"></div>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const pipe = document.getElementById('pipe');
+        const heap = document.getElementById('heap');
+        const server = document.getElementById('server');
+        const serverStatus = document.getElementById('server-status');
+        const network = document.getElementById('network');
+        const logOutput = document.getElementById('log-output');
+
+        const btnFetch = document.getElementById('btn-fetch');
+        const btnHang = document.getElementById('btn-hang');
+        const btnAbort = document.getElementById('btn-abort');
+        const btnReset = document.getElementById('btn-reset');
+
+        let promiseCount = 0;
+        let leakInterval;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function highlightLine(lineNumbers) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        function createPromise(isLeaked) {
+            promiseCount++;
+            const p = document.createElement('div');
+            p.className = `promise-obj ${isLeaked ? 'leaked' : ''}`;
+            p.innerText = `P${promiseCount}`;
+            heap.appendChild(p);
+            return p;
+        }
+
+        btnFetch.addEventListener('click', async () => {
+            btnFetch.disabled = true;
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Fetching';
+
+            highlightLine([0, 1, 4, 5, 6]);
+            log(`Created AbortController. Fetch initiated...`, 'process');
+            
+            const p = createPromise(false);
+            pipe.classList.add('flowing');
+            btnHang.disabled = false;
+            
+            log(`Promise P1 allocated on V8 heap. TCP socket opened.`, 'process');
+            
+            // Healthy resolution if they don't click hang
+            setTimeout(() => {
+                if(btnHang.disabled) return; // Means they clicked hang
+                if(btnFetch.disabled === false) return; // Reset
+                pipe.classList.remove('flowing');
+                p.style.opacity = '0';
+                setTimeout(() => p.remove(), 500);
+                log(`Response received. P1 resolved. Garbage collected.`, 'done');
+                btnFetch.disabled = false;
+                btnHang.disabled = true;
+                document.getElementById('badge-code').className = 'status-badge done';
+                document.getElementById('badge-code').innerText = 'Idle';
+                highlightLine([]);
+                promiseCount = 0;
+            }, 3000);
+        });
+
+        btnHang.addEventListener('click', () => {
+            btnHang.disabled = true;
+            pipe.classList.remove('flowing');
+            server.classList.add('server-hung');
+            serverStatus.style.color = 'var(--orange)';
+            serverStatus.innerText = 'DEADLOCK (30s)';
+            
+            log(`Server hung. Data transmission stopped. Socket remains open.`, 'warn');
+            log(`Warning: Unresolved Promises are pinned in memory (Memory Leak).`, 'warn');
+            
+            document.getElementById('badge-vis').className = 'status-badge warn';
+            document.getElementById('badge-vis').innerText = 'Leaking';
+
+            // Simulate user clicking fetch multiple times while hung
+            leakInterval = setInterval(() => {
+                createPromise(true);
+                log(`User triggered new fetch. Promise P${promiseCount} leaked.`, 'warn');
+                if (heap.children.length > 20) {
+                    clearInterval(leakInterval);
+                    log(`Browser Memory Critical. App crash imminent.`, 'abort');
+                }
+            }, 600);
+
+            btnAbort.disabled = false;
+        });
+
+        btnAbort.addEventListener('click', () => {
+            btnAbort.disabled = true;
+            clearInterval(leakInterval);
+            
+            network.classList.add('cut');
+            highlightLine([15, 9, 10]);
+            
+            log(`controller.abort() executed. TCP RST packet dispatched.`, 'abort');
+            log(`Network socket forcibly severed.`, 'abort');
+            log(`All pending Promises rejected with DOMException 'AbortError'.`, 'process');
+            
+            setTimeout(() => {
+                // Clear heap (GC)
+                Array.from(heap.children).forEach(child => {
+                    child.style.opacity = '0';
+                    setTimeout(() => child.remove(), 500);
+                });
+                log(`V8 Garbage Collector swept rejected Promises. Memory reclaimed.`, 'done');
+                
+                serverStatus.style.color = 'var(--red)';
+                serverStatus.innerText = 'CONN RESET';
+                
+                document.getElementById('badge-code').className = 'status-badge done';
+                document.getElementById('badge-code').innerText = 'Idle';
+                document.getElementById('badge-vis').className = 'status-badge done';
+                document.getElementById('badge-vis').innerText = 'Safe';
+            }, 800);
+        });
+
+        btnReset.addEventListener('click', () => {
+            window.location.reload();
+        });
+
+    </script>
+</body>
+</html>

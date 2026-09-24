@@ -1,0 +1,30 @@
+---
+title: "UNIJOS Campus Navigator v2"
+subtitle: "Full System Design — RESHADED Framework with DevOps Lifecycle"
+author: "SoriKyo / Antigravity AI"
+date: "June 2026"
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm"
+fontsize: 11pt
+mainfont: "DejaVu Serif"
+sansfont: "DejaVu Sans"
+monofont: "DejaVu Sans Mono"
+colorlinks: true
+linkcolor: "MidnightBlue"
+urlcolor: "MidnightBlue"
+toccolor: "MidnightBlue"
+toc: true
+toc-depth: 3
+numbersections: true
+highlight-style: zenburn
+header-includes:
+  - \usepackage{fancyhdr}
+  - \usepackage{xcolor}
+  - \usepackage{mdframed}
+  - \pagestyle{fancy}
+  - \fancyhf{}
+  - \fancyhead[L]{\small UNIJOS Campus Navigator v2 — RESHADED System Design}
+  - \fancyhead[R]{\small \thepage}
+  - \fancyfoot[C]{\small \textcolor{gray}{SoriKyo / Antigravity AI — June 2026}}
+  - \renewcommand{\headrulewidth}{0.4pt}
+  - \renewcommand{\footrulewidth}{0.4pt}
+---

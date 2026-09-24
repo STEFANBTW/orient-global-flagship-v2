@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Parser & V8 Hidden Classes - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(192, 132, 252, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--purple);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--purple); box-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.active { background: var(--purple); color: #fff; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-hl {
+            background-color: rgba(192, 132, 252, 0.4);
+            color: #fff;
+            border-radius: 2px;
+            padding: 0 2px;
+            box-shadow: 0 0 8px rgba(192, 132, 252, 0.8);
+            transition: all 0.2s;
+        }
+
+        /* V8 Memory Visualization */
+        .memory-view {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            overflow: hidden;
+        }
+
+        .mem-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .mem-col h3 { margin: 0 0 10px 0; font-size: 0.8rem; color: var(--text-dim); border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+
+        .mem-block {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            transition: all 0.3s;
+            opacity: 0.2;
+        }
+        .mem-block.active { opacity: 1; border-color: var(--purple); box-shadow: inset 0 0 15px rgba(192, 132, 252, 0.2); }
+        .mem-block.done { opacity: 1; border-color: var(--accent); }
+        
+        .mem-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .mem-row:last-child { border-bottom: none; }
+        .mem-key { color: var(--text-dim); }
+        .mem-val { color: var(--green); }
+        .mem-val.undefined { color: var(--red); font-style: italic; }
+
+        .arrow-down { text-align: center; color: var(--text-dim); font-size: 1.2rem; opacity: 0; transition: opacity 0.3s; margin: -5px 0; }
+        .arrow-down.active { opacity: 1; color: var(--purple); }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.token { border-left-color: var(--orange); color: var(--text); }
+        .log-entry.action { border-left-color: var(--purple); color: var(--purple); font-weight: bold;}
+        .log-entry.done { border-left-color: var(--green); color: var(--green); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(192, 132, 252, 0.1); border-color: var(--purple); color: var(--purple); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(192, 132, 252, 0.15); color: var(--purple); border-color: var(--purple); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .number { color: var(--orange); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>JSON Parser & V8 Hidden Classes</h1>
+        <p>Tokenization, Memory Allocation, and Map Transitions (Shapes)</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Memory Architecture -->
+        <div class="panel" id="panel-vis">
+            <div class="panel-title">1. V8 Memory Heap <span class="status-badge" id="badge-vis">Unallocated</span></div>
+            
+            <div class="memory-view" id="memory-view">
+                <div class="mem-col">
+                    <h3>JSObject Instance (Offset: 0x00A1)</h3>
+                    <div class="mem-block" id="js-obj">
+                        <div class="mem-row"><span class="mem-key">[0]</span> <span class="mem-val undefined" id="val-0">undefined</span></div>
+                        <div class="mem-row" id="row-1" style="display:none;"><span class="mem-key">[1]</span> <span class="mem-val undefined" id="val-1">undefined</span></div>
+                    </div>
+                </div>
+                
+                <div class="mem-col" style="flex: 1.5;">
+                    <h3>Hidden Classes (Shapes/Maps)</h3>
+                    <div class="mem-block" id="map-0">
+                        <strong style="color:var(--purple)">Map0 (Empty)</strong>
+                    </div>
+                    <div class="arrow-down" id="arr-1">↓ <span style="font-size:0.6rem">add 'id'</span></div>
+                    <div class="mem-block" id="map-1" style="display:none;">
+                        <strong style="color:var(--accent)">Map1</strong>
+                        <div class="mem-row"><span class="mem-key">'id'</span> <span class="mem-val" style="color:var(--text-dim)">-> offset 0</span></div>
+                    </div>
+                    <div class="arrow-down" id="arr-2">↓ <span style="font-size:0.6rem">add 'lat'</span></div>
+                    <div class="mem-block" id="map-2" style="display:none;">
+                        <strong style="color:var(--green)">Map2</strong>
+                        <div class="mem-row"><span class="mem-key">'id'</span> <span class="mem-val" style="color:var(--text-dim)">-> offset 0</span></div>
+                        <div class="mem-row"><span class="mem-key">'lat'</span> <span class="mem-val" style="color:var(--text-dim)">-> offset 1</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Raw String Buffer <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container" style="font-size: 1.2rem;">
+<span id="char-0">{</span>
+  <span id="char-1">"id"</span>: <span id="char-2">"main_gate"</span>,
+  <span id="char-3">"lat"</span>: <span id="char-4">9.9508</span>
+<span id="char-5">}</span></div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Tokenizer Scanner Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Waiting for JSON.parse() execution...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-run" class="primary">▶ Run JSON.parse()</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-step" class="primary" disabled>▶ Step Token</button>
+            <button id="btn-play" disabled>▶▶ Auto-Play</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnRun = document.getElementById('btn-run');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const logOutput = document.getElementById('log-output');
+
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let isExecuting = false;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function highlightChar(id) {
+            document.querySelectorAll('[id^="char-"]').forEach(el => el.classList.remove('code-hl'));
+            if(id !== null) document.getElementById(`char-${id}`).classList.add('code-hl');
+        }
+
+        function waitForStep() {
+            return new Promise(resolve => {
+                if (isAutoPlaying) {
+                    setTimeout(resolve, 1000);
+                } else {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    resolveStep = resolve;
+                }
+            });
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        async function runParse() {
+            if (isExecuting) return;
+            isExecuting = true;
+            btnRun.disabled = true;
+            
+            document.getElementById('panel-vis').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Parsing';
+            document.getElementById('badge-vis').className = 'status-badge active';
+            document.getElementById('badge-vis').innerText = 'Allocating';
+
+            // Step 1: '{'
+            highlightChar(0);
+            log(`Token: ObjectStart '{'`, 'token');
+            log(`Action: Request Heap Allocation`, 'action');
+            document.getElementById('js-obj').classList.add('active');
+            document.getElementById('map-0').classList.add('active');
+            await waitForStep();
+            
+            document.getElementById('js-obj').classList.remove('active');
+            document.getElementById('js-obj').classList.add('done');
+            document.getElementById('map-0').classList.remove('active');
+            
+            // Step 2: "id"
+            highlightChar(1);
+            log(`Token: String 'id' (Key)`, 'token');
+            log(`Action: Create Transition Map0 -> Map1`, 'action');
+            document.getElementById('arr-1').classList.add('active');
+            document.getElementById('map-1').style.display = 'block';
+            document.getElementById('map-1').classList.add('active');
+            await waitForStep();
+            document.getElementById('map-1').classList.remove('active');
+            
+            // Step 3: "main_gate"
+            highlightChar(2);
+            log(`Token: String 'main_gate' (Value)`, 'token');
+            log(`Action: Write memory at offset 0`, 'action');
+            document.getElementById('js-obj').classList.remove('done');
+            document.getElementById('js-obj').classList.add('active');
+            const val0 = document.getElementById('val-0');
+            val0.innerText = '"main_gate"';
+            val0.className = 'mem-val string';
+            await waitForStep();
+            document.getElementById('js-obj').classList.remove('active');
+            document.getElementById('js-obj').classList.add('done');
+
+            // Step 4: "lat"
+            highlightChar(3);
+            log(`Token: String 'lat' (Key)`, 'token');
+            log(`Action: Create Transition Map1 -> Map2`, 'action');
+            document.getElementById('row-1').style.display = 'flex';
+            document.getElementById('arr-2').classList.add('active');
+            document.getElementById('map-2').style.display = 'block';
+            document.getElementById('map-2').classList.add('active');
+            await waitForStep();
+            document.getElementById('map-2').classList.remove('active');
+
+            // Step 5: 9.9508
+            highlightChar(4);
+            log(`Token: Number 9.9508 (Value)`, 'token');
+            log(`Action: Write memory at offset 1`, 'action');
+            document.getElementById('js-obj').classList.remove('done');
+            document.getElementById('js-obj').classList.add('active');
+            const val1 = document.getElementById('val-1');
+            val1.innerText = '9.9508';
+            val1.className = 'mem-val number';
+            await waitForStep();
+            
+            // Step 6: '}'
+            highlightChar(5);
+            log(`Token: ObjectEnd '}'`, 'token');
+            log(`Parsing Complete. Object assigned Final Hidden Class: Map2.`, 'done');
+            document.getElementById('js-obj').classList.remove('active');
+            document.getElementById('js-obj').classList.add('done');
+            document.getElementById('map-2').classList.add('done');
+            
+            document.getElementById('badge-code').className = 'status-badge done';
+            document.getElementById('badge-code').innerText = 'Idle';
+            document.getElementById('badge-vis').className = 'status-badge done';
+            document.getElementById('badge-vis').innerText = 'Complete';
+            
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            isAutoPlaying = false;
+        }
+
+        btnRun.addEventListener('click', runParse);
+
+        btnReset.addEventListener('click', () => {
+            window.location.reload();
+        });
+
+    </script>
+</body>
+</html>

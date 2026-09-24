@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>05 — Glassmorphism | Interactive Mindmap</title>
+    <link href="./fonts/fonts.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f4f0;
+            color: #1a1a2e;
+            overflow: auto;
+            min-height: 100vh;
+        }
+        .page-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #4A0E8F 0%, #0057FF 35%, #E91E8C 70%, #00B4D8 100%);
+            z-index: -2;
+        }
+        .page-bg::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(240, 244, 240, 0.92); backdrop-filter: blur(2px);
+        }
+        .header {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .header h1 {
+            font-size: 20px; font-weight: 600; color: #1a1a2e;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .header h1 .family-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #4A0E8F, #0057FF);
+            color: white; border-radius: 8px; font-size: 14px; font-weight: 700;
+        }
+        .controls { display: flex; gap: 12px; }
+        .btn {
+            padding: 8px 20px; border: 1px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px);
+            border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif;
+            font-size: 13px; font-weight: 500; color: #1a1a2e; transition: all 200ms ease;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.4); transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+        .main { padding: 40px 32px; max-width: 100%; margin: 0 auto; }
+        .mindmap-container {
+            background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 20px;
+            padding: 48px; margin-bottom: 40px; position: relative; 
+            overflow: visible;
+            width: max-content;
+            min-width: 100%;
+            min-height: 650px;
+        }
+        .mindmap-container::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(74, 14, 143, 0.05) 0%, rgba(0, 87, 255, 0.05) 50%, rgba(0, 180, 216, 0.05) 100%);
+            pointer-events: none; border-radius: 20px;
+        }
+        #mindmap-svg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .tree {
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+        }
+        .tree ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 18px;
+            padding-left: 140px;
+            position: relative;
+        }
+        .tree > ul { padding-left: 0; }
+        .node {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            position: relative;
+        }
+        .node-content {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 10px 24px 10px 18px; border-radius: 24px; cursor: pointer;
+            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; font-weight: 500;
+            position: relative; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.22);
+            color: #1a1a2e;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            user-select: none;
+            z-index: 2;
+        }
+        .node-content.leaf-node {
+            padding-right: 18px;
+        }
+        .node-content:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+        .node-toggle {
+            position: absolute;
+            right: -9px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            color: #1a1a2e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 200ms ease;
+        }
+        .node-toggle:hover {
+            transform: translateY(-50%) scale(1.1);
+            background: rgba(255, 255, 255, 0.5);
+        }
+        .node.category > .node-content { font-size: 14px; font-weight: 600; padding: 12px 24px 12px 22px; border-radius: 28px; }
+        .node.category.leaf-node > .node-content { padding-right: 22px; }
+        
+        .node.category-industries > .node-content { background: rgba(0, 87, 255, 0.15); color: #0039a6; border-color: rgba(0, 87, 255, 0.3); }
+        .node.category-psych > .node-content { background: rgba(155, 0, 255, 0.15); color: #6b00b3; border-color: rgba(155, 0, 255, 0.3); }
+        .node.category-color > .node-content { background: rgba(233, 30, 140, 0.15); color: #a8145a; border-color: rgba(233, 30, 140, 0.3); }
+        .node.category-type > .node-content { background: rgba(0, 180, 216, 0.15); color: #007a94; border-color: rgba(0, 180, 216, 0.3); }
+        .node.category-spacing > .node-content { background: rgba(74, 14, 143, 0.15); color: #3a0b73; border-color: rgba(74, 14, 143, 0.3); }
+        .node.category-borders > .node-content { background: rgba(255, 102, 0, 0.15); color: #b34700; border-color: rgba(255, 102, 0, 0.3); }
+        .node.category-imagery > .node-content { background: rgba(46, 139, 87, 0.15); color: #1e5c38; border-color: rgba(46, 139, 87, 0.3); }
+        .node.category-anim > .node-content { background: rgba(255, 215, 0, 0.15); color: #8b7500; border-color: rgba(255, 215, 0, 0.3); }
+        .node.category-avoid > .node-content { background: rgba(220, 20, 60, 0.15); color: #9a0e2a; border-color: rgba(220, 20, 60, 0.3); }
+
+        .node.sub > .node-content { background: rgba(255, 255, 255, 0.35); color: #2c2c2c; font-size: 13px; padding: 8px 24px 8px 16px; border-radius: 20px; border-color: rgba(255, 255, 255, 0.4); }
+        .node.leaf > .node-content { background: rgba(255, 255, 255, 0.5); color: #3a3a3a; font-size: 12px; padding: 6px 14px; font-weight: 400; border-radius: 16px; border-color: rgba(255, 255, 255, 0.45); cursor: default !important; transform: none !important; box-shadow: none !important; }
+        .node.collapsed > ul { display: none; }
+
+        /* Font Previews */
+        .font-preview-card {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            text-align: left;
+            min-width: 200px;
+        }
+        .font-meta { font-size: 9px; text-transform: uppercase; opacity: 0.6; font-weight: bold; color: #0057FF; }
+        .font-preview-text { font-size: 13px; line-height: 1.4; margin-top: 2px; }
+
+        .color-swatch-clickable {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.4);
+            vertical-align: middle;
+            cursor: pointer;
+            margin-right: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+
+        .demo-grid {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 16px;
+            padding: 12px 4px;
+        }
+        .demo-studio {
+            flex: 0 0 300px;
+            background: #111122;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .demo-studio h3 { color: #fff; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+        .demo-stage { background: rgba(0, 0, 0, 0.5); border-radius: 12px; height: 140px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .demo-controls { display: flex; gap: 8px; }
+        .demo-btn { padding: 6px 14px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.08); color: #fff; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: 'Inter', sans-serif; transition: all 150ms ease; }
+        .demo-btn:hover { background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.3); }
+        .demo-specs { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+        .demo-spec { background: rgba(255, 255, 255, 0.04); padding: 6px 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .demo-glass-panel { width: 120px; height: 75px; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 500; position: relative; }
+        
+        @keyframes springPop { 0% { transform: scale(0.6); opacity: 0; } 50% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+        .anim-spring { animation: springPop 550ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        
+        .comparison-panel, .typography-panel {
+            position: fixed;
+            top: 0;
+            right: -530px;
+            width: 500px;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.425);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: right 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            color: #FFFFFF;
+        }
+        .comparison-panel.open, .typography-panel.open {
+            right: 0;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 16px;
+        }
+        .panel-header h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+        .panel-action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #FFFFFF;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 4px;
+        }
+        .panel-subtitle {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 8px;
+            margin-bottom: 24px;
+        }
+        .comparison-slots {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        .comparison-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+        }
+        .comparison-color-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .comparison-info { flex-grow: 1; }
+        .comparison-name { font-size: 15px; font-weight: 600; }
+        .comparison-hex { font-family: monospace; font-size: 11px; color: rgba(255,255,255,0.7); }
+        .comparison-remove-btn {
+            background: none; border: none; cursor: pointer; color: #CC2200; font-size: 14px;
+        }
+        .clear-btn {
+            width: 100%; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.08);
+            font-size: 11px; font-weight: 700; text-transform: uppercase; color: #FFFFFF;
+            cursor: pointer; margin-top: 16px;
+        }
+        .clear-btn:hover { background: #CC2200; color: #FFFFFF; }
+
+        .typo-playground { display: flex; flex-direction: column; gap: 20px; overflow-y: auto; flex-grow: 1; }
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .control-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; display: flex; justify-content: space-between; color: rgba(255,255,255,0.7); }
+        .control-group input[type="range"] { accent-color: #0057FF; cursor: pointer; }
+        .control-group input[type="text"] { padding: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(0,0,0,0.5); color: #FFF; font-family: inherit; font-size: 12px; }
+        .control-group select { padding: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(0,0,0,0.5); color: #FFF; font-family: inherit; font-size: 12px; }
+        .playground-preview-card {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); padding: 24px; display: flex; flex-direction: column; gap: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .playground-preview-card.rule-violated {
+            border-color: #CC2200;
+            background: rgba(204, 34, 0, 0.1);
+        }
+        .mock-cat { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #E91E8C; }
+        .mock-title { font-size: 24px; font-weight: 700; line-height: 1.2; }
+        .mock-divider { height: 1px; background: rgba(255,255,255,0.2); }
+        .mock-body { font-size: 14px; line-height: 1.6; }
+        .playground-warning { color: #CC2200; font-size: 11px; font-weight: 700; }
+
+        .section-title { font-size: 14px; font-weight: 700; text-transform: uppercase; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+    <div class="page-bg"></div>
+    <div class="header">
+        <h1>
+            <span class="family-num">05</span>
+            Glassmorphism — Interactive Mindmap
+        </h1>
+        <div class="controls">
+            <button class="btn" onclick="expandAll()">Expand All</button>
+            <button class="btn" onclick="collapseAll()">Collapse All</button>
+            <button class="btn" onclick="openTypographyPanel()">📖 Typography Studio</button>
+            <button class="btn" onclick="downloadOffline()">⬇ Download Offline</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="mindmap-container" id="mindmap-container">
+            <svg id="mindmap-svg-canvas"></svg>
+            <div class="tree" id="tree">
+                <ul>
+                    <li class="node root" id="root-node">
+                        <div class="node-content">
+                            05 — Glassmorphism
+                            <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span>
+                        </div>
+                        <ul>
+                            <li class="node category category-industries">
+                                <div class="node-content">
+                                    Ranked Industries
+                                    <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub"><div class="node-content">1. Consumer Technology / Apps <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Glass interfaces reference iOS, macOS, and the physical surface of devices.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">2. FinTech & Banking Apps <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Glass conveys security and sophistication while remaining approachable.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">3. Music & Streaming Platforms <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Album art glowing through glass surfaces creates beautiful depth.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">4. Weather / Environment Apps <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Atmospheric transparency references sky, water, and weather phenomena.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">5. Health & Fitness Tech <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Clean, light, futuristic feel aligns with the self-improvement ethos.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">6. Gaming (Casual / Mobile) <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">The lightness and color of glassmorphism suits casual gaming aesthetics.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">7. Creative Tools / Design Software <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Glass UI panels reference professional creative software interfaces.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">8. AI Products & Services <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">The translucent, layered quality suggests intelligence working beneath the surface.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">9. Luxury Real Estate <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Glass architecture is a luxury property signifier; the design references the product.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">10. Cosmetics & Skincare (Science-Forward) <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Glass references clarity, purity, and the laboratory.</div></li></ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="node category category-psych">
+                                <div class="node-content">
+                                    Psychological Foundation
+                                    <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub"><div class="node-content">Material Metaphor <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">The design borrows visual properties of frosted glass (translucency, blur) and applies them to digital surfaces.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">Depth Without Heaviness <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Glass cards feel like they are floating above a surface, communicating lightness and modernity.</div></li></ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="node category category-color">
+                                <div class="node-content">
+                                    Color System
+                                    <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub"><div class="node-content">Palette Logic <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Requires highly vibrant background gradients to shine through the frosted layers.</div></li></ul>
+                                    </li>
+                                    <li class="node sub"><div class="node-content">Vibrant Background Gradients <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul>
+                                            <li class="node leaf leaf-node"><div class="node-content">Backing: <span class="color-swatch-clickable" style="background:#4A0E8F;" onclick="event.stopPropagation(); selectColor('Deep Purple Backing', '#4A0E8F');" title="Compare Deep Purple Backing"></span>#4A0E8F (Purple) -> <span class="color-swatch-clickable" style="background:#0057FF;" onclick="event.stopPropagation(); selectColor('Electric Blue Backing', '#0057FF');" title="Compare Electric Blue Backing"></span>#0057FF (Blue) -> <span class="color-swatch-clickable" style="background:#E91E8C;" onclick="event.stopPropagation(); selectColor('Vibrant Pink Backing', '#E91E8C');" title="Compare Vibrant Pink Backing"></span>#E91E8C (Pink) -> <span class="color-swatch-clickable" style="background:#00B4D8;" onclick="event.stopPropagation(); selectColor('Cyan Backing', '#00B4D8');" title="Compare Cyan Backing"></span>#00B4D8 (Cyan)</div></li>
+                                            <li class="node leaf leaf-node"><div class="node-content">Base Glass: <span class="color-swatch-clickable" style="background:#FFFFFF;" onclick="event.stopPropagation(); selectColor('Frosted Glass White', '#FFFFFF');" title="Compare Frosted Glass White"></span>#FFFFFF (White) at 12-25% opacity</div></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="node category category-type">
+                                <div class="node-content">
+                                    Typography
+                                    <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span>
+                                </div>
+                                <ul>
+                                    <li class="node sub"><div class="node-content">Classification <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                        <ul><li class="node leaf leaf-node"><div class="node-content">Modern Sans: Inter, DM Sans, Nunito. Avoid high-stroke serif fonts.</div></li></ul>
+                                    </li>
+                                    <li class="node sub">
+                                        <div class="node-content">
+                                            Font Pairings & Live Previews
+                                            <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span>
+                                        </div>
+                                        <ul>
+                                            <li class="node leaf leaf-node">
+                                                <div class="node-content" style="padding: 4px 8px; border: 1px dashed rgba(255,255,255,0.4); cursor: default;">
+                                                    ✍️ <input type="text" class="tree-preview-input" onclick="event.stopPropagation()" oninput="updateTreePreviews(this.value)" placeholder="Type custom text..." style="border: none; outline: none; background: transparent; font-family: inherit; font-size: 11px; width: 140px; color: inherit;" value="The quick brown fox jumps over the lazy dog.">
+                                                </div>
+                                            </li>
+                                            <li class="node sub"><div class="node-content">Path A (Clean Sans) <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                                <ul>
+                                                    <li class="node leaf leaf-node">
+                                                        <div class="node-content font-preview-card">
+                                                            <div class="font-meta">Inter</div>
+                                                            <div class="font-preview-text" data-font="Inter" style="font-family: 'Inter';">The quick brown fox jumps over the lazy dog.</div>
+                                                        </div>
+                                                    </li>
+                                                    <li class="node leaf leaf-node">
+                                                        <div class="node-content font-preview-card">
+                                                            <div class="font-meta">DM Sans</div>
+                                                            <div class="font-preview-text" data-font="DM Sans" style="font-family: 'DM Sans';">The quick brown fox jumps over the lazy dog.</div>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                            <li class="node sub"><div class="node-content">Path B (Soft Sans) <span class="node-toggle" onclick="event.stopPropagation(); toggleNode(this)">−</span></div>
+                                                <ul>
+                                                    <li class="node leaf leaf-node">
+                                                        <div class="node-content font-preview-card">
+                                                            <div class="font-meta">Nunito</div>
+                                                            <div class="font-preview-text" data-font="Nunito" style="font-family: 'Nunito';">The quick brown fox jumps over the lazy dog.</div>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="node leaf leaf-node"><div class="node-content" onclick="openTypographyPanel()">📖 Open Typography Studio (Slide-out)</div></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section-title">Glassmorphism Design Demos</div>
+        <div class="demo-grid">
+            <div class="demo-studio">
+                <h3>Spring Pop Animation</h3>
+                <div class="demo-stage">
+                    <div id="spring-panel" class="demo-glass-panel anim-spring">Glass Panel</div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="triggerSpring()">Re-trigger</button>
+                </div>
+                <div class="demo-specs">
+                    <div class="demo-spec"><span>Timing</span><span>550ms</span></div>
+                    <div class="demo-spec"><span>Easing</span><span>Spring / Elastic</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Color Comparison Drawer -->
+    <div class="comparison-panel" id="comparison-panel">
+        <div class="panel-header">
+            <h2>Color Palette Comparison</h2>
+            <button class="panel-action-btn" onclick="closeColorPanel()">✕</button>
+        </div>
+        <div class="panel-subtitle">Select up to 5 colors from the mindmap to compare side-by-side.</div>
+        <div class="comparison-slots" id="comparison-slots">
+            <div style="text-align: center; padding: 40px 20px; color: #666;" id="empty-slots-msg">
+                No colors selected. Click swatches in the mindmap to add them here!
+            </div>
+        </div>
+        <div class="panel-footer">
+            <button class="clear-btn" onclick="clearComparison()">Clear All Colors</button>
+        </div>
+    </div>
+
+    <!-- Typography Studio Drawer -->
+    <div class="typography-panel" id="typography-panel">
+        <div class="panel-header">
+            <h2>Typography Studio</h2>
+            <button class="panel-action-btn" onclick="closeTypographyPanel()">✕</button>
+        </div>
+        <div class="panel-subtitle">Adjust and validate glassmorphism typography guidelines.</div>
+        <div class="typo-playground">
+            <div class="control-group">
+                <label><span>✍️ Custom Preview Text</span></label>
+                <input type="text" id="studio-preview-input" placeholder="Type custom preview text..." oninput="updateStudioPreview(this.value)">
+            </div>
+            <div class="control-group">
+                <label><span>Suggested Pairings</span></label>
+                <select id="font-pairing-select" onchange="applyFontPairing(this.value)">
+                    <option value="pairing1">Inter (Header) + Nunito (Body)</option>
+                    <option value="pairing2">DM Sans (Header) + Inter (Body)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label><span>Headline Size</span><strong id="val-head-size">32px</strong></label>
+                <input type="range" id="head-size" min="16" max="64" value="32" oninput="updatePlayground()">
+            </div>
+            <div class="control-group">
+                <label><span>Headline Letter Spacing</span><strong id="val-head-spacing">-0.01em</strong></label>
+                <input type="range" id="head-spacing" min="-0.05" max="0.15" step="0.01" value="-0.01" oninput="updatePlayground()">
+            </div>
+            <div class="control-group">
+                <label><span>Headline Weight</span><strong id="val-head-weight">600</strong></label>
+                <input type="range" id="head-weight" min="300" max="900" step="100" value="600" oninput="updatePlayground()">
+            </div>
+            
+            <div class="playground-preview-card" id="preview-card">
+                <div class="mock-cat">TECH CORE</div>
+                <h2 class="mock-title" id="play-head">Atmospheric Depth</h2>
+                <div class="mock-divider"></div>
+                <p class="mock-body" id="play-body">
+                    Glass cards feel like they are floating above a surface, with the world visible beneath them.
+                </p>
+                <div class="playground-warning" id="playground-warning"></div>
+            </div>
+            <button class="clear-btn" style="margin-top:0;" onclick="resetPlayground()">Reset Presets</button>
+        </div>
+    </div>
+
+    <script src="./fonts/jszip.min.js"></script>
+    <script>
+        function toggleNode(el) {
+            const li = el.closest('li.node');
+            if (li) {
+                li.classList.toggle('collapsed');
+                const toggleSpan = li.querySelector(':scope > .node-content > .node-toggle');
+                if (toggleSpan) {
+                    toggleSpan.textContent = li.classList.contains('collapsed') ? '+' : '−';
+                }
+                setTimeout(drawConnections, 50);
+            }
+        }
+        function expandAll() {
+            document.querySelectorAll('li.node.collapsed').forEach(n => {
+                n.classList.remove('collapsed');
+                const toggleSpan = n.querySelector(':scope > .node-content > .node-toggle');
+                if (toggleSpan) toggleSpan.textContent = '−';
+            });
+            setTimeout(drawConnections, 50);
+        }
+        function collapseAll() {
+            document.querySelectorAll('li.node:not(.root)').forEach(n => {
+                if (n.querySelector('ul')) {
+                    n.classList.add('collapsed');
+                    const toggleSpan = n.querySelector(':scope > .node-content > .node-toggle');
+                    if (toggleSpan) toggleSpan.textContent = '+';
+                }
+            });
+            setTimeout(drawConnections, 50);
+        }
+
+        function drawConnections() {
+            const svg = document.getElementById('mindmap-svg-canvas');
+            const container = document.getElementById('mindmap-container');
+            const W = container.scrollWidth;
+            const H = container.scrollHeight;
+            svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+            svg.setAttribute('width', W);
+            svg.setAttribute('height', H);
+            svg.innerHTML = '';
+
+            function getRightCenter(el) {
+                const r = el.getBoundingClientRect();
+                const cr = container.getBoundingClientRect();
+                return {
+                    x: r.right - cr.left + container.scrollLeft,
+                    y: r.top - cr.top + container.scrollTop + (r.height / 2)
+                };
+            }
+
+            function getLeftCenter(el) {
+                const r = el.getBoundingClientRect();
+                const cr = container.getBoundingClientRect();
+                return {
+                    x: r.left - cr.left + container.scrollLeft,
+                    y: r.top - cr.top + container.scrollTop + (r.height / 2)
+                };
+            }
+
+            function drawCurve(from, to) {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const midX = (from.x + to.x) / 2;
+                path.setAttribute('d', `M${from.x},${from.y} C${midX},${from.y} ${midX},${to.y} ${to.x},${to.y}`);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', 'rgba(255,255,255,0.4)');
+                path.setAttribute('stroke-width', '1.5');
+                svg.appendChild(path);
+            }
+
+            document.querySelectorAll('li.node').forEach(node => {
+                const parentNode = node.parentElement?.closest('li.node');
+                if (!parentNode) return;
+                if (parentNode.classList.contains('collapsed')) return;
+                
+                const fromEl = parentNode.querySelector(':scope > .node-content');
+                const toEl = node.querySelector(':scope > .node-content');
+                if (!fromEl || !toEl) return;
+                if (fromEl.offsetWidth === 0 || toEl.offsetWidth === 0) return;
+
+                const fromPt = getRightCenter(fromEl);
+                const toPt = getLeftCenter(toEl);
+                drawCurve(fromPt, toPt);
+            });
+        }
+
+        function updateTreePreviews(val) {
+            const text = val.trim() || 'The quick brown fox jumps over the lazy dog.';
+            document.querySelectorAll('.font-preview-text').forEach(el => {
+                el.textContent = text;
+            });
+            setTimeout(drawConnections, 50);
+        }
+
+        function updateStudioPreview(val) {
+            const b = document.getElementById('play-body');
+            if (val.trim()) {
+                b.textContent = val;
+            } else {
+                b.textContent = 'Glass cards feel like they are floating above a surface, with the world visible beneath them.';
+            }
+        }
+
+        function applyFontPairing(pairing) {
+            const h = document.getElementById('play-head');
+            const b = document.getElementById('play-body');
+            if (pairing === 'pairing1') {
+                h.style.fontFamily = 'Inter, sans-serif';
+                b.style.fontFamily = 'Nunito, sans-serif';
+            } else if (pairing === 'pairing2') {
+                h.style.fontFamily = 'DM Sans, sans-serif';
+                b.style.fontFamily = 'Inter, sans-serif';
+            }
+        }
+
+        const selectedColors = new Set();
+        function selectColor(name, hex) {
+            closeTypographyPanel();
+            const key = `${name}|${hex}`;
+            if (selectedColors.has(key)) {
+                selectedColors.delete(key);
+            } else {
+                if (selectedColors.size >= 5) {
+                    alert('You can compare up to 5 colors.');
+                    return;
+                }
+                selectedColors.add(key);
+            }
+            updateComparisonPanel();
+        }
+
+        function updateComparisonPanel() {
+            const panel = document.getElementById('comparison-panel');
+            const slots = document.getElementById('comparison-slots');
+            slots.innerHTML = '';
+            
+            if (selectedColors.size === 0) {
+                slots.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #666;" id="empty-slots-msg">No colors selected. Click swatches in the mindmap to add them here!</div>';
+                panel.classList.remove('open');
+                return;
+            }
+
+            panel.classList.add('open');
+            selectedColors.forEach(item => {
+                const [name, hex] = item.split('|');
+                const card = document.createElement('div');
+                card.className = 'comparison-card';
+                card.innerHTML = `
+                    <div class="comparison-color-box" style="background:${hex}"></div>
+                    <div class="comparison-info">
+                        <div class="comparison-name">${name}</div>
+                        <div class="comparison-hex">${hex}</div>
+                    </div>
+                    <button class="comparison-remove-btn" onclick="selectColor('${name}', '${hex}')">✕</button>
+                `;
+                slots.appendChild(card);
+            });
+        }
+        function clearComparison() {
+            selectedColors.clear();
+            updateComparisonPanel();
+        }
+        function closeColorPanel() {
+            document.getElementById('comparison-panel').classList.remove('open');
+        }
+
+        function openTypographyPanel() {
+            closeColorPanel();
+            document.getElementById('typography-panel').classList.add('open');
+            updatePlayground();
+        }
+        function closeTypographyPanel() {
+            document.getElementById('typography-panel').classList.remove('open');
+        }
+
+        function updatePlayground() {
+            const hs = document.getElementById('head-size').value;
+            const hsp = document.getElementById('head-spacing').value;
+            const hw = document.getElementById('head-weight').value;
+
+            document.getElementById('val-head-size').textContent = hs + 'px';
+            document.getElementById('val-head-spacing').textContent = hsp + 'em';
+            document.getElementById('val-head-weight').textContent = hw;
+
+            const h = document.getElementById('play-head');
+            const card = document.getElementById('preview-card');
+            const warning = document.getElementById('playground-warning');
+
+            h.style.fontSize = hs + 'px';
+            h.style.letterSpacing = hsp + 'em';
+            h.style.fontWeight = hw;
+
+            let isViolated = false;
+            let msg = '';
+            if (hsp > 0.05) {
+                isViolated = true;
+                msg += 'Glassmorphism titles prefer tight tracking. ';
+            }
+
+            card.classList.toggle('rule-violated', isViolated);
+            warning.textContent = isViolated ? '⚠️ ' + msg : '';
+        }
+
+        function resetPlayground() {
+            document.getElementById('head-size').value = 32;
+            document.getElementById('head-spacing').value = -0.01;
+            document.getElementById('head-weight').value = 600;
+            updatePlayground();
+            applyFontPairing(document.getElementById('font-pairing-select').value);
+        }
+
+        function triggerSpring() {
+            const panel = document.getElementById('spring-panel');
+            panel.classList.remove('anim-spring');
+            void panel.offsetWidth;
+            panel.classList.add('anim-spring');
+        }
+
+        async function downloadOffline() {
+            if (typeof JSZip === 'undefined') {
+                alert('JSZip library not loaded.');
+                return;
+            }
+            const zip = new JSZip();
+            const htmlContent = document.documentElement.outerHTML;
+            zip.file('mindmap.html', htmlContent);
+
+            try {
+                const fontsFolder = zip.folder('fonts');
+                const fontFiles = [
+                    'fonts.css',
+                    'jszip.min.js',
+                    'UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2JL7SUc.woff2',
+                    'UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa0ZL7SUc.woff2',
+                    'UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2ZL7SUc.woff2',
+                    'UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1pL7SUc.woff2',
+                    'UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2pL7SUc.woff2',
+                    'UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2',
+                    'UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2',
+                    'rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu4-K4.woff2',
+                    'XRXV3I6Li01BKofIMeaBXso.woff2',
+                    'XRXV3I6Li01BKofINeaB.woff2',
+                    'XRXV3I6Li01BKofIO-aBXso.woff2',
+                    'XRXV3I6Li01BKofIOOaBXso.woff2',
+                    'XRXV3I6Li01BKofIOuaBXso.woff2'
+                ];
+
+                for (const f of fontFiles) {
+                    const res = await fetch('./fonts/' + f);
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        fontsFolder.file(f, blob);
+                    }
+                }
+            } catch (e) {
+                console.warn(e);
+            }
+
+            zip.generateAsync({type:'blob'}).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '05_glassmorphism_mindmap_offline.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        window.addEventListener('load', () => {
+            drawConnections();
+            updatePlayground();
+            applyFontPairing(document.getElementById('font-pairing-select').value);
+        });
+        window.addEventListener('resize', drawConnections);
+    </script>
+</body>
+</html>

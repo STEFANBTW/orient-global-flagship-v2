@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adjacency List vs Matrix Memory Architecture</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --border-color: #334155;
+            --c-matrix: #f87171;
+            --c-list: #4ade80;
+            --c-edge: #38bdf8;
+            --c-node: #c084fc;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header { text-align: center; margin-bottom: 20px; }
+        header h1 { margin: 0; font-size: 1.8rem; color: var(--c-edge); text-transform: uppercase; letter-spacing: 2px; }
+        header p { margin: 5px 0 0 0; color: #94a3b8; font-size: 0.9rem; }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 150px);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .visualization-area {
+            flex-grow: 1;
+            background: #0b1120;
+            border-radius: 6px;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* Abstract Graph Graphic */
+        .graph-preview {
+            width: 250px;
+            height: 250px;
+            background: #1e293b;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .graph-title {
+            position: absolute;
+            top: -12px; left: 10px;
+            background: #1e293b;
+            padding: 0 5px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: bold;
+        }
+
+        .g-node {
+            position: absolute;
+            width: 30px; height: 30px;
+            background: var(--c-node);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #fff;
+            z-index: 10;
+        }
+
+        /* Node positions */
+        #gn-a { top: 20px; left: 110px; }
+        #gn-b { top: 100px; left: 40px; }
+        #gn-c { top: 100px; left: 180px; }
+        #gn-d { top: 190px; left: 110px; }
+
+        .g-line {
+            position: absolute;
+            background: var(--c-edge);
+            height: 2px;
+            transform-origin: 0 50%;
+            z-index: 5;
+        }
+
+        /* Lines manually placed for A-B, A-C, B-D, C-D */
+        #gl-ab { top: 35px; left: 125px; width: 106px; transform: rotate(135deg); }
+        #gl-ac { top: 35px; left: 125px; width: 106px; transform: rotate(45deg); }
+        #gl-bd { top: 115px; left: 55px; width: 106px; transform: rotate(45deg); }
+        #gl-cd { top: 115px; left: 195px; width: 106px; transform: rotate(135deg); }
+
+
+        .data-views {
+            display: flex;
+            flex-grow: 1;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .view-pane {
+            flex: 1;
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pane-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        /* Matrix Grid */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            background: var(--border-color);
+            border: 2px solid var(--border-color);
+            opacity: 0.3;
+            transition: opacity 0.5s;
+        }
+
+        .m-cell {
+            background: #0f172a;
+            aspect-ratio: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            font-size: 1rem;
+            color: #64748b;
+        }
+
+        .m-header { background: #334155; color: #fff; font-weight: bold; }
+        .m-zero { color: rgba(248, 113, 113, 0.5); }
+        .m-one { color: var(--c-edge); font-weight: bold; background: rgba(56, 189, 248, 0.1); }
+
+        /* Adjacency List */
+        .adj-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 0.3;
+            transition: opacity 0.5s;
+        }
+
+        .list-row {
+            display: flex;
+            align-items: center;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .list-key {
+            width: 40px; height: 40px;
+            background: var(--c-node);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .list-values {
+            display: flex;
+            gap: 10px;
+        }
+
+        .list-val {
+            padding: 5px 10px;
+            background: rgba(56, 189, 248, 0.2);
+            border: 1px solid var(--c-edge);
+            border-radius: 15px;
+            color: var(--c-edge);
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        /* Controls */
+        .controls-panel {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: #0b1120;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+
+        .stat-title { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; font-family: monospace; }
+        .c-matrix { color: var(--c-matrix); }
+        .c-list { color: var(--c-list); }
+
+        .info-box {
+            background: #0b1120;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #cbd5e1;
+            flex-grow: 1;
+        }
+
+        button {
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button:hover:not(:disabled) { background: #334155; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        button.danger { border-color: var(--c-matrix); color: var(--c-matrix); }
+        button.danger:hover:not(:disabled) { background: var(--c-matrix); color: #000; }
+
+        button.success { border-color: var(--c-list); color: var(--c-list); }
+        button.success:hover:not(:disabled) { background: var(--c-list); color: #000; }
+
+        /* Animation class */
+        .focus-pulse {
+            animation: pulse-border 1.5s infinite;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(248, 113, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+        }
+        .focus-pulse-green {
+            animation: pulse-border-g 1.5s infinite;
+        }
+        @keyframes pulse-border-g {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Adjacency List vs Adjacency Matrix</h1>
+        <p>Visualizing O(V²) Memory Bloat vs O(V+E) Pointer Efficiency for Routing Graphs</p>
+    </header>
+
+    <div class="container">
+        
+        <div class="panel" style="flex-grow: 1; padding: 0;">
+            <div class="visualization-area">
+                
+                <div class="graph-preview">
+                    <div class="graph-title">Map Node Graph</div>
+                    
+                    <div class="g-line" id="gl-ab"></div>
+                    <div class="g-line" id="gl-ac"></div>
+                    <div class="g-line" id="gl-bd"></div>
+                    <div class="g-line" id="gl-cd"></div>
+
+                    <div class="g-node" id="gn-a">A</div>
+                    <div class="g-node" id="gn-b">B</div>
+                    <div class="g-node" id="gn-c">C</div>
+                    <div class="g-node" id="gn-d">D</div>
+                </div>
+
+                <div class="data-views">
+                    <!-- Matrix -->
+                    <div class="view-pane" id="pane-matrix">
+                        <div class="pane-title">Adjacency Matrix (2D Array)</div>
+                        <div class="matrix-grid" id="matrix">
+                            <div class="m-cell m-header"></div><div class="m-cell m-header">A</div><div class="m-cell m-header">B</div><div class="m-cell m-header">C</div><div class="m-cell m-header">D</div>
+                            
+                            <div class="m-cell m-header">A</div><div class="m-cell m-zero">0</div><div class="m-cell m-one">1</div><div class="m-cell m-one">1</div><div class="m-cell m-zero">0</div>
+                            <div class="m-cell m-header">B</div><div class="m-cell m-one">1</div><div class="m-cell m-zero">0</div><div class="m-cell m-zero">0</div><div class="m-cell m-one">1</div>
+                            <div class="m-cell m-header">C</div><div class="m-cell m-one">1</div><div class="m-cell m-zero">0</div><div class="m-cell m-zero">0</div><div class="m-cell m-one">1</div>
+                            <div class="m-cell m-header">D</div><div class="m-cell m-zero">0</div><div class="m-cell m-one">1</div><div class="m-cell m-one">1</div><div class="m-cell m-zero">0</div>
+                        </div>
+                    </div>
+
+                    <!-- List -->
+                    <div class="view-pane" id="pane-list">
+                        <div class="pane-title">Adjacency List (Map)</div>
+                        <div class="adj-list" id="list">
+                            <div class="list-row"><div class="list-key">A</div><div class="list-values"><div class="list-val">B</div><div class="list-val">C</div></div></div>
+                            <div class="list-row"><div class="list-key">B</div><div class="list-values"><div class="list-val">A</div><div class="list-val">D</div></div></div>
+                            <div class="list-row"><div class="list-key">C</div><div class="list-values"><div class="list-val">A</div><div class="list-val">D</div></div></div>
+                            <div class="list-row"><div class="list-key">D</div><div class="list-values"><div class="list-val">B</div><div class="list-val">C</div></div></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="panel controls-panel">
+            
+            <div class="stat-box">
+                <div class="stat-title">Real World Impact (100,000 Nodes)</div>
+                <div style="font-size: 0.9rem; margin-top: 10px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span>Matrix Memory:</span>
+                        <span class="stat-value c-matrix" id="ram-matrix">-</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>List Memory:</span>
+                        <span class="stat-value c-list" id="ram-list">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" id="info">
+                <strong>Phase 1: Setup</strong><br><br>
+                A graph consists of Vertices (Nodes) and Edges (Lines). We need to store this relationship in RAM so A* can route through it.
+            </div>
+
+            <div style="margin-top:auto;">
+                <button id="btn-matrix" class="danger" onclick="runMatrix()">1. Generate Matrix</button>
+                <button id="btn-list" class="success" disabled onclick="runList()">2. Generate List</button>
+                <button id="btn-pause" disabled>⏸ Pause</button>
+                <button onclick="location.reload()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const btnMatrix = document.getElementById('btn-matrix');
+        const btnList = document.getElementById('btn-list');
+        const info = document.getElementById('info');
+        
+        const matrixUI = document.getElementById('matrix');
+        const listUI = document.getElementById('list');
+        const paneMatrix = document.getElementById('pane-matrix');
+        const paneList = document.getElementById('pane-list');
+        
+        const ramMatrix = document.getElementById('ram-matrix');
+        const ramList = document.getElementById('ram-list');
+
+        let isPaused = false; let pauseResolve = null;
+        const btnPause = document.getElementById('btn-pause');
+        if (btnPause) {
+            btnPause.addEventListener('click', () => {
+                if (!isPaused) {
+                    isPaused = true;
+                    btnPause.innerText = '▶ Resume';
+                } else {
+                    isPaused = false;
+                    btnPause.innerText = '⏸ Pause';
+                    if (pauseResolve) pauseResolve();
+                }
+            });
+        }
+
+        async function runMatrix() {
+            btnMatrix.disabled = true;
+            
+            matrixUI.style.opacity = '1';
+            paneMatrix.classList.add('focus-pulse');
+            
+            // Simulating memory calculation: V^2
+            // 100,000 * 100,000 = 10,000,000,000 cells. Assuming 1 byte per cell = 10 GB.
+            ramMatrix.innerText = "10.0 GB";
+            
+            info.innerHTML = `<strong>Phase 2: Adjacency Matrix</strong><br><br>A Matrix creates an N x N grid. Even if Node A only connects to Node B, the matrix forces us to explicitly store <code>0</code> for every other node in the world. For a city with 100k intersections, this requires 10 Billion cells, guaranteeing an Out Of Memory (OOM) crash.`;
+            
+            setTimeout(() => {
+                paneMatrix.classList.remove('focus-pulse');
+                btnList.disabled = false;
+            }, 2500);
+        }
+
+        async function runList() {
+            btnList.disabled = true;
+            
+            matrixUI.style.opacity = '0.3';
+            listUI.style.opacity = '1';
+            paneList.classList.add('focus-pulse-green');
+            
+            // Simulating memory calculation: V + E
+            // 100k nodes + 300k edges = 400k pointers. Extremely small.
+            ramList.innerText = "2.4 MB";
+            
+            info.innerHTML = `<strong>Phase 3: Adjacency List (Map)</strong><br><br>By using a JavaScript <code>Map</code> object, we only store exact pointers to actual connections (Edges). Nodes that don't connect take up zero memory. The data structure compresses from 10 GB down to just 2.4 MB, allowing instant A* routing on mobile devices.`;
+            
+            setTimeout(() => {
+                paneList.classList.remove('focus-pulse-green');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ES6 Modules (ESM) Architecture - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;  /* Blue */
+            --green: #4ade80;   /* Eval */
+            --yellow: #facc15;  /* Link */
+            --purple: #c084fc;  /* Parse */
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(192, 132, 252, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--purple);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status-badge.active { background: var(--purple); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        /* Panel 1: Graph */
+        .module-graph {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-node {
+            position: absolute;
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            width: 140px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+        }
+
+        .module-node.active { transform: scale(1.05); }
+        .module-node.parsed { border-color: var(--purple); box-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+        .module-node.linked { border-color: var(--yellow); box-shadow: 0 0 15px rgba(250, 204, 21, 0.3); }
+        .module-node.evaluated { border-color: var(--green); background: rgba(74, 222, 128, 0.1); box-shadow: 0 0 15px rgba(74, 222, 128, 0.3); }
+
+        .module-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .module-status {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            background: rgba(0,0,0,0.5);
+            padding: 3px 6px;
+            border-radius: 10px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        .export-badge, .import-badge {
+            position: absolute;
+            font-size: 0.6rem;
+            background: var(--surface);
+            padding: 3px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid var(--border);
+        }
+
+        .export-badge { right: -15px; top: 10px; border-left: 2px solid var(--green); }
+        .import-badge { left: -15px; top: 10px; border-right: 2px solid var(--accent); }
+
+        svg.connections {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .connection-line {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 2;
+            transition: stroke 0.4s;
+        }
+
+        .connection-line.active-parse { stroke: var(--purple); stroke-width: 3; stroke-dasharray: 5; animation: dash 1s linear infinite; }
+        .connection-line.active-link { stroke: var(--yellow); stroke-width: 3; stroke-dasharray: 5; animation: dash 1s linear infinite; }
+
+        @keyframes dash { to { stroke-dashoffset: -10; } }
+
+        /* Panel 2 & 3: Phases & Logs */
+        .phase-indicator {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .phase {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--text-dim);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .phase.active.p-parse { color: var(--purple); border-color: var(--purple); background: rgba(192, 132, 252, 0.1); }
+        .phase.active.p-link { color: var(--yellow); border-color: var(--yellow); background: rgba(250, 204, 21, 0.1); }
+        .phase.active.p-eval { color: var(--green); border-color: var(--green); background: rgba(74, 222, 128, 0.1); }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.parse { border-left-color: var(--purple); color: var(--purple); }
+        .log-entry.link { border-left-color: var(--yellow); color: var(--yellow); }
+        .log-entry.eval { border-left-color: var(--green); color: var(--green); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Panel 3: Code */
+        .file-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .file-tab {
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.4);
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            border: 1px solid transparent;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .file-tab.active {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+            border-color: var(--accent);
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.05);
+            white-space: pre-wrap;
+        }
+
+        /* Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        button.primary { background: rgba(192, 132, 252, 0.15); color: var(--purple); border-color: var(--purple); }
+        button.primary:hover:not(:disabled) { background: rgba(192, 132, 252, 0.3); box-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+
+        .kw { color: #f472b6; } /* keyword */
+        .func { color: var(--accent); }
+        .str { color: var(--green); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ES6 Modules (ESM) Architecture</h1>
+        <p>3-Phase Loading Pipeline: Parse (Construction) → Link (Instantiation) → Evaluate</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Graph -->
+        <div class="panel" style="grid-row: 1 / span 2;">
+            <div class="panel-title">1. Module Dependency Graph <span class="status-badge" id="badge-graph">Idle</span></div>
+            <div class="module-graph" id="graph-container">
+                <svg class="connections" id="connections-svg"></svg>
+                
+                <div class="module-node" id="node-index" style="top: 20px; left: 50%; transform: translateX(-50%);">
+                    <div class="module-name">index.js</div>
+                    <div class="module-status" id="status-index">Unloaded</div>
+                    <div class="import-badge" style="top: 40px; left: -30px;">{ initMap }</div>
+                </div>
+
+                <div class="module-node" id="node-map" style="top: 150px; left: 50%; transform: translateX(-50%);">
+                    <div class="module-name">MapController.js</div>
+                    <div class="module-status" id="status-map">Unloaded</div>
+                    <div class="export-badge" style="top: 40px;">initMap</div>
+                    <div class="import-badge" style="top: 60px; left: -40px;">{ parseGeo }</div>
+                </div>
+
+                <div class="module-node" id="node-geo" style="top: 280px; left: 20%;">
+                    <div class="module-name">GeoParser.js</div>
+                    <div class="module-status" id="status-geo">Unloaded</div>
+                    <div class="export-badge" style="top: 40px;">parseGeo</div>
+                </div>
+
+                <div class="module-node" id="node-api" style="top: 280px; left: 80%; transform: translateX(-100%);">
+                    <div class="module-name">APIClient.js</div>
+                    <div class="module-status" id="status-api">Unloaded</div>
+                    <div class="export-badge" style="top: 40px;">fetchData</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Panel 2: Pipeline State -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">2. V8 Module Loader <span class="status-badge" id="badge-loader">Waiting</span></div>
+                <div class="phase-indicator">
+                    <div class="phase" id="phase-1">1. Parse (AST)</div>
+                    <div class="phase" id="phase-2">2. Link (Memory)</div>
+                    <div class="phase" id="phase-3">3. Evaluate (Exec)</div>
+                </div>
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">Awaiting pipeline start...</div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Code -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">3. Source Code Inspector</div>
+                <div class="file-tabs">
+                    <div class="file-tab active" onclick="showFile('index')">index.js</div>
+                    <div class="file-tab" onclick="showFile('map')">MapController.js</div>
+                    <div class="file-tab" onclick="showFile('geo')">GeoParser.js</div>
+                </div>
+                <div class="code-block" id="code-viewer"></div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-next" class="primary">▶ Run Phase 1 (Parse)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const fileContents = {
+            index: `<span class="kw">import</span> { initMap } <span class="kw">from</span> <span class="str">'./MapController.js'</span>;
+
+console.log(<span class="str">"Starting application..."</span>);
+<span class="func">initMap</span>(<span class="str">'map-container'</span>);`,
+            map: `<span class="kw">import</span> { parseGeo } <span class="kw">from</span> <span class="str">'./GeoParser.js'</span>;
+<span class="kw">import</span> { fetchData } <span class="kw">from</span> <span class="str">'./APIClient.js'</span>;
+
+<span class="kw">export</span> <span class="kw">function</span> <span class="func">initMap</span>(containerId) {
+  <span class="kw">const</span> data = <span class="func">fetchData</span>(<span class="str">'/api/map'</span>);
+  <span class="kw">const</span> geo = <span class="func">parseGeo</span>(data);
+  console.log(<span class="str">'Map initialized'</span>);
+}`,
+            geo: `<span class="kw">export</span> <span class="kw">function</span> <span class="func">parseGeo</span>(raw) {
+  <span class="kw">return</span> JSON.parse(raw);
+}`
+        };
+
+        function showFile(fileKey) {
+            document.querySelectorAll('.file-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('code-viewer').innerHTML = fileContents[fileKey];
+        }
+        document.getElementById('code-viewer').innerHTML = fileContents['index'];
+
+        const nodes = {
+            index: document.getElementById('node-index'),
+            map: document.getElementById('node-map'),
+            geo: document.getElementById('node-geo'),
+            api: document.getElementById('node-api')
+        };
+
+        const statuses = {
+            index: document.getElementById('status-index'),
+            map: document.getElementById('status-map'),
+            geo: document.getElementById('status-geo'),
+            api: document.getElementById('status-api')
+        };
+
+        const svg = document.getElementById('connections-svg');
+        const paths = {
+            'index-map': document.createElementNS('http://www.w3.org/2000/svg', 'path'),
+            'map-geo': document.createElementNS('http://www.w3.org/2000/svg', 'path'),
+            'map-api': document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        };
+
+        function initPaths() {
+            Object.values(paths).forEach(p => {
+                p.setAttribute('class', 'connection-line');
+                svg.appendChild(p);
+            });
+            updatePaths();
+        }
+
+        function updatePaths() {
+            const getCenter = (node) => {
+                const rect = node.getBoundingClientRect();
+                const parentRect = svg.getBoundingClientRect();
+                return {
+                    x: rect.left - parentRect.left + rect.width / 2,
+                    y: rect.top - parentRect.top + rect.height / 2
+                };
+            };
+
+            const idx = getCenter(nodes.index);
+            const map = getCenter(nodes.map);
+            const geo = getCenter(nodes.geo);
+            const api = getCenter(nodes.api);
+
+            paths['index-map'].setAttribute('d', `M ${idx.x} ${idx.y + 40} L ${map.x} ${map.y - 40}`);
+            paths['map-geo'].setAttribute('d', `M ${map.x - 20} ${map.y + 40} C ${map.x - 40} ${geo.y - 40}, ${geo.x} ${geo.y - 40}, ${geo.x} ${geo.y - 40}`);
+            paths['map-api'].setAttribute('d', `M ${map.x + 20} ${map.y + 40} C ${map.x + 40} ${api.y - 40}, ${api.x} ${api.y - 40}, ${api.x} ${api.y - 40}`);
+        }
+
+        window.addEventListener('resize', updatePaths);
+        initPaths();
+
+        const logOutput = document.getElementById('log-output');
+        function log(msg, type='normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${msg}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        const btnNext = document.getElementById('btn-next');
+        let step = 0;
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        let isPaused = false; let pauseResolve = null;
+        const btnPause = document.getElementById('btn-pause');
+        if (btnPause) {
+            btnPause.addEventListener('click', () => {
+                if (!isPaused) {
+                    isPaused = true;
+                    btnPause.innerText = '▶ Resume';
+                } else {
+                    isPaused = false;
+                    btnPause.innerText = '⏸ Pause';
+                    if (pauseResolve) pauseResolve();
+                }
+            });
+        }
+
+        btnNext.addEventListener('click', async () => {
+            btnNext.disabled = true;
+
+            if (step === 0) {
+                // PHASE 1: PARSING
+                document.getElementById('badge-loader').className = 'status-badge active';
+                document.getElementById('badge-loader').innerText = 'Phase 1';
+                document.getElementById('badge-graph').className = 'status-badge active';
+                document.getElementById('badge-graph').innerText = 'Parsing';
+                
+                document.getElementById('phase-1').classList.add('active', 'p-parse');
+                log('Phase 1: Construction (AST Parsing)', 'parse');
+                
+                nodes.index.classList.add('active'); await sleep(500);
+                statuses.index.textContent = 'Parsed (AST)'; nodes.index.classList.add('parsed');
+                log('Parsed index.js. Found import: ./MapController.js', 'parse');
+                paths['index-map'].classList.add('active-parse'); await sleep(500);
+                nodes.index.classList.remove('active');
+                
+                nodes.map.classList.add('active'); await sleep(500);
+                statuses.map.textContent = 'Parsed (AST)'; nodes.map.classList.add('parsed');
+                log('Parsed MapController.js. Found imports: GeoParser.js, APIClient.js', 'parse');
+                paths['map-geo'].classList.add('active-parse'); paths['map-api'].classList.add('active-parse'); await sleep(500);
+                nodes.map.classList.remove('active');
+
+                nodes.geo.classList.add('active'); nodes.api.classList.add('active'); await sleep(500);
+                statuses.geo.textContent = 'Parsed (AST)'; statuses.api.textContent = 'Parsed (AST)';
+                nodes.geo.classList.add('parsed'); nodes.api.classList.add('parsed');
+                log('Parsed leaves. Module Record Tree created.', 'parse');
+                await sleep(500);
+                nodes.geo.classList.remove('active'); nodes.api.classList.remove('active');
+                Object.values(paths).forEach(p => p.classList.remove('active-parse'));
+
+                btnNext.textContent = '▶ Run Phase 2 (Link)';
+                btnNext.style.borderColor = 'var(--yellow)';
+                btnNext.style.color = 'var(--yellow)';
+                step = 1;
+            } 
+            else if (step === 1) {
+                // PHASE 2: LINKING
+                document.getElementById('badge-loader').innerText = 'Phase 2';
+                document.getElementById('badge-graph').innerText = 'Linking';
+                document.getElementById('phase-1').classList.remove('active', 'p-parse');
+                document.getElementById('phase-2').classList.add('active', 'p-link');
+                log('Phase 2: Instantiation (Linking)', 'link');
+
+                await sleep(500);
+                nodes.geo.classList.add('linked'); nodes.api.classList.add('linked');
+                statuses.geo.textContent = 'Linked'; statuses.api.textContent = 'Linked';
+                log('Allocated memory for exports in GeoParser & APIClient', 'link');
+                
+                await sleep(800);
+                nodes.map.classList.add('linked'); statuses.map.textContent = 'Linked';
+                log('Wired MapController imports to memory addresses.', 'link');
+
+                await sleep(800);
+                nodes.index.classList.add('linked'); statuses.index.textContent = 'Linked';
+                log('Wired index.js imports. All bindings resolved.', 'link');
+
+                btnNext.textContent = '▶ Run Phase 3 (Eval)';
+                btnNext.style.borderColor = 'var(--green)';
+                btnNext.style.color = 'var(--green)';
+                step = 2;
+            }
+            else if (step === 2) {
+                // PHASE 3: EVALUATION
+                document.getElementById('badge-loader').innerText = 'Phase 3';
+                document.getElementById('badge-graph').innerText = 'Evaluating';
+                document.getElementById('phase-2').classList.remove('active', 'p-link');
+                document.getElementById('phase-3').classList.add('active', 'p-eval');
+                log('Phase 3: Evaluation (Execution)', 'eval');
+
+                await sleep(500);
+                nodes.geo.classList.add('active', 'evaluated'); nodes.api.classList.add('active', 'evaluated');
+                statuses.geo.textContent = 'Evaluated'; statuses.api.textContent = 'Evaluated';
+                log('Executed top-level code in leaves.', 'eval');
+                await sleep(500); nodes.geo.classList.remove('active'); nodes.api.classList.remove('active');
+
+                nodes.map.classList.add('active', 'evaluated'); statuses.map.textContent = 'Evaluated';
+                log('Executed MapController.js.', 'eval');
+                await sleep(500); nodes.map.classList.remove('active');
+
+                nodes.index.classList.add('active', 'evaluated'); statuses.index.textContent = 'Evaluated';
+                log('Executed index.js.', 'eval');
+                await sleep(500); nodes.index.classList.remove('active');
+
+                log('ESM Pipeline Complete.', 'eval');
+                document.getElementById('badge-graph').className = 'status-badge done';
+                document.getElementById('badge-graph').innerText = 'Live';
+                document.getElementById('badge-loader').className = 'status-badge done';
+                document.getElementById('badge-loader').innerText = 'Finished';
+                
+                btnNext.textContent = 'Pipeline Finished';
+                btnNext.style.borderColor = 'var(--border)';
+                btnNext.style.color = 'var(--text-dim)';
+            }
+
+            if(step < 3) btnNext.disabled = false;
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => location.reload());
+
+    </script>
+</body>
+</html>

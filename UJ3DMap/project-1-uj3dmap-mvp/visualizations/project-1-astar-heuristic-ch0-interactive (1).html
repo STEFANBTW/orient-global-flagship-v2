@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A* vs Dijkstra Heuristic Simulator - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8; /* Dijkstra Blue */
+            --green: #4ade80;  /* Start */
+            --red: #ef4444;    /* End */
+            --purple: #c084fc;
+            --yellow: #facc15; /* A* Yellow */
+            --wall: #475569;
+            --visited: rgba(148, 163, 184, 0.3);
+            --open: rgba(192, 132, 252, 0.4);
+            --glow: 0 0 15px rgba(250, 204, 21, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(250, 204, 21, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--yellow);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active-astar { border-color: var(--yellow); box-shadow: 0 0 15px rgba(250, 204, 21, 0.2); }
+        .panel.active-dijkstra { border-color: var(--accent); box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.astar { background: var(--yellow); color: #000; font-weight: bold; }
+        .status-badge.dijkstra { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        /* Grid View */
+        .grid-view {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            gap: 1px;
+            width: 100%;
+            height: 100%;
+            max-width: 500px;
+            max-height: 500px;
+            background: var(--border);
+            border: 2px solid var(--border);
+            aspect-ratio: 1;
+        }
+
+        .cell {
+            background: var(--bg);
+            transition: background 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.4rem;
+            color: rgba(255,255,255,0.4);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cell.wall { background: var(--wall); }
+        .cell.start { background: var(--green); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); z-index: 10; color:#000; font-weight:bold;}
+        .cell.end { background: var(--red); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); z-index: 10; color:#000; font-weight:bold;}
+        .cell.visited-astar { background: rgba(250, 204, 21, 0.2); animation: pulse 0.3s; }
+        .cell.visited-dijkstra { background: rgba(56, 189, 248, 0.2); animation: pulse 0.3s; }
+        .cell.open { background: var(--open); }
+        .cell.path-astar { background: var(--yellow); animation: pulse 0.3s; box-shadow: 0 0 8px var(--yellow); z-index: 5; color: #000;}
+        .cell.path-dijkstra { background: var(--accent); animation: pulse 0.3s; box-shadow: 0 0 8px var(--accent); z-index: 5; color: #000;}
+
+        @keyframes pulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .legend {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 0.65rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
+        .legend-color { width: 10px; height: 10px; border-radius: 2px; }
+
+        /* Stats Panel */
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: var(--surface2);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-title { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; }
+        .stat-value { font-size: 2rem; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
+        .stat-value.c-astar { color: var(--yellow); text-shadow: 0 0 10px rgba(250, 204, 21, 0.3); }
+        .stat-value.c-dijkstra { color: var(--accent); text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+
+        .eval-formula {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            padding: 10px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Log Panel */
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.process { border-left-color: var(--text); color: var(--text); }
+        .log-entry.astar { border-left-color: var(--yellow); color: var(--yellow); }
+        .log-entry.dijkstra { border-left-color: var(--accent); color: var(--accent); }
+        .log-entry.done { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        button.btn-dijkstra { background: rgba(56, 189, 248, 0.15); color: var(--accent); border-color: var(--accent); }
+        button.btn-dijkstra:hover:not(:disabled) { background: rgba(56, 189, 248, 0.25); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+        
+        button.btn-astar { background: rgba(250, 204, 21, 0.15); color: var(--yellow); border-color: var(--yellow); }
+        button.btn-astar:hover:not(:disabled) { background: rgba(250, 204, 21, 0.25); box-shadow: 0 0 10px rgba(250, 204, 21, 0.3); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>A* vs Dijkstra Heuristic Simulator</h1>
+        <p>Visualizing the performance impact of heuristic-guided spatial search</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Grid -->
+        <div class="panel" id="panel-grid" style="grid-row: 1 / span 2;">
+            <div class="panel-title">1. Spatial Grid <span class="status-badge" id="badge-grid">Ready</span></div>
+            <div class="grid-view">
+                <div class="grid" id="grid"></div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background: var(--green)"></div> Start Node</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--red)"></div> Target Node</div>
+                    <div class="legend-item"><div class="legend-color" style="background: var(--wall)"></div> Wall (Obstacle)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: rgba(56, 189, 248, 0.3)"></div> Evaluated (Dijkstra)</div>
+                    <div class="legend-item"><div class="legend-color" style="background: rgba(250, 204, 21, 0.3)"></div> Evaluated (A*)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Stats -->
+        <div class="panel" id="panel-stats">
+            <div class="panel-title">2. Algorithm Efficiency <span class="status-badge" id="badge-stats">Idle</span></div>
+            <div class="stats-container">
+                <div class="stat-box">
+                    <div class="stat-title">Currently Running</div>
+                    <div class="stat-value" id="algo-name" style="font-size: 1.5rem; color: var(--text-dim);">-</div>
+                </div>
+                
+                <div class="stat-box">
+                    <div class="stat-title">Nodes Evaluated (Time Cost)</div>
+                    <div class="stat-value" id="nodes-evaluated">0</div>
+                    <div style="font-size: 0.65rem; color: var(--text-dim); margin-top: 5px;">Lower is better</div>
+                </div>
+
+                <div class="eval-formula" id="eval-formula">
+                    <span style="color:var(--text-dim)">f(n) = g(n) + h(n)</span><br>
+                    Waiting to start...
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" id="panel-log">
+            <div class="panel-title">3. Pointer Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Grid initialized. Select an algorithm.</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-dijkstra" class="btn-dijkstra">▶ Run Dijkstra (Blind)</button>
+            <button id="btn-astar" class="btn-astar">▶ Run A* (Heuristic)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-reset">↺ Reset Grid</button>
+        </div>
+
+    </div>
+
+    <script>
+        const ROWS = 20;
+        const COLS = 20;
+        const gridEl = document.getElementById('grid');
+        const logOutput = document.getElementById('log-output');
+        
+        const START = {r: 10, c: 2};
+        const END = {r: 5, c: 17};
+        
+        const walls = new Set([
+            '5,10', '6,10', '7,10', '8,10', '9,10', '10,10', '11,10', '12,10', '13,10',
+            '5,11', '5,12', '5,13', '5,14',
+            '13,11', '13,12', '13,13'
+        ]);
+
+        let cells = [];
+        let isExecuting = false;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function initGrid() {
+            gridEl.innerHTML = '';
+            cells = [];
+            for (let r = 0; r < ROWS; r++) {
+                const row = [];
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${r}-${c}`;
+                    
+                    if (r === START.r && c === START.c) {
+                        cell.classList.add('start');
+                        cell.innerText = 'S';
+                    } else if (r === END.r && c === END.c) {
+                        cell.classList.add('end');
+                        cell.innerText = 'E';
+                    } else if (walls.has(`${r},${c}`)) {
+                        cell.classList.add('wall');
+                    }
+                    
+                    gridEl.appendChild(cell);
+                    row.push(cell);
+                }
+                cells.push(row);
+            }
+        }
+
+        function resetGrid() {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = cells[r][c];
+                    cell.classList.remove('visited-astar', 'visited-dijkstra', 'open', 'path-astar', 'path-dijkstra');
+                    if (!cell.classList.contains('start') && !cell.classList.contains('end')) {
+                        cell.innerText = '';
+                    }
+                }
+            }
+            document.getElementById('nodes-evaluated').innerText = '0';
+            document.getElementById('algo-name').innerText = '-';
+            document.getElementById('algo-name').className = 'stat-value';
+            document.getElementById('eval-formula').innerHTML = `<span style="color:var(--text-dim)">f(n) = g(n) + h(n)</span><br>Waiting to start...`;
+            
+            document.getElementById('panel-grid').className = 'panel';
+            document.getElementById('badge-grid').innerText = 'Ready';
+            document.getElementById('badge-stats').className = 'status-badge';
+            document.getElementById('badge-stats').innerText = 'Idle';
+
+            document.getElementById('btn-dijkstra').disabled = false;
+            document.getElementById('btn-astar').disabled = false;
+            
+            logOutput.innerHTML = '<div class="log-entry">Grid reset. Select an algorithm.</div>';
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function heuristic(r, c) {
+            return Math.sqrt(Math.pow(r - END.r, 2) + Math.pow(c - END.c, 2));
+        }
+
+        async function runSimulation(useAstar) {
+            if (isExecuting) return;
+            isExecuting = true;
+            resetGrid();
+            
+            const btnD = document.getElementById('btn-dijkstra');
+            const btnA = document.getElementById('btn-astar');
+            btnD.disabled = true;
+            btnA.disabled = true;
+            
+            const algoName = document.getElementById('algo-name');
+            const typeStr = useAstar ? 'astar' : 'dijkstra';
+            const niceName = useAstar ? 'A* (A-Star)' : 'Dijkstra (Blind)';
+            
+            algoName.innerText = niceName;
+            algoName.className = `stat-value c-${typeStr}`;
+            
+            document.getElementById('panel-grid').classList.add(`active-${typeStr}`);
+            document.getElementById('badge-grid').innerText = 'Searching';
+            document.getElementById('badge-stats').className = `status-badge ${typeStr}`;
+            document.getElementById('badge-stats').innerText = 'Active';
+
+            if(useAstar) {
+                document.getElementById('eval-formula').innerHTML = `<span style="color:var(--text-dim)">f(n) = g(n) + h(n)</span><br><span style="color:var(--yellow)">Uses Heuristic to guide search</span>`;
+                log(`Started A* Search. h(n) active.`, 'astar');
+            } else {
+                document.getElementById('eval-formula').innerHTML = `<span style="color:var(--text-dim)">f(n) = g(n) + 0</span><br><span style="color:var(--accent)">Blind search in all directions</span>`;
+                log(`Started Dijkstra Search. h(n) = 0.`, 'dijkstra');
+            }
+
+            let openSet = [{r: START.r, c: START.c, g: 0, f: useAstar ? heuristic(START.r, START.c) : 0, parent: null}];
+            let closedSet = new Set();
+            let evaluatedCount = 0;
+            const evalCounter = document.getElementById('nodes-evaluated');
+
+            while (openSet.length > 0) {
+                openSet.sort((a, b) => a.f - b.f);
+                const current = openSet.shift();
+                const key = `${current.r},${current.c}`;
+
+                if (closedSet.has(key)) continue;
+                closedSet.add(key);
+
+                if (!(current.r === START.r && current.c === START.c) && !(current.r === END.r && current.c === END.c)) {
+                    cells[current.r][current.c].classList.remove('open');
+                    cells[current.r][current.c].classList.add(`visited-${typeStr}`);
+                    evaluatedCount++;
+                    evalCounter.innerText = evaluatedCount;
+                    
+                    if(useAstar) {
+                        cells[current.r][current.c].innerText = Math.round(current.f);
+                        cells[current.r][current.c].style.color = 'rgba(0,0,0,0.5)';
+                    }
+                    
+                    if (evaluatedCount % 5 === 0) {
+                        log(`Evaluated ${evaluatedCount} nodes...`, typeStr);
+                        await sleep(10);
+                    }
+                }
+
+                if (current.r === END.r && current.c === END.c) {
+                    log(`Target reached! Reconstructing path...`, 'process');
+                    let curr = current.parent;
+                    let pathLength = 0;
+                    while (curr && curr.parent !== null) {
+                        cells[curr.r][curr.c].classList.remove(`visited-${typeStr}`);
+                        cells[curr.r][curr.c].classList.add(`path-${typeStr}`);
+                        cells[curr.r][curr.c].innerText = '';
+                        curr = curr.parent;
+                        pathLength++;
+                        await sleep(20);
+                    }
+                    log(`Optimal path found. Length: ${pathLength}. Evaluated: ${evaluatedCount} nodes.`, 'done');
+                    break;
+                }
+
+                const neighbors = [
+                    {r: current.r-1, c: current.c}, {r: current.r+1, c: current.c},
+                    {r: current.r, c: current.c-1}, {r: current.r, c: current.c+1}
+                ];
+
+                for (const n of neighbors) {
+                    if (n.r >= 0 && n.r < ROWS && n.c >= 0 && n.c < COLS) {
+                        const nKey = `${n.r},${n.c}`;
+                        if (!closedSet.has(nKey) && !walls.has(nKey)) {
+                            const g = current.g + 1;
+                            const h = useAstar ? heuristic(n.r, n.c) : 0;
+                            const f = g + h;
+                            
+                            const existing = openSet.find(o => o.r === n.r && o.c === n.c);
+                            if (!existing) {
+                                openSet.push({r: n.r, c: n.c, g, f, parent: current});
+                                if (!(n.r === END.r && n.c === END.c)) {
+                                    cells[n.r][n.c].classList.add('open');
+                                }
+                            } else if (g < existing.g) {
+                                existing.g = g;
+                                existing.f = f;
+                                existing.parent = current;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            document.getElementById('badge-grid').innerText = 'Complete';
+            document.getElementById('badge-stats').className = 'status-badge done';
+            document.getElementById('badge-stats').innerText = 'Finished';
+            
+            btnD.disabled = false;
+            btnA.disabled = false;
+            isExecuting = false;
+        }
+
+        document.getElementById('btn-dijkstra').addEventListener('click', () => runSimulation(false));
+        document.getElementById('btn-astar').addEventListener('click', () => runSimulation(true));
+        document.getElementById('btn-reset').addEventListener('click', resetGrid);
+
+        initGrid();
+    </script>
+</body>
+</html>

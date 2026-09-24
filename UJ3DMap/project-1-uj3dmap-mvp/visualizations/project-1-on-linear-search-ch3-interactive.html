@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O(N) Linear Search Complexity - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #3b82f6;
+            --c-scan: #ef4444;
+            --c-found: #10b981;
+            --c-idle: #334155;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status-badge.active { background: rgba(59, 130, 246, 0.2); color: var(--accent); font-weight: bold; }
+
+        /* Panel 1: Data Struct */
+        .data-container {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .memory-block {
+            width: 80%;
+            height: 40px;
+            background: var(--c-idle);
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .mem-segment {
+            flex: 1;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .target-node {
+            position: absolute;
+            right: 5%;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            background: var(--c-found);
+            box-shadow: 0 0 10px var(--c-found);
+        }
+
+        /* Panel 2: Execution */
+        .vis-area {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-content: flex-start;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .box {
+            width: 14px; height: 14px;
+            background: var(--surface2);
+            border-radius: 2px;
+            transition: background 0.05s;
+        }
+
+        .box.scan { background: var(--c-scan); box-shadow: 0 0 5px var(--c-scan); }
+        .box.found { background: var(--c-found); box-shadow: 0 0 15px var(--c-found); transform: scale(1.5); z-index: 10; position: relative; }
+        .box.passed { background: rgba(239, 68, 68, 0.2); }
+
+        /* Panel 3: Stats */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex-grow: 1; }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stat-title { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; margin-bottom: 5px; text-align: center; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: bold; color: var(--text); transition: color 0.3s; }
+        .stat-value.active { color: var(--accent); }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.info { border-left-color: var(--accent); color: var(--accent); }
+        .log-entry.warn { border-left-color: var(--c-scan); color: var(--c-scan); }
+        .log-entry.pass { border-left-color: var(--c-found); color: var(--c-found); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Panel 4: Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            padding: 15px 30px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            width: 250px;
+            accent-color: var(--accent);
+        }
+
+        button {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(59, 130, 246, 0.25); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; border-color: var(--border); color: var(--text-dim); background: var(--surface2); }
+        
+        button.danger { border-color: var(--border); color: var(--text); background: var(--surface2); }
+        button.danger:hover:not(:disabled) { background: rgba(255,255,255,0.1); box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Linear Search Complexity</h1>
+        <p>Visualizing O(N) Execution Scaling Against Dataset Size (N)</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Data Struct -->
+        <div class="panel">
+            <div class="panel-title">1. Memory Array (N) <span class="status-badge" id="badge-mem">Allocated</span></div>
+            <div class="data-container">
+                <div class="memory-block" id="mem-block">
+                    <!-- Segments gen via JS -->
+                    <div class="target-node" id="target-node"></div>
+                </div>
+                <div style="margin-top: 15px; color: var(--text-dim); font-size: 0.8rem; font-family: monospace;">
+                    Dataset Size: <span id="ds-label">500</span> Elements
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Execution -->
+        <div class="panel">
+            <div class="panel-title">2. CPU Execution <span class="status-badge" id="badge-cpu">Idle</span></div>
+            <div class="vis-area" id="vis-area">
+                <!-- Boxes gen via JS -->
+            </div>
+        </div>
+
+        <!-- Panel 3: Stats -->
+        <div class="panel" style="grid-column: 1 / -1; display:flex; flex-direction:row; gap:20px;">
+            <div class="stats-grid" style="flex: 1;">
+                <div class="stat-box">
+                    <div class="stat-title">Input Size (N)</div>
+                    <div class="stat-value" id="val-n">500</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Operations Executed</div>
+                    <div class="stat-value" id="val-ops">0</div>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display:flex; flex-direction:column;">
+                <div class="panel-title" style="margin-bottom:5px;">Complexity Log</div>
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">System ready. Set N and execute search.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <div class="slider-group">
+                <label>N = <span id="slider-val">500</span></label>
+                <input type="range" id="n-slider" min="50" max="1000" step="50" value="500">
+            </div>
+            <div style="border-left: 1px solid var(--border); height: 30px;"></div>
+            <button id="btn-run">▶ Execute Search</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <div style="border-left: 1px solid var(--border); height: 30px;"></div>
+            <button id="btn-reset" class="danger">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            visArea: document.getElementById('vis-area'),
+            memBlock: document.getElementById('mem-block'),
+            targetNode: document.getElementById('target-node'),
+            slider: document.getElementById('n-slider'),
+            sliderVal: document.getElementById('slider-val'),
+            dsLabel: document.getElementById('ds-label'),
+            valN: document.getElementById('val-n'),
+            valOps: document.getElementById('val-ops'),
+            log: document.getElementById('log-output'),
+            btnRun: document.getElementById('btn-run'),
+            btnPause: document.getElementById('btn-pause'),
+            badgeCpu: document.getElementById('badge-cpu')
+        };
+
+        let isRunning = false;
+        let currentN = 500;
+        let isPaused = false;
+        let pauseResolve = null;
+        let isPlaying = false;
+
+        function log(msg, type='normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${msg}`;
+            UI.log.appendChild(entry);
+            UI.log.scrollTop = UI.log.scrollHeight;
+        }
+
+        function renderData(n) {
+            UI.visArea.innerHTML = '';
+            UI.memBlock.innerHTML = '<div class="target-node" id="target-node"></div>';
+            
+            const renderCount = Math.min(n, 1000);
+            
+            // Build CPU grid
+            for(let i=0; i<renderCount; i++) {
+                const box = document.createElement('div');
+                box.className = 'box';
+                UI.visArea.appendChild(box);
+            }
+
+            // Build Mem block visualization
+            for(let i=0; i<20; i++) {
+                const seg = document.createElement('div');
+                seg.className = 'mem-segment';
+                UI.memBlock.appendChild(seg);
+            }
+            // Put target node back on top
+            UI.memBlock.appendChild(document.getElementById('target-node'));
+            
+            // Target is at 95% of array to show worst case
+            document.getElementById('target-node').style.left = '95%';
+            document.getElementById('target-node').style.right = 'auto';
+            
+            UI.valOps.innerText = '0';
+            UI.valOps.className = 'stat-value';
+        }
+
+        UI.slider.addEventListener('input', (e) => {
+            if(isRunning) return;
+            currentN = parseInt(e.target.value);
+            UI.sliderVal.innerText = currentN;
+            UI.dsLabel.innerText = currentN;
+            UI.valN.innerText = currentN;
+            renderData(currentN);
+        });
+
+        UI.btnPause.addEventListener('click', () => {
+            if (!isPaused) {
+                isPaused = true;
+                UI.btnPause.innerText = '▶ Resume';
+            } else {
+                isPaused = false;
+                UI.btnPause.innerText = '⏸ Pause';
+                if (pauseResolve) pauseResolve();
+            }
+        });
+
+        UI.btnRun.addEventListener('click', async () => {
+            if(isRunning) return;
+            isRunning = true;
+            isPlaying = true;
+            
+            UI.slider.disabled = true;
+            UI.btnRun.disabled = true;
+            UI.btnPause.disabled = false;
+            UI.badgeCpu.className = 'status-badge active';
+            UI.badgeCpu.innerText = 'Scanning';
+            
+            log(`Starting Linear Search on array size N=${currentN}`, 'info');
+            log(`Worst-case scenario: Target element located at end of contiguous memory.`, 'warn');
+            
+            const boxes = UI.visArea.children;
+            const targetIndex = Math.floor(currentN * 0.95);
+            
+            let i = 0;
+            
+            async function step() {
+                if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+                if (i > 0) {
+                    boxes[i-1].classList.remove('scan');
+                    boxes[i-1].classList.add('passed');
+                }
+                
+                if (i < boxes.length) {
+                    boxes[i].classList.add('scan');
+                    UI.valOps.innerText = i + 1;
+                    UI.valOps.className = 'stat-value active';
+                    
+                    if (i === targetIndex) {
+                        boxes[i].classList.remove('scan');
+                        boxes[i].classList.add('found');
+                        finish(i + 1);
+                        return;
+                    }
+                    
+                    i++;
+                    
+                    // Throttle speed based on N so animation takes roughly same visual time
+                    const delay = Math.max(1, 1500 / currentN);
+                    setTimeout(step, delay);
+                }
+            }
+            
+            function finish(ops) {
+                log(`MATCH FOUND. Search terminated.`, 'pass');
+                log(`Total Operations = ${ops}. As N scales, operations scale linearly: O(N).`, 'info');
+                
+                UI.badgeCpu.className = 'status-badge';
+                UI.badgeCpu.innerText = 'Idle';
+                isRunning = false;
+                isPlaying = false;
+                UI.slider.disabled = false;
+                UI.btnPause.disabled = true;
+            }
+
+            step();
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            isRunning = false;
+            isPlaying = false;
+            isPaused = false;
+            if (pauseResolve) pauseResolve();
+            UI.btnPause.innerText = '⏸ Pause';
+            location.reload();
+        });
+
+        // Init
+        renderData(currentN);
+    </script>
+</body>
+</html>

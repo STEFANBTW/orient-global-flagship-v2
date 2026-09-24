@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>String includes() Visualization - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(251, 146, 60, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--orange);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--orange); box-shadow: 0 0 15px rgba(251, 146, 60, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.active { background: var(--orange); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+        .status-badge.fail { background: var(--red); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .code-line.executing { background: rgba(251, 146, 60, 0.2); border-left: 3px solid var(--orange); }
+
+        /* Memory Scanner Visualization */
+        .memory-view {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .string-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            position: relative;
+        }
+
+        .char-box {
+            width: 28px;
+            height: 36px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            color: var(--text);
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .char-box .index {
+            position: absolute;
+            bottom: -15px;
+            font-size: 0.5rem;
+            color: var(--text-dim);
+        }
+
+        .char-box.match { background: rgba(74, 222, 128, 0.2); border-color: var(--green); color: var(--green); }
+        .char-box.fail { background: rgba(248, 113, 113, 0.2); border-color: var(--red); color: var(--red); }
+        
+        .scanner-overlay {
+            position: absolute;
+            height: 42px;
+            border: 2px solid var(--orange);
+            background: rgba(251, 146, 60, 0.15);
+            border-radius: 4px;
+            top: -3px;
+            transition: left 0.3s ease, width 0.3s ease, border-color 0.3s ease;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(251, 146, 60, 0.3);
+        }
+        
+        .scanner-overlay.match { border-color: var(--green); background: rgba(74, 222, 128, 0.15); box-shadow: 0 0 15px rgba(74, 222, 128, 0.4); }
+        .scanner-overlay.fail { border-color: var(--red); background: rgba(248, 113, 113, 0.15); box-shadow: 0 0 15px rgba(248, 113, 113, 0.4); }
+
+        .search-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-input {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            border-radius: 4px;
+            outline: none;
+            flex-grow: 1;
+        }
+        .search-input:focus { border-color: var(--orange); }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.scan { border-left-color: var(--orange); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+        .log-entry.fail { border-left-color: var(--red); color: var(--red); font-weight: bold;}
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(251, 146, 60, 0.1); border-color: var(--orange); color: var(--orange); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(251, 146, 60, 0.15); color: var(--orange); border-color: var(--orange); box-shadow: 0 0 10px rgba(251, 146, 60, 0.2); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+        .function { color: var(--yellow); }
+        .number { color: var(--orange); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>String.includes() & Linear Search</h1>
+        <p>V8 Memory Scanning and O(N) Substring matching</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Flow / Architecture -->
+        <div class="panel" id="panel-vis">
+            <div class="panel-title">1. Memory Scanner <span class="status-badge" id="badge-vis">Ready</span></div>
+            <div class="search-input-container">
+                <input type="text" id="queryInput" class="search-input" value="gate" placeholder="Search substring..." maxlength="10">
+            </div>
+            
+            <div class="memory-view" id="memory-view">
+                <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 10px;">Target String in RAM:</div>
+                <div class="string-display" id="targetStr">
+                    <!-- chars injected via JS -->
+                    <div class="scanner-overlay" id="scanner"></div>
+                </div>
+                
+                <div style="margin-top: 30px; font-size: 0.8rem; display: flex; justify-content: space-between;">
+                    <span>Big O Time Complexity: <strong style="color:var(--orange)">O(N * M)</strong></span>
+                    <span>Operations: <strong id="op-counter" style="color:var(--accent)">0</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. V8 Implementation Logic <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="keyword">const</span> target = <span class="string">"main campus gate north"</span>;</span>
+<span class="code-line" id="line-1"><span class="keyword">const</span> query = <span class="string">"<span id="code-query">gate</span>"</span>;</span>
+<span class="code-line" id="line-2"></span>
+<span class="code-line" id="line-3"><span class="comment">// C++ runtime implementation equivalent</span></span>
+<span class="code-line" id="line-4"><span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i <= target.length - query.length; i++) {</span>
+<span class="code-line" id="line-5">  <span class="keyword">let</span> match = <span class="keyword">true</span>;</span>
+<span class="code-line" id="line-6">  </span>
+<span class="code-line" id="line-7">  <span class="keyword">for</span> (<span class="keyword">let</span> j = <span class="number">0</span>; j < query.length; j++) {</span>
+<span class="code-line" id="line-8">    <span class="keyword">if</span> (target[i + j] !== query[j]) {</span>
+<span class="code-line" id="line-9">      match = <span class="keyword">false</span>;</span>
+<span class="code-line" id="line-10">      <span class="keyword">break</span>;</span>
+<span class="code-line" id="line-11">    }</span>
+<span class="code-line" id="line-12">  }</span>
+<span class="code-line" id="line-13">  </span>
+<span class="code-line" id="line-14">  <span class="keyword">if</span> (match) <span class="keyword">return</span> <span class="keyword">true</span>;</span>
+<span class="code-line" id="line-15">}</span>
+<span class="code-line" id="line-16"><span class="keyword">return</span> <span class="keyword">false</span>;</span></div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Pointer & Index Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Waiting to invoke String.prototype.includes()...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-run" class="primary">▶ Run .includes()</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-step" class="primary" disabled>▶ Step Scan</button>
+            <button id="btn-play" disabled>▶▶ Auto-Play</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const targetText = "main campus gate north";
+        const targetDiv = document.getElementById('targetStr');
+        const scanner = document.getElementById('scanner');
+        const queryInput = document.getElementById('queryInput');
+        
+        const btnRun = document.getElementById('btn-run');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnPause = document.getElementById('btn-pause');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const logOutput = document.getElementById('log-output');
+        const opCounter = document.getElementById('op-counter');
+
+        let charBoxes = [];
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let isPaused = false;
+        let isExecuting = false;
+
+        function initMemory() {
+            targetDiv.innerHTML = '';
+            targetDiv.appendChild(scanner);
+            charBoxes = [];
+            for(let i=0; i<targetText.length; i++) {
+                let box = document.createElement('div');
+                box.className = 'char-box';
+                box.innerText = targetText[i];
+                
+                let index = document.createElement('span');
+                index.className = 'index';
+                index.innerText = i;
+                box.appendChild(index);
+                
+                targetDiv.appendChild(box);
+                charBoxes.push(box);
+            }
+        }
+        initMemory();
+
+        queryInput.addEventListener('input', () => {
+            document.getElementById('code-query').innerText = queryInput.value;
+        });
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function highlightLine(lineNumbers) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        function waitForStep() {
+            return new Promise(resolve => {
+                if (isAutoPlaying && !isPaused) {
+                    setTimeout(resolve, 1200);
+                } else {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    btnPause.disabled = true;
+                    resolveStep = resolve;
+                }
+            });
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            isPaused = false;
+            btnPlay.disabled = true;
+            btnPause.disabled = false;
+            btnStep.disabled = true;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPause.addEventListener('click', () => {
+            isPaused = true;
+            btnPause.disabled = true;
+            btnPlay.disabled = false;
+            btnStep.disabled = false;
+        });
+
+        async function runScan() {
+            if (isExecuting) return;
+            const query = queryInput.value;
+            if (!query) return;
+
+            isExecuting = true;
+            btnRun.disabled = true;
+            queryInput.disabled = true;
+            
+            // Clean state
+            charBoxes.forEach(b => b.classList.remove('match', 'fail'));
+            scanner.classList.remove('match', 'fail');
+            let ops = 0;
+            
+            document.getElementById('panel-vis').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Scanning';
+            
+            scanner.style.display = 'block';
+            const charWidth = 32; // 28 + 4 gap
+            scanner.style.width = `${(charWidth * query.length) - 4}px`;
+
+            log(`Initiating O(N*M) linear search for '${query}'...`, 'scan');
+            highlightLine([4]);
+            
+            let matchFound = false;
+
+            for (let i = 0; i <= targetText.length - query.length; i++) {
+                highlightLine([4, 5]);
+                scanner.style.left = `${i * charWidth}px`;
+                ops++;
+                opCounter.innerText = ops;
+                
+                log(`[i=${i}] Advancing scan window...`, 'scan');
+                await waitForStep();
+                
+                let localMatch = true;
+                for (let j = 0; j < query.length; j++) {
+                    highlightLine([7, 8]);
+                    ops++;
+                    opCounter.innerText = ops;
+                    
+                    const tChar = targetText[i+j];
+                    const qChar = query[j];
+                    
+                    if (tChar !== qChar) {
+                        highlightLine([8, 9, 10]);
+                        charBoxes[i+j].classList.add('fail');
+                        log(`[i=${i}, j=${j}] Mismatch: '${tChar}' != '${qChar}'. Breaking inner loop.`, 'fail');
+                        localMatch = false;
+                        await waitForStep();
+                        charBoxes[i+j].classList.remove('fail');
+                        break;
+                    } else {
+                        charBoxes[i+j].classList.add('match');
+                        log(`[i=${i}, j=${j}] Match: '${tChar}' == '${qChar}'.`, 'result');
+                        await waitForStep();
+                    }
+                }
+
+                if (localMatch) {
+                    highlightLine([14]);
+                    matchFound = true;
+                    scanner.classList.add('match');
+                    document.getElementById('badge-vis').className = 'status-badge done';
+                    document.getElementById('badge-vis').innerText = 'Found';
+                    log(`Subset complete! Engine returns TRUE. Total Ops: ${ops}`, 'result');
+                    break;
+                } else {
+                    // reset green boxes for this window
+                    for (let j = 0; j < query.length; j++) {
+                        charBoxes[i+j].classList.remove('match');
+                    }
+                }
+            }
+
+            if (!matchFound) {
+                highlightLine([16]);
+                scanner.classList.add('fail');
+                document.getElementById('badge-vis').className = 'status-badge fail';
+                document.getElementById('badge-vis').innerText = 'Not Found';
+                log(`Scan exhausted. Engine returns FALSE. Total Ops: ${ops}`, 'fail');
+            }
+
+            document.getElementById('badge-code').className = 'status-badge done';
+            document.getElementById('badge-code').innerText = 'Idle';
+            
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            isAutoPlaying = false;
+        }
+
+        btnRun.addEventListener('click', runScan);
+
+        btnReset.addEventListener('click', () => {
+            scanner.style.display = 'none';
+            charBoxes.forEach(b => b.classList.remove('match', 'fail'));
+            scanner.classList.remove('match', 'fail');
+            logOutput.innerHTML = '<div class="log-entry">Waiting to invoke String.prototype.includes()...</div>';
+            opCounter.innerText = '0';
+            btnRun.disabled = false;
+            queryInput.disabled = false;
+            isExecuting = false;
+            document.getElementById('panel-vis').classList.remove('active');
+            document.getElementById('badge-vis').className = 'status-badge';
+            document.getElementById('badge-vis').innerText = 'Ready';
+            document.getElementById('badge-code').className = 'status-badge';
+            document.getElementById('badge-code').innerText = 'Idle';
+            highlightLine([]);
+        });
+
+    </script>
+</body>
+</html>

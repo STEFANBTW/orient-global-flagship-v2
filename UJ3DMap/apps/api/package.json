@@ -1,0 +1,18 @@
+{
+  "name": "uj3dmap-api",
+  "version": "1.0.0",
+  "description": "UJ3DMap raw Node.js API server — no framework, only pg and jsonwebtoken",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

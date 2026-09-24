@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haversine Formula Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active {
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .code-line.executing {
+            background: rgba(56, 189, 248, 0.2);
+            border-left: 3px solid var(--accent);
+        }
+
+        .canvas-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        canvas {
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+            background: radial-gradient(circle at 30% 30%, #1e293b, #020617);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .input-group label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            background: rgba(0,0,0,0.3);
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry {
+            border-left: 2px solid var(--border);
+            padding-left: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        .log-entry.math { border-left-color: var(--purple); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .number { color: var(--yellow); }
+        .function { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Haversine Formula Simulation</h1>
+        <p>Interactive Great-Circle Distance Calculation State Machine</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Visual Stage (Canvas) -->
+        <div class="panel" id="panel-stage">
+            <div class="panel-title">1. Great-Circle Projection <span class="status-badge" id="badge-stage">Ready</span></div>
+            <div class="controls-grid">
+                <div class="input-group">
+                    <label>Lat 1 (<span id="val-lat1" class="number">35.68</span>°)</label>
+                    <input type="range" id="lat1" min="-90" max="90" value="35.68" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Lon 1 (<span id="val-lon1" class="number">139.76</span>°)</label>
+                    <input type="range" id="lon1" min="-180" max="180" value="139.76" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Lat 2 (<span id="val-lat2" class="number">51.50</span>°)</label>
+                    <input type="range" id="lat2" min="-90" max="90" value="51.50" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Lon 2 (<span id="val-lon2" class="number">-0.12</span>°)</label>
+                    <input type="range" id="lon2" min="-180" max="180" value="-0.12" step="0.01">
+                </div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="earthCanvas" width="280" height="280"></canvas>
+            </div>
+        </div>
+
+        <!-- Panel 2: Source Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Execution Context <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="keyword">function</span> <span class="function">haversine</span>(lat1, lon1, lat2, lon2) {</span>
+<span class="code-line" id="line-1">  <span class="keyword">const</span> R = <span class="number">6371e3</span>; <span class="comment">// Earth radius in meters</span></span>
+<span class="code-line" id="line-2">  <span class="keyword">const</span> φ1 = lat1 * Math.PI/<span class="number">180</span>;</span>
+<span class="code-line" id="line-3">  <span class="keyword">const</span> φ2 = lat2 * Math.PI/<span class="number">180</span>;</span>
+<span class="code-line" id="line-4">  <span class="keyword">const</span> Δφ = (lat2 - lat1) * Math.PI/<span class="number">180</span>;</span>
+<span class="code-line" id="line-5">  <span class="keyword">const</span> Δλ = (lon2 - lon1) * Math.PI/<span class="number">180</span>;</span>
+<span class="code-line" id="line-6"></span>
+<span class="code-line" id="line-7">  <span class="keyword">const</span> a = Math.sin(Δφ/<span class="number">2</span>) * Math.sin(Δφ/<span class="number">2</span>) +</span>
+<span class="code-line" id="line-8">            Math.cos(φ1) * Math.cos(φ2) *</span>
+<span class="code-line" id="line-9">            Math.sin(Δλ/<span class="number">2</span>) * Math.sin(Δλ/<span class="number">2</span>);</span>
+<span class="code-line" id="line-10"></span>
+<span class="code-line" id="line-11">  <span class="keyword">const</span> c = <span class="number">2</span> * Math.atan2(Math.sqrt(a), Math.sqrt(<span class="number">1</span>-a));</span>
+<span class="code-line" id="line-12">  <span class="keyword">const</span> d = R * c;</span>
+<span class="code-line" id="line-13">  <span class="keyword">return</span> d;</span>
+<span class="code-line" id="line-14">}</span></div>
+        </div>
+
+        <!-- Panel 3: System Log & Math State -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. ALU State & Register Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">System initialized. Awaiting execution trigger...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Master Controls -->
+        <div class="master-controls">
+            <button id="btn-step" class="primary">▶ Step Execution</button>
+            <button id="btn-play">▶▶ Auto-Play</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        // DOM Elements
+        const canvas = document.getElementById('earthCanvas');
+        const ctx = canvas.getContext('2d');
+        const inputs = ['lat1', 'lon1', 'lat2', 'lon2'].map(id => document.getElementById(id));
+        const displays = ['val-lat1', 'val-lon1', 'val-lat2', 'val-lon2'].map(id => document.getElementById(id));
+        const logOutput = document.getElementById('log-output');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        
+        let state = 0; // 0: init, 1-N: execution steps
+        let autoPlayTimer = null;
+        let p1 = { lat: 35.68, lon: 139.76 };
+        let p2 = { lat: 51.50, lon: -0.12 };
+
+        // Math Variables State
+        let R = 6371000, phi1, phi2, deltaPhi, deltaLambda, a, c, d;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearHighlight() {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+        }
+
+        function highlightLine(lineNumbers) {
+            clearHighlight();
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        // --- Visualizer (Globe & Points) ---
+        function latLonToOrtho(lat, lon, centerLon) {
+            const latR = lat * Math.PI / 180;
+            const lonR = (lon - centerLon) * Math.PI / 180;
+            const cx = 140, cy = 140, r = 130;
+            // Orthographic projection roughly facing centerLon
+            const x = r * Math.cos(latR) * Math.sin(lonR);
+            const y = -r * Math.sin(latR); // Negative because canvas Y is down
+            // Basic visibility check
+            const z = r * Math.cos(latR) * Math.cos(lonR);
+            return { x: cx + x, y: cy + y, visible: z > 0 };
+        }
+
+        function drawStage(progress = 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Graticule
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+            ctx.lineWidth = 1;
+            const centerLon = (p1.lon + p2.lon) / 2;
+
+            for(let lat = -80; lat <= 80; lat+=20) {
+                ctx.beginPath();
+                for(let lon = -180; lon <= 180; lon+=5) {
+                    const pt = latLonToOrtho(lat, lon, centerLon);
+                    if(pt.visible) ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.stroke();
+            }
+
+            // Draw Points & Arc
+            const pt1 = latLonToOrtho(p1.lat, p1.lon, centerLon);
+            const pt2 = latLonToOrtho(p2.lat, p2.lon, centerLon);
+
+            // Points
+            ctx.fillStyle = '#f87171';
+            if (pt1.visible) { ctx.beginPath(); ctx.arc(pt1.x, pt1.y, 4, 0, Math.PI*2); ctx.fill(); }
+            ctx.fillStyle = '#4ade80';
+            if (pt2.visible) { ctx.beginPath(); ctx.arc(pt2.x, pt2.y, 4, 0, Math.PI*2); ctx.fill(); }
+
+            // Connecting Arc if state > 0
+            if (state >= 1 && pt1.visible && pt2.visible) {
+                ctx.strokeStyle = '#c084fc';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(pt1.x, pt1.y);
+                
+                // Approximate arc
+                const steps = 20;
+                const renderSteps = Math.ceil(steps * progress);
+                
+                for(let i=1; i<=renderSteps; i++) {
+                    const t = i / steps;
+                    const latT = p1.lat + (p2.lat - p1.lat) * t;
+                    const lonT = p1.lon + (p2.lon - p1.lon) * t;
+                    const pT = latLonToOrtho(latT, lonT, centerLon);
+                    ctx.lineTo(pT.x, pT.y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        // --- State Machine ---
+        async function stepExecution() {
+            document.getElementById('panel-code').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Executing';
+
+            switch(state) {
+                case 0:
+                    highlightLine(0);
+                    log(`Invoking <span class="function">haversine</span>(${p1.lat}°, ${p1.lon}°, ${p2.lat}°, ${p2.lon}°)`);
+                    break;
+                case 1:
+                    highlightLine(1);
+                    log(`Allocated constant R = 6371e3 m (Earth Radius)`);
+                    break;
+                case 2:
+                    highlightLine([2,3]);
+                    phi1 = p1.lat * Math.PI / 180;
+                    phi2 = p2.lat * Math.PI / 180;
+                    log(`φ1 = ${phi1.toFixed(4)} rad, φ2 = ${phi2.toFixed(4)} rad`, 'math');
+                    drawStage(0.2);
+                    break;
+                case 3:
+                    highlightLine([4,5]);
+                    deltaPhi = (p2.lat - p1.lat) * Math.PI / 180;
+                    deltaLambda = (p2.lon - p1.lon) * Math.PI / 180;
+                    log(`Δφ = ${deltaPhi.toFixed(4)} rad, Δλ = ${deltaLambda.toFixed(4)} rad`, 'math');
+                    drawStage(0.5);
+                    break;
+                case 4:
+                    highlightLine([7,8,9]);
+                    a = Math.sin(deltaPhi/2)**2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda/2)**2;
+                    log(`a (Square of half chord length) = ${a.toFixed(8)}`, 'math');
+                    drawStage(0.8);
+                    break;
+                case 5:
+                    highlightLine(11);
+                    c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    log(`c (Angular distance) = ${c.toFixed(6)} rad`, 'math');
+                    drawStage(1.0);
+                    break;
+                case 6:
+                    highlightLine([12, 13]);
+                    d = R * c;
+                    log(`d = R * c = ${(d).toFixed(2)} meters`, 'result');
+                    log(`Distance Calculation Complete. Returning ${(d/1000).toFixed(2)} km`, 'result');
+                    
+                    document.getElementById('badge-code').className = 'status-badge done';
+                    document.getElementById('badge-code').innerText = 'Finished';
+                    btnStep.disabled = true;
+                    btnPlay.disabled = true;
+                    if(autoPlayTimer) clearInterval(autoPlayTimer);
+                    break;
+            }
+            state++;
+        }
+
+        // --- Event Listeners ---
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                displays[index].innerText = parseFloat(e.target.value).toFixed(2);
+                p1 = { lat: parseFloat(inputs[0].value), lon: parseFloat(inputs[1].value) };
+                p2 = { lat: parseFloat(inputs[2].value), lon: parseFloat(inputs[3].value) };
+                drawStage(0);
+            });
+        });
+
+        let isPaused = false;
+        let pauseResolve = null;
+        let isPlaying = false;
+
+        btnStep.addEventListener('click', stepExecution);
+        
+        btnPlay.addEventListener('click', async () => {
+            if (isPlaying) return;
+            isPlaying = true;
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            btnPause.disabled = false;
+            inputs.forEach(i => i.disabled = true);
+            
+            while(state <= 6 && isPlaying) {
+                if (isPaused) {
+                    await new Promise(resolve => pauseResolve = resolve);
+                }
+                if (!isPlaying) break; // In case reset was pressed while paused
+                
+                stepExecution();
+                
+                if (state <= 6) {
+                    // Wait 800ms before next step, allowing pause to interrupt
+                    await new Promise(resolve => {
+                        autoPlayTimer = setTimeout(resolve, 800);
+                    });
+                }
+            }
+            if (state > 6) {
+                btnPause.disabled = true;
+            }
+        });
+
+        const btnPause = document.createElement('button');
+        btnPause.id = 'btn-pause';
+        btnPause.innerHTML = '⏸ Pause';
+        btnPause.disabled = true;
+        btnPause.addEventListener('click', () => {
+            if (isPaused) {
+                isPaused = false;
+                btnPause.innerHTML = '⏸ Pause';
+                if (pauseResolve) {
+                    pauseResolve();
+                    pauseResolve = null;
+                }
+            } else {
+                isPaused = true;
+                btnPause.innerHTML = '▶ Resume';
+            }
+        });
+        
+        // Insert pause button after play button
+        btnPlay.parentNode.insertBefore(btnPause, btnPlay.nextSibling);
+
+        btnReset.addEventListener('click', () => {
+            isPlaying = false;
+            if(autoPlayTimer) clearTimeout(autoPlayTimer);
+            if(pauseResolve) pauseResolve();
+            isPaused = false;
+            btnPause.innerHTML = '⏸ Pause';
+            btnPause.disabled = true;
+            
+            state = 0;
+            logOutput.innerHTML = '<div class="log-entry">System reset. Awaiting execution trigger...</div>';
+            clearHighlight();
+            inputs.forEach(i => i.disabled = false);
+            btnStep.disabled = false;
+            btnPlay.disabled = false;
+            document.getElementById('badge-code').className = 'status-badge';
+            document.getElementById('badge-code').innerText = 'Idle';
+            document.getElementById('panel-code').classList.remove('active');
+            drawStage(0);
+        });
+
+        // Init
+        drawStage(0);
+
+    </script>
+</body>
+</html>

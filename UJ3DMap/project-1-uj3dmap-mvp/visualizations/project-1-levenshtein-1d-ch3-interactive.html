@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levenshtein 1D Optimization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #4ade80;
+            
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #3b82f6;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 100px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        .code-display {
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            overflow-y: auto;
+            flex: 1;
+            color: var(--text-dim);
+        }
+        .code-line { margin: 0; padding: 2px 5px; border-radius: 3px; }
+        .code-line.active { background: rgba(192, 132, 252, 0.2); color: #fff; border-left: 3px solid var(--purple); }
+
+        .array-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+        .array-row {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .array-label {
+            width: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--purple);
+            font-weight: bold;
+        }
+        .cell {
+            width: 40px; height: 40px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        .cell.active {
+            background: rgba(74, 222, 128, 0.3);
+            border-color: var(--green);
+            transform: scale(1.1);
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        .btn-play { color: var(--green); border-color: var(--green); }
+        .btn-pause { color: var(--red); border-color: var(--red); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Levenshtein 1D Optimization</h1>
+    </header>
+
+    <div class="container">
+        <!-- Canvas -->
+        <div class="panel">
+            <div class="panel-title">Canvas (1D Arrays)</div>
+            <div class="array-container" id="canvas">
+                <div style="font-family: monospace; margin-bottom: 10px; color: var(--text-dim); text-align: center;">
+                    s = "kitten" <br>
+                    t = "sitting"
+                </div>
+                <div class="array-row" id="row-v0">
+                    <div class="array-label">v0</div>
+                </div>
+                <div class="array-row" id="row-v1">
+                    <div class="array-label">v1</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code -->
+        <div class="panel">
+            <div class="panel-title">Code Display</div>
+            <div class="code-display" id="code-display">
+<div class="code-line" id="line-1">for (let i = 0; i &lt; s.length; i++) {</div>
+<div class="code-line" id="line-2">  v1[0] = i + 1;</div>
+<div class="code-line" id="line-3">  for (let j = 0; j &lt; t.length; j++) {</div>
+<div class="code-line" id="line-4">    let delCost = v0[j + 1] + 1;</div>
+<div class="code-line" id="line-5">    let insCost = v1[j] + 1;</div>
+<div class="code-line" id="line-6">    let subCost = v0[j] + (s[i] === t[j] ? 0 : 1);</div>
+<div class="code-line" id="line-7">    v1[j + 1] = Math.min(delCost, insCost, subCost);</div>
+<div class="code-line" id="line-8">  }</div>
+<div class="code-line" id="line-9">  // Swap v0 and v1</div>
+<div class="code-line" id="line-10">  let temp = v0; v0 = v1; v1 = temp;</div>
+<div class="code-line" id="line-11">}</div>
+            </div>
+        </div>
+
+        <!-- Log -->
+        <div class="panel" style="grid-column: 1 / -1;">
+            <div class="panel-title">System Log</div>
+            <div class="log-panel" id="log"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="master-controls">
+            <button class="btn-play" onclick="play()">▶ Play</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button onclick="step()">⏭ Step</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const UI = {
+            v0: document.getElementById('row-v0'),
+            v1: document.getElementById('row-v1'),
+            log: document.getElementById('log'),
+            lines: {}
+        };
+        for(let i=1; i<=11; i++) UI.lines[i] = document.getElementById(`line-${i}`);
+
+        const state = { paused: true, resolveStep: null };
+        let isPaused = false; let pauseResolve = null; let isPlaying = false;
+        const s = "kitten";
+        const t = "sitting";
+        
+        let v0 = new Array(t.length + 1).fill(0);
+        let v1 = new Array(t.length + 1).fill(0);
+
+        function renderArrays(activeJ = -1) {
+            // clear
+            const label0 = UI.v0.children[0];
+            const label1 = UI.v1.children[0];
+            UI.v0.innerHTML = ''; UI.v0.appendChild(label0);
+            UI.v1.innerHTML = ''; UI.v1.appendChild(label1);
+
+            for(let k=0; k<=t.length; k++) {
+                const c0 = document.createElement('div');
+                c0.className = 'cell';
+                c0.innerText = v0[k];
+                UI.v0.appendChild(c0);
+
+                const c1 = document.createElement('div');
+                c1.className = 'cell';
+                c1.innerText = v1[k];
+                if (k === activeJ) c1.classList.add('active');
+                UI.v1.appendChild(c1);
+            }
+        }
+
+        function logMsg(msg, color='#fff') {
+            const div = document.createElement('div');
+            div.style.color = color;
+            div.innerText = `> ${msg}`;
+            UI.log.appendChild(div);
+            UI.log.scrollTop = UI.log.scrollHeight;
+        }
+
+        function highlight(line) {
+            Object.values(UI.lines).forEach(el => el.classList.remove('active'));
+            if(UI.lines[line]) UI.lines[line].classList.add('active');
+        }
+
+        async function waitStep() {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            if (state.paused) {
+                await new Promise(r => state.resolveStep = r);
+            } else {
+                await new Promise(r => setTimeout(r, 600));
+            }
+        }
+
+        function play() {
+            state.paused = false;
+            isPlaying = true;
+            document.getElementById('btn-pause').disabled = false;
+            if (state.resolveStep) {
+                state.resolveStep();
+                state.resolveStep = null;
+            }
+        }
+        function pause() { state.paused = true; }
+        function step() {
+            state.paused = true;
+            if (state.resolveStep) {
+                state.resolveStep();
+                state.resolveStep = null;
+            }
+        }
+
+        async function runLevenshtein() {
+            for(let k=0; k<=t.length; k++) v0[k] = k;
+            renderArrays();
+            logMsg('Initialized v0 array');
+
+            for (let i = 0; i < s.length; i++) {
+                highlight(1); await waitStep();
+                
+                v1[0] = i + 1;
+                renderArrays(0);
+                highlight(2); await waitStep();
+
+                for (let j = 0; j < t.length; j++) {
+                    highlight(3); await waitStep();
+
+                    let delCost = v0[j + 1] + 1;
+                    highlight(4); await waitStep();
+
+                    let insCost = v1[j] + 1;
+                    highlight(5); await waitStep();
+
+                    let subCost = v0[j] + (s[i] === t[j] ? 0 : 1);
+                    highlight(6); await waitStep();
+
+                    v1[j + 1] = Math.min(delCost, insCost, subCost);
+                    renderArrays(j + 1);
+                    logMsg(`cell[${i}][${j}] (s='${s[i]}', t='${t[j]}') => min(del:${delCost}, ins:${insCost}, sub:${subCost}) = ${v1[j+1]}`, 'var(--green)');
+                    highlight(7); await waitStep();
+                }
+
+                highlight(9); await waitStep();
+                // Swap
+                for(let k=0; k<=t.length; k++) v0[k] = v1[k];
+                renderArrays();
+                logMsg(`Swapped v0 and v1 for next row`, 'var(--purple)');
+                highlight(10); await waitStep();
+            }
+            logMsg(`Final Distance: ${v0[t.length]}`, 'var(--red)');
+        }
+
+        const btnPause = document.getElementById('btn-pause');
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            isPlaying = false;
+            isPaused = false;
+            if (pauseResolve) pauseResolve();
+            btnPause.innerText = '⏸ Pause';
+            location.reload();
+        });
+        btnPause.addEventListener('click', () => {
+            if (!isPaused) {
+                isPaused = true;
+                btnPause.innerText = '▶ Resume';
+            } else {
+                isPaused = false;
+                btnPause.innerText = '⏸ Pause';
+                if (pauseResolve) pauseResolve();
+            }
+        });
+
+        // Start async loop
+        runLevenshtein().then(() => { btnPause.disabled = true; isPlaying = false; });
+    </script>
+</body>
+</html>

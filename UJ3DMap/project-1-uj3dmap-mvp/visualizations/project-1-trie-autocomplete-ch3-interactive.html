@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trie Tree & Autocomplete O(m) - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(192, 132, 252, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--purple);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--purple); box-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.active { background: var(--purple); color: #fff; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .code-line.executing { background: rgba(192, 132, 252, 0.2); border-left: 3px solid var(--purple); }
+
+        /* Tree Visualization */
+        .tree-view {
+            flex-grow: 1;
+            position: relative;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+        }
+
+        svg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        line { stroke: var(--border); stroke-width: 2; transition: all 0.3s; }
+        line.active { stroke: var(--purple); stroke-width: 4; box-shadow: 0 0 10px var(--purple); }
+
+        .nodes-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .node {
+            position: absolute;
+            width: 36px; height: 36px;
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+            transform: translate(-50%, -50%);
+        }
+
+        .node.root { background: #0f172a; border-style: dashed; }
+        
+        .node.active {
+            background: rgba(192, 132, 252, 0.2);
+            color: var(--text);
+            border-color: var(--purple);
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 15px rgba(192, 132, 252, 0.5);
+        }
+
+        .node.match {
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--green);
+            border-color: var(--green);
+            transform: translate(-50%, -50%) scale(1.2);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
+        }
+
+        .node::after {
+            content: attr(data-word);
+            position: absolute;
+            top: 100%;
+            margin-top: 5px;
+            font-size: 0.75rem;
+            color: var(--green);
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+        .node.match::after { opacity: 1; }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.traverse { border-left-color: var(--purple); color: var(--purple); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+        .log-entry.fail { border-left-color: var(--red); color: var(--red); }
+        .log-entry.warn { border-left-color: var(--yellow); color: var(--yellow); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 15px 25px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        .search-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-box {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px 15px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            width: 150px;
+            transition: border-color 0.3s;
+        }
+        .search-box:focus { border-color: var(--purple); }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(192, 132, 252, 0.1); border-color: var(--purple); color: var(--purple); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(192, 132, 252, 0.15); color: var(--purple); border-color: var(--purple); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+
+        .stats-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Trie Tree Autocomplete</h1>
+        <p>O(m) Prefix Search vs O(N*m) Array Scan</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Tree Visualization -->
+        <div class="panel" id="panel-vis">
+            <div class="panel-title">1. Trie Topology <span class="status-badge" id="badge-vis">Ready</span></div>
+            <div class="tree-view" id="tree-view">
+                <svg id="svg-lines"></svg>
+                <div class="nodes-layer" id="nodes-layer"></div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Trie Node Logic <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="keyword">class</span> TrieNode {</span>
+<span class="code-line" id="line-1">  <span class="keyword">constructor</span>() {</span>
+<span class="code-line" id="line-2">    <span class="keyword">this</span>.children = {};</span>
+<span class="code-line" id="line-3">    <span class="keyword">this</span>.isWord = <span class="keyword">false</span>;</span>
+<span class="code-line" id="line-4">  }</span>
+<span class="code-line" id="line-5">}</span>
+<span class="code-line" id="line-6"></span>
+<span class="code-line" id="line-7"><span class="keyword">function</span> searchPrefix(prefix) {</span>
+<span class="code-line" id="line-8">  <span class="keyword">let</span> node = root;</span>
+<span class="code-line" id="line-9">  <span class="keyword">for</span> (<span class="keyword">let</span> char <span class="keyword">of</span> prefix) {</span>
+<span class="code-line" id="line-10">    <span class="keyword">if</span> (!node.children[char]) {</span>
+<span class="code-line" id="line-11">      <span class="keyword">return</span> []; <span class="comment">// 404</span></span>
+<span class="code-line" id="line-12">    }</span>
+<span class="code-line" id="line-13">    node = node.children[char];</span>
+<span class="code-line" id="line-14">  }</span>
+<span class="code-line" id="line-15">  <span class="keyword">return</span> collectWords(node, prefix);</span>
+<span class="code-line" id="line-16">}</span></div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Pointer & Traversal Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Waiting for prefix input...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            
+            <div class="search-area">
+                <input type="text" id="searchInput" class="search-box" placeholder="e.g. ca" maxlength="4">
+            </div>
+
+            <div class="btn-group">
+                <button id="btn-run" class="primary">▶ Search Prefix</button>
+                <div style="border-left: 1px solid var(--border); margin: 0 5px;"></div>
+                <button id="btn-step" class="primary" disabled>▶ Step Node</button>
+                <button id="btn-play" disabled>▶▶ Auto-Play</button>
+                <button id="btn-reset">↺ Reset</button>
+            </div>
+
+            <div class="stats-box">
+                <div>Scan Ops (Linear Array): <span id="stat-scan" style="color:var(--red)">0</span></div>
+                <div>Trie Ops (O(m) tree): <span id="stat-trie" style="color:var(--green)">0</span></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const treeData = {
+            id: 'root', char: '*', x: 250, y: 30,
+            children: [
+                {
+                    id: 'c', char: 'c', x: 150, y: 100,
+                    children: [
+                        {
+                            id: 'c-a', char: 'a', x: 150, y: 170,
+                            children: [
+                                { id: 'c-a-t', char: 't', x: 100, y: 240, isWord: true, word: 'cat' },
+                                { id: 'c-a-r', char: 'r', x: 200, y: 240, isWord: true, word: 'car' }
+                            ]
+                        },
+                        { id: 'c-o', char: 'o', x: 50, y: 170, children: [
+                            { id: 'c-o-w', char: 'w', x: 50, y: 240, isWord: true, word: 'cow'}
+                        ] }
+                    ]
+                },
+                {
+                    id: 'b', char: 'b', x: 350, y: 100,
+                    children: [
+                        {
+                            id: 'b-a', char: 'a', x: 350, y: 170,
+                            children: [
+                                { id: 'b-a-t', char: 't', x: 300, y: 240, isWord: true, word: 'bat' },
+                                { id: 'b-a-r', char: 'r', x: 400, y: 240, isWord: true, word: 'bar' }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        const svgLines = document.getElementById('svg-lines');
+        const nodesLayer = document.getElementById('nodes-layer');
+        const searchInput = document.getElementById('searchInput');
+        const logOutput = document.getElementById('log-output');
+        
+        const btnRun = document.getElementById('btn-run');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const statScan = document.getElementById('stat-scan');
+        const statTrie = document.getElementById('stat-trie');
+
+        const nodeElements = {};
+        const lineElements = {};
+
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let isExecuting = false;
+        let isPaused = false;
+        let pauseResolve = null;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function highlightLine(lineNumbers) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        async function waitForStep() {
+            if (isAutoPlaying) {
+                if (isPaused) await new Promise(r => pauseResolve = r);
+                if (!isExecuting) return;
+                await new Promise(r => setTimeout(r, 600));
+                if (isPaused) await new Promise(r => pauseResolve = r);
+            } else {
+                return new Promise(resolve => {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    resolveStep = resolve;
+                });
+            }
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            btnPause.disabled = false;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        const btnPause = document.createElement('button');
+        btnPause.id = 'btn-pause';
+        btnPause.innerHTML = '⏸ Pause';
+        btnPause.disabled = true;
+        btnPause.addEventListener('click', () => {
+            if (isPaused) {
+                isPaused = false;
+                btnPause.innerHTML = '⏸ Pause';
+                if (pauseResolve) {
+                    pauseResolve();
+                    pauseResolve = null;
+                }
+            } else {
+                isPaused = true;
+                btnPause.innerHTML = '▶ Resume';
+            }
+        });
+        
+        btnPlay.parentNode.insertBefore(btnPause, btnPlay.nextSibling);
+
+        function findNode(tree, id) {
+            if (tree.id === id) return tree;
+            if (tree.children) {
+                for (let child of tree.children) {
+                    const found = findNode(child, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        function renderTree(node, parentId = null) {
+            const el = document.createElement('div');
+            el.className = `node ${node.id === 'root' ? 'root' : ''}`;
+            el.style.left = `${node.x}px`;
+            el.style.top = `${node.y}px`;
+            el.innerText = node.char;
+            if(node.isWord) el.setAttribute('data-word', node.word);
+            
+            nodesLayer.appendChild(el);
+            nodeElements[node.id] = el;
+
+            if (parentId) {
+                const parentNode = findNode(treeData, parentId);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                // Offset 18px for center of 36px node
+                line.setAttribute('x1', parentNode.x);
+                line.setAttribute('y1', parentNode.y);
+                line.setAttribute('x2', node.x);
+                line.setAttribute('y2', node.y);
+                line.setAttribute('id', `line-${parentId}-${node.id}`);
+                
+                svgLines.appendChild(line);
+                lineElements[node.id] = line;
+            }
+
+            if (node.children) {
+                node.children.forEach(child => renderTree(child, node.id));
+            }
+        }
+
+        function resetUI() {
+            Object.values(nodeElements).forEach(el => el.classList.remove('active', 'match'));
+            Object.values(lineElements).forEach(el => el.classList.remove('active'));
+            highlightLine([]);
+            statScan.innerText = '0';
+            statTrie.innerText = '0';
+            document.getElementById('panel-vis').classList.remove('active');
+            document.getElementById('badge-code').className = 'status-badge';
+            document.getElementById('badge-code').innerText = 'Idle';
+            document.getElementById('badge-vis').className = 'status-badge';
+            document.getElementById('badge-vis').innerText = 'Ready';
+        }
+
+        async function highlightChildren(node) {
+            if (!node) return;
+            if (node.isWord) {
+                nodeElements[node.id].classList.add('match');
+            }
+            if (node.children) {
+                for(let child of node.children) {
+                    nodeElements[child.id].classList.add('active');
+                    if (lineElements[child.id]) lineElements[child.id].classList.add('active');
+                    await waitForStep();
+                    await highlightChildren(child);
+                }
+            }
+        }
+
+        async function runSearch() {
+            if (isExecuting) return;
+            const prefix = searchInput.value.toLowerCase().trim();
+            if (!prefix) return;
+
+            isExecuting = true;
+            btnRun.disabled = true;
+            searchInput.disabled = true;
+            resetUI();
+            
+            document.getElementById('panel-vis').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Searching';
+            
+            // Assume dict size of 50,000 for scan contrast
+            statScan.innerText = (50000).toLocaleString();
+            
+            log(`Starting Trie Traversal for prefix: '${prefix}'`, 'traverse');
+            highlightLine([8]);
+            nodeElements['root'].classList.add('active');
+            let currentPath = [];
+            let isValid = true;
+            let ops = 0;
+            
+            await waitForStep();
+
+            for (let i = 0; i < prefix.length; i++) {
+                highlightLine([9, 10]);
+                const char = prefix[i];
+                let nodeId = i === 0 ? char : `${currentPath[i-1]}-${char}`;
+                
+                ops++;
+                statTrie.innerText = ops;
+
+                if (nodeElements[nodeId]) {
+                    highlightLine([13]);
+                    log(`Node '${char}' found. Descending...`, 'traverse');
+                    currentPath.push(nodeId);
+                    nodeElements[nodeId].classList.add('active');
+                    if (lineElements[nodeId]) lineElements[nodeId].classList.add('active');
+                    await waitForStep();
+                } else {
+                    highlightLine([11]);
+                    log(`Dead end at '${char}'. Prefix not in dictionary.`, 'fail');
+                    isValid = false;
+                    break;
+                }
+            }
+
+            if (isValid && currentPath.length > 0) {
+                highlightLine([15]);
+                log(`Prefix found. Collecting child words (DFS)...`, 'result');
+                const lastNodeId = currentPath[currentPath.length - 1];
+                await highlightChildren(findNode(treeData, lastNodeId));
+                log(`Collection complete. Returned predictions.`, 'result');
+            }
+
+            document.getElementById('badge-code').className = 'status-badge done';
+            document.getElementById('badge-code').innerText = 'Idle';
+            
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            btnPause.disabled = true;
+            isAutoPlaying = false;
+        }
+
+        btnRun.addEventListener('click', runSearch);
+        btnReset.addEventListener('click', () => {
+            isExecuting = false;
+            btnRun.disabled = false;
+            searchInput.disabled = false;
+            searchInput.value = '';
+            
+            isAutoPlaying = false;
+            isPaused = false;
+            btnPause.innerHTML = '⏸ Pause';
+            btnPause.disabled = true;
+            if (pauseResolve) {
+                pauseResolve();
+                pauseResolve = null;
+            }
+            if (resolveStep) {
+                resolveStep();
+                resolveStep = null;
+            }
+            
+            resetUI();
+            logOutput.innerHTML = '<div class="log-entry">Waiting for prefix input...</div>';
+        });
+
+        // Init
+        renderTree(treeData);
+
+    </script>
+</body>
+</html>

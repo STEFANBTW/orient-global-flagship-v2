@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Architecture - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #3b82f6;
+            --c-https: #10b981;
+            --c-manifest: #f59e0b;
+            --c-sw: #c084fc;
+            --c-off: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        /* Panel 1: Three Pillars */
+        .pillar-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        .pillar {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pillar::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0; width: 4px;
+            background: var(--surface2);
+            transition: background 0.5s;
+        }
+
+        .pillar.active.https::before { background: var(--c-https); box-shadow: 0 0 10px var(--c-https); }
+        .pillar.active.manifest::before { background: var(--c-manifest); box-shadow: 0 0 10px var(--c-manifest); }
+        .pillar.active.sw::before { background: var(--c-sw); box-shadow: 0 0 10px var(--c-sw); }
+
+        .pillar-icon { font-size: 1.5rem; opacity: 0.2; transition: opacity 0.5s; }
+        .pillar.active .pillar-icon { opacity: 1; }
+
+        .pillar-content { flex: 1; }
+        .pillar-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; color: var(--text-dim); transition: color 0.5s; }
+        .pillar.active .pillar-title { color: var(--text); }
+        .pillar-desc { font-size: 0.75rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+        .pillar-status { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: bold; color: var(--c-off); transition: color 0.5s; }
+        .pillar.active .pillar-status { color: var(--c-https); }
+
+        /* Panel 2: Browser Engine */
+        .engine-area {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sys-check {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sys-check .bool { color: var(--c-off); font-weight: bold; }
+        .sys-check.pass .bool { color: var(--c-https); }
+
+        /* Panel 3: Cache Storage */
+        .cache-vis {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-grow: 1;
+        }
+        
+        .flow-diagram {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .flow-node {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.3s;
+        }
+        
+        .flow-node.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); color: var(--accent); }
+
+        .flow-arrow { color: var(--border); font-weight: bold; transition: color 0.3s; }
+        .flow-arrow.active { color: var(--accent); }
+
+        .cache-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 8px;
+        }
+
+        .asset {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            opacity: 0.3;
+            transition: all 0.5s;
+        }
+        .asset.cached { opacity: 1; border-color: var(--c-https); color: var(--c-https); }
+
+        /* Panel 4: Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            align-items: center;
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        button.primary { background: rgba(59, 130, 246, 0.15); color: var(--accent); border-color: var(--accent); }
+        button.primary:hover:not(:disabled) { background: rgba(59, 130, 246, 0.25); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+
+        .progress-dots { display: flex; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
+        .dot.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Progressive Web App Architecture</h1>
+        <p>The Three Browser Contracts Required for Installation</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Pillars -->
+        <div class="panel" style="grid-row: 1 / span 2;">
+            <div class="panel-title">1. The Three Pillars <span class="status-badge" id="badge-score">0/3 Met</span></div>
+            <div class="pillar-grid">
+                
+                <div class="pillar https" id="p-https">
+                    <div class="pillar-icon">🔒</div>
+                    <div class="pillar-content">
+                        <div class="pillar-title">Secure Context (HTTPS)</div>
+                        <div class="pillar-desc">Required to prevent MITM attacks on the Service Worker.</div>
+                    </div>
+                    <div class="pillar-status" id="s-https">FALSE</div>
+                </div>
+
+                <div class="pillar manifest" id="p-manifest">
+                    <div class="pillar-icon">📋</div>
+                    <div class="pillar-content">
+                        <div class="pillar-title">Web App Manifest</div>
+                        <div class="pillar-desc">JSON file defining app name, icons, and standalone display.</div>
+                    </div>
+                    <div class="pillar-status" id="s-manifest">FALSE</div>
+                </div>
+
+                <div class="pillar sw" id="p-sw">
+                    <div class="pillar-icon">⚙️</div>
+                    <div class="pillar-content">
+                        <div class="pillar-title">Service Worker</div>
+                        <div class="pillar-desc">Background V8 thread that intercepts fetch() events.</div>
+                    </div>
+                    <div class="pillar-status" id="s-sw">FALSE</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Panel 2: Browser Check -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">2. Chromium V8 Capability</div>
+                <div class="engine-area">
+                    <div class="sys-check" id="sys-sec">
+                        <span>window.isSecureContext</span>
+                        <span class="bool">false</span>
+                    </div>
+                    <div class="sys-check" id="sys-sw">
+                        <span>'serviceWorker' in navigator</span>
+                        <span class="bool">false</span>
+                    </div>
+                    <div class="sys-check" id="sys-prompt">
+                        <span>BeforeInstallPromptEvent fired</span>
+                        <span class="bool">false</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Cache -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">3. Cache Storage API</div>
+                <div class="cache-vis">
+                    <div class="flow-diagram">
+                        <div class="flow-node" id="fn-net">Network</div>
+                        <div class="flow-arrow" id="fa-1">→</div>
+                        <div class="flow-node" id="fn-sw">Service Worker</div>
+                        <div class="flow-arrow" id="fa-2">→</div>
+                        <div class="flow-node" id="fn-cache">Cache Storage</div>
+                    </div>
+                    <div class="cache-box" id="cache-box">
+                        <div class="asset" id="a1">index.html</div>
+                        <div class="asset" id="a2">app.js</div>
+                        <div class="asset" id="a3">style.css</div>
+                        <div class="asset" id="a4">pois.json</div>
+                        <div class="asset" id="a5">OSM tiles (×48)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-prev" disabled>← Previous</button>
+            <div class="progress-dots">
+                <div class="dot active" id="dot-0"></div>
+                <div class="dot" id="dot-1"></div>
+                <div class="dot" id="dot-2"></div>
+                <div class="dot" id="dot-3"></div>
+            </div>
+            <button id="btn-next" class="primary">Next Step →</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            btnPrev: document.getElementById('btn-prev'),
+            btnNext: document.getElementById('btn-next'),
+            badgeScore: document.getElementById('badge-score'),
+            pHttps: document.getElementById('p-https'),
+            pManifest: document.getElementById('p-manifest'),
+            pSw: document.getElementById('p-sw'),
+            sHttps: document.getElementById('s-https'),
+            sManifest: document.getElementById('s-manifest'),
+            sSw: document.getElementById('s-sw'),
+            sysSec: document.getElementById('sys-sec'),
+            sysSw: document.getElementById('sys-sw'),
+            sysPrompt: document.getElementById('sys-prompt'),
+            fnNet: document.getElementById('fn-net'),
+            fnSw: document.getElementById('fn-sw'),
+            fnCache: document.getElementById('fn-cache'),
+            fa1: document.getElementById('fa-1'),
+            fa2: document.getElementById('fa-2'),
+            a1: document.getElementById('a1'),
+            a2: document.getElementById('a2'),
+            a3: document.getElementById('a3'),
+            a4: document.getElementById('a4'),
+            a5: document.getElementById('a5')
+        };
+
+        let currentStep = 0;
+        const totalSteps = 3;
+        let isPaused = false;
+        let pauseResolve = null;
+        let isPlaying = false;
+
+        const btnPause = document.getElementById('btn-pause');
+        btnPause.addEventListener('click', () => {
+            if (!isPaused) {
+                isPaused = true;
+                btnPause.innerText = '▶ Resume';
+            } else {
+                isPaused = false;
+                btnPause.innerText = '⏸ Pause';
+                if (pauseResolve) pauseResolve();
+            }
+        });
+        
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function updateUI() {
+            // Update dots
+            for(let i=0; i<=3; i++) {
+                document.getElementById('dot-'+i).className = i === currentStep ? 'dot active' : 'dot';
+            }
+            
+            UI.btnPrev.disabled = currentStep === 0;
+            UI.btnNext.disabled = currentStep === totalSteps;
+            
+            UI.badgeScore.innerText = `${currentStep}/3 Met`;
+            if (currentStep === 3) {
+                UI.badgeScore.className = 'status-badge active';
+            } else {
+                UI.badgeScore.className = 'status-badge';
+            }
+        }
+
+        async function step1() {
+            UI.pHttps.classList.add('active');
+            UI.sHttps.innerText = 'TRUE';
+            
+            UI.sysSec.classList.add('pass');
+            UI.sysSec.querySelector('.bool').innerText = 'true';
+            UI.sysSw.classList.add('pass');
+            UI.sysSw.querySelector('.bool').innerText = 'true';
+        }
+        
+        function rev1() {
+            UI.pHttps.classList.remove('active');
+            UI.sHttps.innerText = 'FALSE';
+            
+            UI.sysSec.classList.remove('pass');
+            UI.sysSec.querySelector('.bool').innerText = 'false';
+            UI.sysSw.classList.remove('pass');
+            UI.sysSw.querySelector('.bool').innerText = 'false';
+        }
+
+        async function step2() {
+            UI.pManifest.classList.add('active');
+            UI.sManifest.innerText = 'TRUE';
+        }
+        
+        function rev2() {
+            UI.pManifest.classList.remove('active');
+            UI.sManifest.innerText = 'FALSE';
+        }
+
+        async function step3() {
+            UI.pSw.classList.add('active');
+            UI.sSw.innerText = 'TRUE';
+            
+            UI.sysPrompt.classList.add('pass');
+            UI.sysPrompt.querySelector('.bool').innerText = 'true';
+            
+            // Animate caching
+            UI.fnNet.classList.add('active');
+            await sleep(300);
+            UI.fa1.classList.add('active');
+            UI.fnSw.classList.add('active');
+            await sleep(300);
+            UI.fa2.classList.add('active');
+            UI.fnCache.classList.add('active');
+            
+            await sleep(500);
+            UI.a1.classList.add('cached');
+            await sleep(200);
+            UI.a2.classList.add('cached');
+            await sleep(200);
+            UI.a3.classList.add('cached');
+            await sleep(200);
+            UI.a4.classList.add('cached');
+            await sleep(200);
+            UI.a5.classList.add('cached');
+            
+            await sleep(1000);
+            // Switch to offline mode
+            UI.fnNet.style.opacity = '0.2';
+            UI.fa1.style.opacity = '0.2';
+            UI.fnNet.innerText = 'Offline';
+            UI.fnSw.style.borderColor = 'var(--c-https)';
+            UI.fnSw.style.color = 'var(--c-https)';
+            UI.fa2.style.color = 'var(--c-https)';
+            UI.fa2.innerText = '←';
+            UI.fnCache.style.borderColor = 'var(--c-https)';
+            UI.fnCache.style.color = 'var(--c-https)';
+        }
+        
+        function rev3() {
+            UI.pSw.classList.remove('active');
+            UI.sSw.innerText = 'FALSE';
+            
+            UI.sysPrompt.classList.remove('pass');
+            UI.sysPrompt.querySelector('.bool').innerText = 'false';
+            
+            UI.fnNet.classList.remove('active');
+            UI.fa1.classList.remove('active');
+            UI.fnSw.classList.remove('active');
+            UI.fa2.classList.remove('active');
+            UI.fnCache.classList.remove('active');
+            
+            UI.a1.classList.remove('cached');
+            UI.a2.classList.remove('cached');
+            UI.a3.classList.remove('cached');
+            UI.a4.classList.remove('cached');
+            UI.a5.classList.remove('cached');
+            
+            UI.fnNet.style.opacity = '1';
+            UI.fa1.style.opacity = '1';
+            UI.fnNet.innerText = 'Network';
+            UI.fnSw.style.borderColor = '';
+            UI.fnSw.style.color = '';
+            UI.fa2.style.color = '';
+            UI.fa2.innerText = '→';
+            UI.fnCache.style.borderColor = '';
+            UI.fnCache.style.color = '';
+        }
+
+        UI.btnNext.addEventListener('click', async () => {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            currentStep++;
+            btnPause.disabled = false;
+            isPlaying = true;
+            if (currentStep === 1) await step1();
+            if (currentStep === 2) await step2();
+            if (currentStep === 3) await step3();
+            updateUI();
+            btnPause.disabled = true;
+            isPlaying = false;
+        });
+
+        UI.btnPrev.addEventListener('click', () => {
+            if (currentStep === 3) rev3();
+            if (currentStep === 2) rev2();
+            if (currentStep === 1) rev1();
+            currentStep--;
+            updateUI();
+        });
+
+    </script>
+</body>
+</html>

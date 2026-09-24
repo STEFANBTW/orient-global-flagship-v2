@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App Manifest OS Integration - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(192, 132, 252, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--purple);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--purple); box-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--purple); color: #fff; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .editor {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea {
+            width: 100%;
+            flex-grow: 1;
+            background: transparent;
+            color: var(--accent);
+            border: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        /* OS Simulator */
+        .simulator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .phone {
+            width: 260px;
+            height: 520px;
+            border: 10px solid #222;
+            border-radius: 36px;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 15px 30px rgba(0,0,0,0.5);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .status-bar {
+            height: 24px;
+            background: rgba(0,0,0,0.2);
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 15px;
+            box-sizing: border-box;
+            align-items: center;
+            font-size: 0.6rem;
+            color: white;
+            z-index: 10;
+            transition: background 0.3s;
+        }
+
+        .screen-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: opacity 0.5s;
+        }
+
+        /* Home Screen */
+        .home-screen {
+            background: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="%230f172a"/><circle cx="50" cy="50" r="20" fill="%231e293b"/></svg>');
+            background-size: cover;
+            padding-top: 40px;
+            opacity: 1;
+            z-index: 1;
+        }
+
+        .app-icon-container {
+            width: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+            cursor: pointer;
+        }
+
+        .app-icon {
+            width: 50px;
+            height: 50px;
+            background: #fff;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #000;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+        .app-icon-container:active .app-icon { transform: scale(0.9); }
+
+        .app-label {
+            margin-top: 5px;
+            font-size: 0.7rem;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+
+        /* Splash Screen */
+        .splash-screen {
+            background: var(--bg);
+            opacity: 0;
+            z-index: 2;
+            pointer-events: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .splash-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .splash-icon {
+            width: 80px;
+            height: 80px;
+            background: #fff;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #000;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .splash-text {
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.3s ease; }
+        .log-entry.event { border-left-color: var(--purple); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+        .log-entry.warn { border-left-color: var(--orange); color: var(--orange); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(192, 132, 252, 0.1); border-color: var(--purple); color: var(--purple); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(192, 132, 252, 0.15); color: var(--purple); border-color: var(--purple); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Web App Manifest Integration</h1>
+        <p>OS-level PWA parsing for Home Screen and Splash generation</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: OS Simulator -->
+        <div class="panel" id="panel-sim">
+            <div class="panel-title">1. OS Environment <span class="status-badge" id="badge-sim">Home</span></div>
+            <div class="simulator">
+                <div class="phone">
+                    <div class="status-bar" id="status-bar">
+                        <span>12:00</span>
+                        <span>5G 🔋</span>
+                    </div>
+                    
+                    <div class="screen-layer home-screen" id="home-screen">
+                        <div class="app-icon-container" id="app-trigger">
+                            <div class="app-icon">U3D</div>
+                            <div class="app-label" id="home-label">UJ3DMap</div>
+                        </div>
+                    </div>
+                    
+                    <div class="screen-layer splash-screen" id="splash-screen">
+                        <div class="splash-icon">U3D</div>
+                        <div class="splash-text" id="splash-label">UJ3DMap Navigator</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Manifest Editor & Log -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel" id="panel-code" style="flex-grow: 1;">
+                <div class="panel-title">2. manifest.json <span class="status-badge" id="badge-code">Editable</span></div>
+                <div class="editor">
+<textarea id="json-input">
+{
+  "name": "UJ3DMap Navigator",
+  "short_name": "UJ3DMap",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#3B82F6",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ]
+}
+</textarea>
+                </div>
+            </div>
+
+            <div class="panel" id="panel-log" style="height: 180px;">
+                <div class="panel-title">3. OS Parser Log <span class="status-badge" id="badge-log">Waiting</span></div>
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">Awaiting manifest compilation...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-compile" class="primary">Install / Compile JSON</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-launch" disabled>Tap App Icon</button>
+            <button id="btn-home" disabled>Press Home Button</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnCompile = document.getElementById('btn-compile');
+        const btnLaunch = document.getElementById('btn-launch');
+        const btnHome = document.getElementById('btn-home');
+        const appTrigger = document.getElementById('app-trigger');
+        
+        const jsonInput = document.getElementById('json-input');
+        const logOutput = document.getElementById('log-output');
+        
+        const homeLabel = document.getElementById('home-label');
+        const splashLabel = document.getElementById('splash-label');
+        const splashScreen = document.getElementById('splash-screen');
+        const statusBar = document.getElementById('status-bar');
+
+        let currentManifest = null;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        btnCompile.addEventListener('click', () => {
+            try {
+                const raw = jsonInput.value;
+                currentManifest = JSON.parse(raw);
+                
+                log(`OS parsing manifest.json...`, 'event');
+                
+                // Extract keys
+                const name = currentManifest.name || 'App';
+                const short = currentManifest.short_name || name;
+                const bg = currentManifest.background_color || '#ffffff';
+                const theme = currentManifest.theme_color || '#000000';
+                const display = currentManifest.display || 'browser';
+                
+                log(`Parsed short_name: "${short}" -> Home Screen Label`, 'result');
+                log(`Parsed name: "${name}" -> Splash Screen Name`, 'result');
+                log(`Parsed background_color: "${bg}" -> Splash Screen Fill`, 'result');
+                log(`Parsed theme_color: "${theme}" -> Status Bar Tint`, 'result');
+                log(`Parsed display mode: "${display}"`, 'result');
+                
+                // Apply to DOM
+                homeLabel.innerText = short;
+                splashLabel.innerText = name;
+                splashScreen.style.backgroundColor = bg;
+                
+                btnLaunch.disabled = false;
+                log(`Installation complete. App icon added to Home Screen.`, 'event');
+                
+                document.getElementById('badge-code').className = 'status-badge done';
+                document.getElementById('badge-code').innerText = 'Valid JSON';
+
+            } catch(err) {
+                log(`JSON Parse Error: ${err.message}`, 'warn');
+                document.getElementById('badge-code').className = 'status-badge warn';
+                document.getElementById('badge-code').innerText = 'Syntax Error';
+                btnLaunch.disabled = true;
+            }
+        });
+
+        async function launchApp() {
+            if(!currentManifest) return;
+            
+            btnLaunch.disabled = true;
+            btnCompile.disabled = true;
+            
+            log(`User tapped app icon. Initiating launch...`, 'event');
+            
+            // Splash State
+            splashScreen.classList.add('active');
+            statusBar.style.backgroundColor = currentManifest.theme_color || '#000';
+            
+            if (currentManifest.display === 'standalone' || currentManifest.display === 'fullscreen') {
+                log(`Display mode is '${currentManifest.display}'. Hiding browser UI constraints.`, 'result');
+            } else {
+                log(`Display mode is '${currentManifest.display}'. Showing default browser shell.`, 'warn');
+            }
+            
+            document.getElementById('badge-sim').innerText = 'Splash Screen';
+            document.getElementById('badge-sim').className = 'status-badge active';
+            
+            // Wait for "app to load"
+            await sleep(2000);
+            
+            log(`App bundle loaded. Rendering viewport.`, 'result');
+            // Hide splash screen - pretend app UI is underneath.
+            // For demo purposes, we will just show a dark blank screen as the "App UI"
+            splashScreen.classList.remove('active');
+            
+            document.getElementById('badge-sim').innerText = 'Running App';
+            btnHome.disabled = false;
+        }
+
+        btnLaunch.addEventListener('click', launchApp);
+        appTrigger.addEventListener('click', launchApp);
+
+        btnHome.addEventListener('click', () => {
+            log(`Hardware Home Button pressed. Returning to OS Home.`, 'event');
+            splashScreen.classList.remove('active'); // ensure it's off
+            statusBar.style.backgroundColor = 'rgba(0,0,0,0.2)';
+            
+            document.getElementById('badge-sim').innerText = 'Home';
+            document.getElementById('badge-sim').className = 'status-badge';
+            
+            btnHome.disabled = true;
+            btnLaunch.disabled = false;
+            btnCompile.disabled = false;
+        });
+
+        // Initialize with default state
+        btnCompile.click();
+
+    </script>
+</body>
+</html>

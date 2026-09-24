@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Loop Simulator - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            
+            --c-sync: #facc15;
+            --c-macro: #38bdf8;
+            --c-micro: #c084fc;
+            --c-webapi: #4ade80;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--c-webapi);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        
+        .status-badge.active { background: var(--c-webapi); color: #000; font-weight: bold; box-shadow: 0 0 10px rgba(74, 222, 128, 0.4); }
+
+        /* Stack & Queues */
+        .stack-container {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column-reverse;
+            padding: 15px;
+            gap: 10px;
+            overflow-y: auto;
+        }
+
+        .queue-container {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: row;
+            padding: 15px;
+            gap: 10px;
+            overflow-x: auto;
+            align-items: center;
+            position: relative;
+        }
+
+        .task {
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #000;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            min-width: 100px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .task.sync { background: var(--c-sync); }
+        .task.macro { background: var(--c-macro); }
+        .task.micro { background: var(--c-micro); color: #fff; }
+        .task.webapi { background: var(--c-webapi); }
+
+        .task.executing {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #fff;
+            z-index: 10;
+        }
+
+        /* Console */
+        .console-out {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        .console-line { margin: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+
+        /* Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-sync { border-color: var(--c-sync); color: var(--c-sync); }
+        .btn-sync:hover:not(:disabled) { background: rgba(250, 204, 21, 0.15); box-shadow: 0 0 10px rgba(250, 204, 21, 0.3); }
+        
+        .btn-micro { border-color: var(--c-micro); color: var(--c-micro); }
+        .btn-micro:hover:not(:disabled) { background: rgba(192, 132, 252, 0.15); box-shadow: 0 0 10px rgba(192, 132, 252, 0.3); }
+        
+        .btn-macro { border-color: var(--c-macro); color: var(--c-macro); }
+        .btn-macro:hover:not(:disabled) { background: rgba(56, 189, 248, 0.15); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+
+        .btn-loop {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--c-webapi);
+            border-color: var(--c-webapi);
+            animation: pulse-border 2s infinite;
+        }
+        
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); }
+            50% { box-shadow: 0 0 10px rgba(74, 222, 128, 0.5); }
+        }
+
+        .loop-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 120px;
+            height: 120px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 4px dashed rgba(255,255,255,0.1);
+            z-index: 0;
+            transition: all 0.5s;
+        }
+
+        .loop-spinner.active {
+            border-color: var(--c-webapi);
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Event Loop Architecture</h1>
+        <p>V8 Call Stack, Libuv Threads, and Queue Priorities</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Call Stack & Console -->
+        <div class="panel" style="grid-row: 1 / span 1;">
+            <div class="panel-title">1. V8 Engine <span class="status-badge" id="badge-v8">Idle</span></div>
+            <div style="display: flex; flex-direction: column; gap: 15px; height: 100%;">
+                <div class="stack-container" id="call-stack"></div>
+                <div class="console-out" id="console-out" style="height: 30%;"></div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Queues -->
+        <div class="panel">
+            <div class="panel-title">2. Task Queues <span class="status-badge" id="badge-queues">Idle</span></div>
+            <div style="display: flex; flex-direction: column; gap: 15px; height: 100%;">
+                <div style="display: flex; flex-direction: column; gap: 5px; flex: 1;">
+                    <div style="font-size: 0.75rem; color: var(--c-micro); text-transform: uppercase; font-weight: 600;">Microtask Queue (VIP)</div>
+                    <div class="queue-container" id="micro-queue" style="border-color: rgba(192, 132, 252, 0.3);"></div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 5px; flex: 1;">
+                    <div style="font-size: 0.75rem; color: var(--c-macro); text-transform: uppercase; font-weight: 600;">Macrotask Queue (Standard)</div>
+                    <div class="queue-container" id="macro-queue" style="border-color: rgba(56, 189, 248, 0.3);"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Web APIs & Event Loop -->
+        <div class="panel">
+            <div class="panel-title">3. Web APIs (Background) <span class="status-badge" id="badge-api">Idle</span></div>
+            <div class="queue-container" id="web-api" style="flex-wrap: wrap; border-color: rgba(74, 222, 128, 0.3); align-content: flex-start;">
+                <div class="loop-spinner" id="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button class="btn-sync" onclick="addSync()">Add console.log()</button>
+            <button class="btn-micro" onclick="addMicro()">Add Promise.resolve()</button>
+            <button class="btn-macro" onclick="addMacro()">Add setTimeout()</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button class="btn-loop" id="btn-loop" onclick="spinEventLoop()">Step Event Loop</button>
+            <button onclick="location.reload()">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            stack: document.getElementById('call-stack'),
+            webApi: document.getElementById('web-api'),
+            micro: document.getElementById('micro-queue'),
+            macro: document.getElementById('macro-queue'),
+            console: document.getElementById('console-out'),
+            spinner: document.getElementById('spinner'),
+            btnLoop: document.getElementById('btn-loop'),
+            badgeV8: document.getElementById('badge-v8'),
+            badgeQueues: document.getElementById('badge-queues'),
+            badgeApi: document.getElementById('badge-api')
+        };
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        
+        let idCounter = 1;
+
+        function log(msg, color) {
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.style.color = color;
+            line.innerText = `> ${msg}`;
+            UI.console.appendChild(line);
+            UI.console.scrollTop = UI.console.scrollHeight;
+        }
+
+        async function addSync() {
+            const id = idCounter++;
+            const el = document.createElement('div');
+            el.className = 'task sync';
+            el.innerText = `log(${id})`;
+            UI.stack.appendChild(el);
+            
+            UI.badgeV8.className = 'status-badge active';
+            UI.badgeV8.innerText = 'Executing';
+
+            await sleep(400);
+            el.classList.add('executing');
+            await sleep(400);
+            log(`console.log(${id}) executed`, 'var(--c-sync)');
+            el.remove();
+
+            if (UI.stack.children.length === 0) {
+                UI.badgeV8.className = 'status-badge';
+                UI.badgeV8.innerText = 'Idle';
+            }
+        }
+
+        async function addMicro() {
+            const id = idCounter++;
+            const el = document.createElement('div');
+            el.className = 'task sync executing';
+            el.innerText = `Promise(${id})`;
+            UI.stack.appendChild(el);
+            
+            UI.badgeV8.className = 'status-badge active';
+            UI.badgeV8.innerText = 'Executing';
+
+            await sleep(400);
+            log(`Promise.resolve(${id}) registered`, 'var(--text)');
+            el.remove();
+            
+            if (UI.stack.children.length === 0) {
+                UI.badgeV8.className = 'status-badge';
+                UI.badgeV8.innerText = 'Idle';
+            }
+
+            const microEl = document.createElement('div');
+            microEl.className = 'task micro';
+            microEl.innerText = `.then(${id})`;
+            UI.micro.appendChild(microEl);
+
+            UI.badgeQueues.className = 'status-badge active';
+            UI.badgeQueues.innerText = 'Has Tasks';
+            UI.badgeQueues.style.background = 'var(--c-micro)';
+        }
+
+        async function addMacro() {
+            const id = idCounter++;
+            const el = document.createElement('div');
+            el.className = 'task sync executing';
+            el.innerText = `setTimeout(${id})`;
+            UI.stack.appendChild(el);
+            
+            UI.badgeV8.className = 'status-badge active';
+            UI.badgeV8.innerText = 'Executing';
+
+            await sleep(400);
+            log(`setTimeout(${id}) handed to Web API`, 'var(--text)');
+            el.remove();
+            
+            if (UI.stack.children.length === 0) {
+                UI.badgeV8.className = 'status-badge';
+                UI.badgeV8.innerText = 'Idle';
+            }
+
+            const apiEl = document.createElement('div');
+            apiEl.className = 'task webapi';
+            apiEl.innerText = `Timer(${id})`;
+            UI.webApi.appendChild(apiEl);
+            
+            UI.badgeApi.className = 'status-badge active';
+            UI.badgeApi.innerText = 'Thread Running';
+
+            setTimeout(() => {
+                apiEl.remove();
+                if(UI.webApi.querySelectorAll('.task').length === 0) {
+                    UI.badgeApi.className = 'status-badge';
+                    UI.badgeApi.innerText = 'Idle';
+                }
+
+                const macroEl = document.createElement('div');
+                macroEl.className = 'task macro';
+                macroEl.innerText = `CB(${id})`;
+                UI.macro.appendChild(macroEl);
+                log(`Timer(${id}) completed, queued to Macrotask`, 'var(--c-macro)');
+
+                UI.badgeQueues.className = 'status-badge active';
+                UI.badgeQueues.innerText = 'Has Tasks';
+                UI.badgeQueues.style.background = 'var(--c-macro)';
+            }, 1500);
+        }
+
+        let isLooping = false;
+
+        async function spinEventLoop() {
+            if (isLooping) return;
+            isLooping = true;
+            UI.btnLoop.disabled = true;
+            UI.spinner.classList.add('active');
+
+            if (UI.stack.children.length > 0) {
+                log('Event Loop Blocked: Call Stack not empty!', '#ef4444');
+                UI.spinner.classList.remove('active');
+                UI.btnLoop.disabled = false;
+                isLooping = false;
+                return;
+            }
+
+            // Drain Microtasks
+            while (UI.micro.children.length > 0) {
+                const task = UI.micro.children[0];
+                const text = task.innerText;
+                task.remove();
+
+                UI.badgeV8.className = 'status-badge active';
+                UI.badgeV8.innerText = 'Executing';
+
+                const stackEl = document.createElement('div');
+                stackEl.className = 'task micro executing';
+                stackEl.innerText = text;
+                UI.stack.appendChild(stackEl);
+
+                log(`Event Loop: Executing Microtask ${text}`, 'var(--c-micro)');
+                await sleep(800);
+                
+                log(`${text} completed`, 'var(--c-micro)');
+                stackEl.remove();
+                await sleep(200);
+            }
+
+            // Process ONE Macrotask
+            if (UI.macro.children.length > 0) {
+                const task = UI.macro.children[0];
+                const text = task.innerText;
+                task.remove();
+                
+                UI.badgeV8.className = 'status-badge active';
+                UI.badgeV8.innerText = 'Executing';
+
+                const stackEl = document.createElement('div');
+                stackEl.className = 'task macro executing';
+                stackEl.innerText = text;
+                UI.stack.appendChild(stackEl);
+
+                log(`Event Loop: Executing Macrotask ${text}`, 'var(--c-macro)');
+                await sleep(800);
+
+                log(`${text} completed`, 'var(--c-macro)');
+                stackEl.remove();
+            } else {
+                log(`Event Loop: Macrotask Queue empty.`, 'var(--text-dim)');
+            }
+
+            UI.badgeV8.className = 'status-badge';
+            UI.badgeV8.innerText = 'Idle';
+            
+            if(UI.micro.children.length === 0 && UI.macro.children.length === 0) {
+                UI.badgeQueues.className = 'status-badge';
+                UI.badgeQueues.innerText = 'Idle';
+                UI.badgeQueues.style.background = '';
+            }
+
+            await sleep(500);
+            UI.spinner.classList.remove('active');
+            UI.btnLoop.disabled = false;
+            isLooping = false;
+        }
+
+    </script>
+</body>
+</html>

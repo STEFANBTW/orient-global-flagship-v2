@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB B-Tree vs Full Scan - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #4ade80;
+            --c-scan: #ef4444;
+            --c-btree: #4ade80;
+            --c-target: #facc15;
+            --c-read: #3b82f6;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--c-btree);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status-badge.scan { background: rgba(239, 68, 68, 0.2); color: var(--c-scan); font-weight: bold; }
+        .status-badge.btree { background: rgba(74, 222, 128, 0.2); color: var(--c-btree); font-weight: bold; }
+
+        /* Panel 1: Full Scan */
+        .document-pile {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 2px;
+            overflow-y: hidden;
+            position: relative;
+        }
+
+        .doc-box {
+            width: 12px; height: 12px;
+            background: var(--surface2);
+            border-radius: 2px;
+            transition: background 0.1s;
+        }
+
+        .doc-box.scanned { background: var(--c-scan); box-shadow: 0 0 5px var(--c-scan); }
+        .doc-box.target { background: var(--c-target); box-shadow: 0 0 10px var(--c-target); z-index: 10; transform: scale(1.5); }
+
+        .scan-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(239, 68, 68, 0.1);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .scan-overlay.active { opacity: 1; }
+        .freeze-text { font-size: 1.5rem; color: var(--c-scan); font-weight: bold; text-transform: uppercase; text-shadow: 0 0 20px #000; border: 2px solid var(--c-scan); padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.8); }
+
+        /* Panel 2: B-Tree */
+        .btree-container {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 30px;
+            gap: 50px;
+            position: relative;
+        }
+
+        .tree-level { display: flex; gap: 60px; position: relative; z-index: 10; }
+
+        .tree-node {
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            color: var(--text);
+        }
+
+        .tree-node.active { background: rgba(59, 130, 246, 0.2); border-color: var(--c-read); color: var(--c-read); transform: scale(1.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        .tree-node.target { background: rgba(250, 204, 21, 0.2); border-color: var(--c-target); color: var(--c-target); transform: scale(1.2); box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); z-index: 15; }
+        .tree-node.dim { opacity: 0.2; }
+
+        svg.tree-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        line { stroke: var(--border); stroke-width: 2; transition: all 0.3s; }
+        line.active { stroke: var(--c-read); stroke-width: 3; }
+        line.dim { stroke-opacity: 0.1; }
+
+        /* Panel 3: Stats */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex-grow: 1; }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stat-title { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: bold; color: var(--text); transition: color 0.3s; }
+        .stat-value.bad { color: var(--c-scan); text-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+        .stat-value.good { color: var(--c-btree); text-shadow: 0 0 10px rgba(74, 222, 128, 0.4); }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.scan { border-left-color: var(--c-scan); color: var(--c-scan); }
+        .log-entry.btree { border-left-color: var(--c-btree); color: var(--c-btree); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Panel 4: Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        button.danger { background: rgba(239, 68, 68, 0.15); color: var(--c-scan); border-color: var(--c-scan); }
+        button.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.25); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+        button.success { background: rgba(74, 222, 128, 0.15); color: var(--c-btree); border-color: var(--c-btree); }
+        button.success:hover:not(:disabled) { background: rgba(74, 222, 128, 0.25); box-shadow: 0 0 15px rgba(74, 222, 128, 0.3); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>IndexedDB B-Tree Performance</h1>
+        <p>O(N) Full Collection Scan vs O(log N) Indexed Search</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Full Scan -->
+        <div class="panel">
+            <div class="panel-title">1. No Index: Full Table Scan <span class="status-badge" id="badge-scan">O(N) Complexity</span></div>
+            <div class="document-pile" id="pile">
+                <!-- Populated by JS -->
+                <div class="scan-overlay" id="freeze-overlay">
+                    <div class="freeze-text">Main Thread Blocked</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: B-Tree -->
+        <div class="panel">
+            <div class="panel-title">2. B-Tree Index Traversal <span class="status-badge" id="badge-btree">O(log N) Complexity</span></div>
+            <div class="btree-container" id="tree-area">
+                <svg class="tree-lines">
+                    <line x1="50%" y1="20" x2="25%" y2="100" id="l1" />
+                    <line x1="50%" y1="20" x2="75%" y2="100" id="l2" />
+                    
+                    <line x1="25%" y1="100" x2="15%" y2="180" id="l3" />
+                    <line x1="25%" y1="100" x2="35%" y2="180" id="l4" />
+                    
+                    <line x1="75%" y1="100" x2="65%" y2="180" id="l5" />
+                    <line x1="75%" y1="100" x2="85%" y2="180" id="l6" />
+                </svg>
+
+                <div class="tree-level">
+                    <div class="tree-node" id="n1">500</div>
+                </div>
+                <div class="tree-level">
+                    <div class="tree-node" id="n2">250</div>
+                    <div class="tree-node" id="n3">750</div>
+                </div>
+                <div class="tree-level">
+                    <div class="tree-node" id="n4">100</div>
+                    <div class="tree-node" id="n5">400</div>
+                    <div class="tree-node" id="n6">600</div>
+                    <div class="tree-node" id="n7">800</div>
+                </div>
+                
+                <div style="position:absolute; bottom:15px; color:var(--text-dim); font-size:0.7rem; font-style:italic;">
+                    Target Query: Find Document ID = 600
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Stats -->
+        <div class="panel" style="grid-column: 1 / -1; display:flex; flex-direction:row; gap:20px;">
+            <div class="stats-grid" style="flex: 1;">
+                <div class="stat-box">
+                    <div class="stat-title">Disk Block Reads (I/O)</div>
+                    <div class="stat-value" id="disk-reads">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Time Complexity</div>
+                    <div class="stat-value" id="time-comp" style="font-size:1.5rem;">Ready</div>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display:flex; flex-direction:column;">
+                <div class="panel-title" style="margin-bottom:5px;">Execution Log</div>
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">Database initialized. Total documents: 500.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-scan" class="danger">▶ Run Query (No Index)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-btree" class="success" disabled>▶ Run Query (B-Tree Index)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            pile: document.getElementById('pile'),
+            diskReads: document.getElementById('disk-reads'),
+            timeComp: document.getElementById('time-comp'),
+            freezeOverlay: document.getElementById('freeze-overlay'),
+            log: document.getElementById('log-output'),
+            btnScan: document.getElementById('btn-scan'),
+            btnBtree: document.getElementById('btn-btree'),
+            badgeScan: document.getElementById('badge-scan'),
+            badgeBtree: document.getElementById('badge-btree')
+        };
+
+        let isPaused = false; let pauseResolve = null;
+        const btnPause = document.getElementById('btn-pause');
+        if (btnPause) {
+            btnPause.addEventListener('click', () => {
+                if (!isPaused) {
+                    isPaused = true;
+                    btnPause.innerText = '▶ Resume';
+                } else {
+                    isPaused = false;
+                    btnPause.innerText = '⏸ Pause';
+                    if (pauseResolve) pauseResolve();
+                }
+            });
+        }
+
+        const sleep = async (ms) => {
+            if (isPaused) { await new Promise(r => { pauseResolve = r; }); pauseResolve = null; }
+            return new Promise(r => setTimeout(r, ms));
+        };
+
+        function log(msg, type='normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${msg}`;
+            UI.log.appendChild(entry);
+            UI.log.scrollTop = UI.log.scrollHeight;
+        }
+
+        // Init pile (500 boxes)
+        for(let i=0; i<500; i++) {
+            const d = document.createElement('div');
+            d.className = 'doc-box';
+            UI.pile.appendChild(d);
+        }
+
+        UI.btnScan.addEventListener('click', async () => {
+            UI.btnScan.disabled = true;
+            if(btnPause) btnPause.disabled = false;
+            UI.badgeScan.className = 'status-badge scan';
+            
+            log('Initiating Full Table Scan for ID=600...', 'scan');
+            UI.timeComp.innerText = 'O(N)';
+            UI.timeComp.className = 'stat-value bad';
+            UI.freezeOverlay.classList.add('active');
+            
+            const boxes = UI.pile.children;
+            const targetIndex = 420; // Abstracted target down the pile
+            
+            log('Reading blocks sequentially from disk...', 'scan');
+
+            for(let i=0; i<=targetIndex; i++) {
+                boxes[i].classList.add('scanned');
+                UI.diskReads.innerText = i + 1;
+                UI.diskReads.className = 'stat-value bad';
+                
+                if(i % 12 === 0) await sleep(16); // Simulate frame-blocking I/O
+            }
+
+            boxes[targetIndex].classList.add('target');
+            UI.freezeOverlay.classList.remove('active');
+            
+            log(`Found ID=600 after ${targetIndex+1} continuous disk reads. Main thread unblocked.`, 'scan');
+            
+            await sleep(1000);
+            UI.btnBtree.disabled = false;
+            if(btnPause) btnPause.disabled = true;
+        });
+
+        UI.btnBtree.addEventListener('click', async () => {
+            UI.btnBtree.disabled = true;
+            if(btnPause) btnPause.disabled = false;
+            UI.badgeBtree.className = 'status-badge btree';
+            
+            UI.diskReads.innerText = '0';
+            UI.timeComp.innerText = 'O(log N)';
+            UI.timeComp.className = 'stat-value good';
+            
+            log('Querying via B-Tree Index...', 'btree');
+            
+            let reads = 0;
+
+            // Step 1: Root
+            await sleep(500);
+            document.getElementById('n1').classList.add('active');
+            reads++; UI.diskReads.innerText = reads; UI.diskReads.className = 'stat-value good';
+            log('Read root node: 500. Target (600) > 500. Branching Right.', 'btree');
+            
+            document.getElementById('l1').classList.add('dim');
+            document.getElementById('n2').classList.add('dim');
+            document.getElementById('l3').classList.add('dim');
+            document.getElementById('l4').classList.add('dim');
+            document.getElementById('n4').classList.add('dim');
+            document.getElementById('n5').classList.add('dim');
+            
+            await sleep(1000);
+
+            // Step 2: Right
+            document.getElementById('l2').classList.add('active');
+            await sleep(300);
+            document.getElementById('n1').classList.remove('active');
+            document.getElementById('n3').classList.add('active');
+            reads++; UI.diskReads.innerText = reads;
+            log('Read node: 750. Target (600) < 750. Branching Left.', 'btree');
+            
+            document.getElementById('l6').classList.add('dim');
+            document.getElementById('n7').classList.add('dim');
+
+            await sleep(1000);
+
+            // Step 3: Left (Match)
+            document.getElementById('l5').classList.add('active');
+            await sleep(300);
+            document.getElementById('n3').classList.remove('active');
+            document.getElementById('n6').classList.add('target');
+            reads++; UI.diskReads.innerText = reads;
+            
+            log(`MATCH: Found pointer to ID=600. Total disk reads: 3.`, 'btree');
+            log(`Performance improvement over full scan: ~14000%`, 'btree');
+            if(btnPause) btnPause.disabled = true;
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => location.reload());
+
+    </script>
+</body>
+</html>

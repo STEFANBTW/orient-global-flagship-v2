@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSM Web Mercator Tile System - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active {
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .code-line.executing {
+            background: rgba(56, 189, 248, 0.2);
+            border-left: 3px solid var(--accent);
+        }
+
+        .visual-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .grid-display {
+            display: grid;
+            width: 256px;
+            height: 256px;
+            margin: 0 auto;
+            border: 2px solid var(--accent);
+            background: #020617;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+        }
+
+        .tile {
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.6);
+            background: rgba(56, 189, 248, 0.05);
+            transition: all 0.3s;
+        }
+
+        .tile:hover {
+            background: rgba(56, 189, 248, 0.2);
+            color: #fff;
+            border: 1px solid var(--accent);
+            z-index: 2;
+        }
+
+        .tile-target {
+            background: rgba(192, 132, 252, 0.4) !important;
+            border: 1px solid var(--purple) !important;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: inset 0 0 10px var(--purple);
+            z-index: 3;
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry {
+            border-left: 2px solid var(--border);
+            padding-left: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        .log-entry.math { border-left-color: var(--purple); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .number { color: var(--yellow); }
+        .function { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+
+        /* Sliders */
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .input-group label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            width: 80px;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            accent-color: var(--accent);
+            background: rgba(0,0,0,0.3);
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>OSM Tile Coordinate System</h1>
+        <p>Web Mercator Quadtree Math & Slippy Map URL Generation</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Visual Stage (Grid) -->
+        <div class="panel" id="panel-stage">
+            <div class="panel-title">1. Slippy Map Quadtree Grid <span class="status-badge" id="badge-stage">Ready</span></div>
+            
+            <div class="input-group">
+                <label>Lat: <span id="val-lat" class="number">51.5</span></label>
+                <input type="range" id="lat" min="-85.0511" max="85.0511" value="51.5" step="0.01">
+            </div>
+            <div class="input-group">
+                <label>Lon: <span id="val-lon" class="number">-0.12</span></label>
+                <input type="range" id="lon" min="-180" max="180" value="-0.12" step="0.01">
+            </div>
+            
+            <div class="visual-stage" style="margin-top:10px;">
+                <div id="grid" class="grid-display">
+                    <!-- Tiles -->
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 10px; font-family: 'JetBrains Mono'; font-size: 0.75rem; color: var(--text-dim);">
+                Zoom: <span id="val-zoom" class="number">0</span> | Total Tiles: <span id="val-total" class="number">1</span>
+            </div>
+        </div>
+
+        <!-- Panel 2: Source Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Lat/Lon to Tile (X,Y) Conversion <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="keyword">function</span> <span class="function">lon2tile</span>(lon, zoom) {</span>
+<span class="code-line" id="line-1">  <span class="keyword">const</span> n = Math.pow(<span class="number">2</span>, zoom);</span>
+<span class="code-line" id="line-2">  <span class="keyword">return</span> Math.floor(n * ((lon + <span class="number">180</span>) / <span class="number">360</span>));</span>
+<span class="code-line" id="line-3">}</span>
+<span class="code-line" id="line-4"></span>
+<span class="code-line" id="line-5"><span class="keyword">function</span> <span class="function">lat2tile</span>(lat, zoom) {</span>
+<span class="code-line" id="line-6">  <span class="keyword">const</span> n = Math.pow(<span class="number">2</span>, zoom);</span>
+<span class="code-line" id="line-7">  <span class="keyword">const</span> latRad = lat * Math.PI / <span class="number">180</span>;</span>
+<span class="code-line" id="line-8">  <span class="keyword">return</span> Math.floor(</span>
+<span class="code-line" id="line-9">    n * (<span class="number">1</span> - (Math.log(Math.tan(latRad) + </span>
+<span class="code-line" id="line-10">    <span class="number">1</span>/Math.cos(latRad)) / Math.PI)) / <span class="number">2</span></span>
+<span class="code-line" id="line-11">  );</span>
+<span class="code-line" id="line-12">}</span></div>
+        </div>
+
+        <!-- Panel 3: System Log & URL construction -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Web Mercator URL State <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">System initialized. Awaiting zoom subdivision trigger...</div>
+            </div>
+            <div style="background: #000; padding: 10px; margin-top: 10px; border-radius: 4px; font-family: 'JetBrains Mono'; color: var(--accent); font-size: 0.9rem; text-align: center; border: 1px dashed var(--border);">
+                URL: https://tile.openstreetmap.org/<span id="url-z" class="number">0</span>/<span id="url-x" class="keyword">0</span>/<span id="url-y" class="keyword">0</span>.png
+            </div>
+        </div>
+
+        <!-- Panel 4: Master Controls -->
+        <div class="master-controls">
+            <button id="btn-step" class="primary">▶ Subdivide Grid (Z++)</button>
+            <button id="btn-reset">↺ Reset Grid (Z=0)</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnStep = document.getElementById('btn-step');
+        const btnReset = document.getElementById('btn-reset');
+        const grid = document.getElementById('grid');
+        const logOutput = document.getElementById('log-output');
+        
+        const latInput = document.getElementById('lat');
+        const lonInput = document.getElementById('lon');
+        
+        let stateZoom = 0; // z from 0 to 4 max in visualization
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearHighlight() {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+        }
+
+        function highlightLine(lineNumbers) {
+            clearHighlight();
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        function lon2tile(lon, zoom) {
+            return Math.floor((Math.pow(2, zoom) * (lon + 180)) / 360);
+        }
+
+        function lat2tile(lat, zoom) {
+            const latRad = lat * Math.PI / 180;
+            const n = Math.pow(2, zoom);
+            return Math.floor(n * (1 - (Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI)) / 2);
+        }
+
+        function drawGrid(z, targetLat, targetLon) {
+            const side = Math.pow(2, z);
+            const total = side * side;
+            
+            document.getElementById('val-zoom').innerText = z;
+            document.getElementById('val-total').innerText = total;
+            document.getElementById('url-z').innerText = z;
+
+            const tX = lon2tile(targetLon, z);
+            const tY = lat2tile(targetLat, z);
+
+            document.getElementById('url-x').innerText = tX;
+            document.getElementById('url-y').innerText = tY;
+
+            grid.style.gridTemplateColumns = `repeat(${side}, 1fr)`;
+            grid.style.gridTemplateRows = `repeat(${side}, 1fr)`;
+            grid.innerHTML = '';
+            
+            // Only draw up to a certain limit so browser doesn't freeze (z=5 is 1024 dom nodes)
+            if (z <= 5) {
+                for(let y=0; y<side; y++) {
+                    for(let x=0; x<side; x++) {
+                        const t = document.createElement('div');
+                        t.className = 'tile';
+                        if (z <= 3) t.textContent = `${z}/${x}/${y}`; // Stop showing text if too small
+                        
+                        if (x === tX && y === tY) {
+                            t.classList.add('tile-target');
+                        }
+                        
+                        grid.appendChild(t);
+                    }
+                }
+            } else {
+                grid.innerHTML = `<div style="display:flex; height:100%; width:100%; justify-content:center; align-items:center; color: var(--text-dim); text-align:center;">Grid too dense to render<br>${total} tiles</div>`;
+            }
+
+            return { tX, tY, n: side };
+        }
+
+        function updateInputs() {
+            const lat = parseFloat(latInput.value);
+            const lon = parseFloat(lonInput.value);
+            document.getElementById('val-lat').innerText = lat.toFixed(2);
+            document.getElementById('val-lon').innerText = lon.toFixed(2);
+            drawGrid(stateZoom, lat, lon);
+        }
+
+        async function stepZoom() {
+            if (stateZoom >= 4) {
+                log(`Zoom limit reached for visualization.`);
+                return;
+            }
+            
+            stateZoom++;
+            const lat = parseFloat(latInput.value);
+            const lon = parseFloat(lonInput.value);
+            
+            document.getElementById('panel-code').classList.add('active');
+            
+            // Math flow for X
+            highlightLine([0,1,2]);
+            const { tX, tY, n } = drawGrid(stateZoom, lat, lon);
+            log(`n = 2^${stateZoom} = ${n}`, 'math');
+            log(`lon2tile(${lon.toFixed(2)}, ${stateZoom}) → X = ${tX}`, 'result');
+            
+            // Wait slightly then math flow for Y
+            setTimeout(() => {
+                highlightLine([5,6,7,8,9,10,11]);
+                log(`lat2tile(${lat.toFixed(2)}, ${stateZoom}) → Y = ${tY}`, 'result');
+                log(`URL Updated: https://tile.openstreetmap.org/${stateZoom}/${tX}/${tY}.png`, 'result');
+            }, 500);
+
+            if (stateZoom === 4) {
+                document.getElementById('badge-stage').innerText = 'Max Zoom Vis';
+                btnStep.disabled = true;
+            }
+        }
+
+        latInput.addEventListener('input', updateInputs);
+        lonInput.addEventListener('input', updateInputs);
+        
+        btnStep.addEventListener('click', stepZoom);
+        
+        btnReset.addEventListener('click', () => {
+            stateZoom = 0;
+            logOutput.innerHTML = '<div class="log-entry">Grid reset to Z=0 (Global view).</div>';
+            clearHighlight();
+            updateInputs();
+            btnStep.disabled = false;
+            document.getElementById('panel-code').classList.remove('active');
+            document.getElementById('badge-stage').innerText = 'Ready';
+        });
+
+        // Bootstrap
+        updateInputs();
+
+    </script>
+</body>
+</html>

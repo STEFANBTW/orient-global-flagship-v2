@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levenshtein GC Optimization - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #4ade80;
+            --c-bad: #ef4444;
+            --c-good: #4ade80;
+            --c-warn: #eab308;
+            --c-mem: #3b82f6;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--c-mem);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        .status-badge.bad { background: rgba(239, 68, 68, 0.2); color: var(--c-bad); font-weight: bold; }
+        .status-badge.good { background: rgba(74, 222, 128, 0.2); color: var(--c-good); font-weight: bold; }
+
+        /* Panel 1: 2D Grid */
+        .vis-area {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .grid-2d { display: flex; flex-direction: column; gap: 2px; }
+        .row-2d { display: flex; gap: 2px; }
+
+        .cell-2d {
+            width: 25px; height: 25px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text);
+            transition: all 0.1s;
+        }
+
+        .cell-2d.calc { background: rgba(239, 68, 68, 0.3); border-color: var(--c-bad); color: var(--c-bad); transform: scale(1.1); z-index: 10; }
+        
+        .gc-sweep {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 0%;
+            background: rgba(234, 179, 8, 0.2);
+            border-top: 2px solid var(--c-warn);
+            backdrop-filter: blur(4px);
+            transition: height 0.5s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: var(--c-warn);
+            text-transform: uppercase;
+            overflow: hidden;
+            z-index: 20;
+        }
+
+        /* Panel 2: 1D Array */
+        .array-1d-container { display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center; height: 100%; }
+        
+        .array-1d {
+            display: flex;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .cell-1d {
+            width: 45px; height: 45px;
+            background: rgba(59, 130, 246, 0.1);
+            border-right: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--c-mem);
+            transition: all 0.1s;
+        }
+        .cell-1d:last-child { border-right: none; }
+        .cell-1d.mutating { background: rgba(74, 222, 128, 0.3); border-color: var(--c-good); color: var(--c-good); transform: scale(1.1); }
+
+        .buffer-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-family: monospace; }
+
+        /* Panel 3: Stats */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex-grow: 1; }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stat-title { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: bold; color: var(--text); transition: color 0.3s; }
+        .stat-value.bad { color: var(--c-bad); text-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+        .stat-value.good { color: var(--c-good); text-shadow: 0 0 10px rgba(74, 222, 128, 0.4); }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.2s ease; }
+        .log-entry.bad { border-left-color: var(--c-bad); color: var(--c-bad); }
+        .log-entry.warn { border-left-color: var(--c-warn); color: var(--c-warn); }
+        .log-entry.good { border-left-color: var(--c-good); color: var(--c-good); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Panel 4: Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        button.danger { background: rgba(239, 68, 68, 0.15); color: var(--c-bad); border-color: var(--c-bad); }
+        button.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.25); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+        button.success { background: rgba(74, 222, 128, 0.15); color: var(--c-good); border-color: var(--c-good); }
+        button.success:hover:not(:disabled) { background: rgba(74, 222, 128, 0.25); box-shadow: 0 0 15px rgba(74, 222, 128, 0.3); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Levenshtein 1D Uint8Array Optimization</h1>
+        <p>Continuous Heap Allocation vs Flat Buffer Reusability</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: 2D Grid -->
+        <div class="panel">
+            <div class="panel-title">1. Standard 2D Matrix <span class="status-badge" id="badge-2d">Array of Arrays</span></div>
+            <div class="vis-area">
+                <div class="grid-2d" id="grid-2d"></div>
+                <div class="gc-sweep" id="gc-sweep">V8 GC Pause</div>
+            </div>
+        </div>
+
+        <!-- Panel 2: 1D Array -->
+        <div class="panel">
+            <div class="panel-title">2. Optimized 1D Uint8Array <span class="status-badge" id="badge-1d">C++ Backed</span></div>
+            <div class="vis-area">
+                <div class="array-1d-container">
+                    <div class="array-1d" id="array-1d"></div>
+                    <div class="buffer-label">0x7ffee9b80ca0 (Pre-Allocated Memory)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Stats -->
+        <div class="panel" style="grid-column: 1 / -1; display:flex; flex-direction:row; gap:20px;">
+            <div class="stats-grid" style="flex: 1;">
+                <div class="stat-box">
+                    <div class="stat-title">Heap Objects Created</div>
+                    <div class="stat-value" id="val-alloc">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-title">Garbage Collections</div>
+                    <div class="stat-value" id="val-gc">0</div>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display:flex; flex-direction:column;">
+                <div class="panel-title" style="margin-bottom:5px;">V8 Engine Log</div>
+                <div class="log-panel" id="log-output">
+                    <div class="log-entry">Engine initialized. Ready for string distance calculations.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-2d" class="danger">▶ Run 2D (Standard)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-1d" class="success" disabled>▶ Run 1D (Optimized)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            grid2d: document.getElementById('grid-2d'),
+            array1d: document.getElementById('array-1d'),
+            gcSweep: document.getElementById('gc-sweep'),
+            valAlloc: document.getElementById('val-alloc'),
+            valGc: document.getElementById('val-gc'),
+            log: document.getElementById('log-output'),
+            btn2d: document.getElementById('btn-2d'),
+            btn1d: document.getElementById('btn-1d'),
+            badge2d: document.getElementById('badge-2d'),
+            badge1d: document.getElementById('badge-1d')
+        };
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function log(msg, type='normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${msg}`;
+            UI.log.appendChild(entry);
+            UI.log.scrollTop = UI.log.scrollHeight;
+        }
+
+        // Init 1D Array Visual
+        const bufferSize = 8;
+        for(let i=0; i<bufferSize; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell-1d';
+            cell.innerText = i;
+            UI.array1d.appendChild(cell);
+        }
+
+        UI.btn2d.addEventListener('click', async () => {
+            UI.btn2d.disabled = true;
+            UI.grid2d.innerHTML = '';
+            UI.badge2d.className = 'status-badge bad';
+            
+            log('Allocating Array of Arrays: Array(8).fill(Array(8))', 'bad');
+            
+            let allocCount = 0;
+            let gcCount = 0;
+
+            for(let r=0; r<8; r++) {
+                const row = document.createElement('div');
+                row.className = 'row-2d';
+                allocCount++; // Row object
+                
+                for(let c=0; c<8; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell-2d calc';
+                    cell.innerText = Math.floor(Math.random() * 5);
+                    row.appendChild(cell);
+                    allocCount++; // Cell obj
+                }
+                UI.grid2d.appendChild(row);
+                UI.valAlloc.innerText = allocCount;
+                UI.valAlloc.className = 'stat-value bad';
+                
+                await sleep(100);
+                
+                // Clear calc class to leave them static
+                Array.from(row.children).forEach(child => child.classList.remove('calc'));
+            }
+
+            log('Calculation complete. Matrix discarded to heap.', 'warn');
+            await sleep(500);
+            
+            // GC Event
+            log('V8 memory threshold reached. Initiating Garbage Collection (Mark-and-Sweep).', 'warn');
+            UI.gcSweep.style.height = '100%';
+            gcCount++;
+            UI.valGc.innerText = gcCount;
+            UI.valGc.className = 'stat-value bad';
+            
+            await sleep(800);
+            
+            UI.grid2d.style.opacity = '0.2';
+            log('Main thread paused. UI Jank occurred.', 'bad');
+            
+            await sleep(1000);
+            UI.gcSweep.style.height = '0%';
+            
+            UI.btn1d.disabled = false;
+        });
+
+        UI.btn1d.addEventListener('click', async () => {
+            UI.btn1d.disabled = true;
+            UI.badge1d.className = 'status-badge good';
+            
+            UI.valAlloc.innerText = '0';
+            UI.valAlloc.className = 'stat-value good';
+            UI.valGc.innerText = '0';
+            UI.valGc.className = 'stat-value good';
+            
+            log('Utilizing single pre-allocated Uint8Array block.', 'good');
+            
+            const cells = UI.array1d.children;
+
+            // Simulate mutating the same buffer for multiple calculations
+            for(let loops=1; loops<=3; loops++) {
+                log(`Calculation pass ${loops}: Mutating Uint8Array in-place using dual cursors.`, 'good');
+                
+                for(let i=0; i<bufferSize; i++) {
+                    cells[i].classList.add('mutating');
+                    cells[i].innerText = Math.floor(Math.random() * 9);
+                    await sleep(40);
+                    cells[i].classList.remove('mutating');
+                }
+            }
+            
+            log('Calculations finished. Zero allocations. Zero GC pauses.', 'good');
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => location.reload());
+
+    </script>
+</body>
+</html>

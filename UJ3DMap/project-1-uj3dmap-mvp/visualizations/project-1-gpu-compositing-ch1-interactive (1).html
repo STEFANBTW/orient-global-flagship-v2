@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU Compositing - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #4ade80;
+            --c-cpu: #ef4444;
+            --c-gpu: #4ade80;
+            --c-map: #3b82f6;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.05) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--c-gpu);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .status-badge.cpu { background: rgba(239, 68, 68, 0.2); color: var(--c-cpu); font-weight: bold; }
+        .status-badge.gpu { background: rgba(74, 222, 128, 0.2); color: var(--c-gpu); font-weight: bold; box-shadow: 0 0 10px rgba(74, 222, 128, 0.3); }
+
+        /* Panel 1: Scene */
+        .scene-container {
+            flex-grow: 1;
+            position: relative;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .layer-stack {
+            position: relative;
+            width: 80%;
+            height: 70%;
+            transform-style: preserve-3d;
+            transform: rotateX(60deg) rotateZ(-45deg);
+            transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border: 2px solid;
+            background: rgba(30, 41, 59, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: all 0.5s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .layer-cpu {
+            border-color: var(--c-cpu);
+            transform: translateZ(0px);
+            z-index: 1;
+        }
+
+        .layer-gpu {
+            border-color: var(--c-gpu);
+            transform: translateZ(2px);
+            background: rgba(74, 222, 128, 0.1);
+            opacity: 0;
+            z-index: 2;
+        }
+
+        .map-element {
+            width: 150px;
+            height: 150px;
+            background: var(--c-map);
+            border-radius: 8px;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+        }
+
+        /* Animations */
+        @keyframes cpuThrash {
+            0% { transform: translateZ(0px) translateX(0px); border-color: var(--c-cpu); background: rgba(239, 68, 68, 0.2); }
+            25% { transform: translateZ(0px) translateX(-10px); }
+            50% { transform: translateZ(0px) translateX(10px); }
+            75% { transform: translateZ(0px) translateX(-10px); }
+            100% { transform: translateZ(0px) translateX(0px); border-color: var(--c-cpu); background: rgba(239, 68, 68, 0.2); }
+        }
+
+        @keyframes gpuSmooth {
+            0% { transform: translateZ(120px) translateX(0px); }
+            50% { transform: translateZ(120px) translateX(60px) translateY(-60px); }
+            100% { transform: translateZ(120px) translateX(0px); }
+        }
+
+        .thrashing .layer-cpu { animation: cpuThrash 0.5s infinite; }
+        .accelerated .layer-gpu { opacity: 1; transform: translateZ(120px); box-shadow: 0 0 30px rgba(74, 222, 128, 0.2); }
+        .accelerated .map-element { animation: gpuSmooth 2.5s infinite alternate ease-in-out; }
+        .accelerated .layer-cpu { opacity: 0.3; }
+
+        /* Panel 2: Stats & Pipeline */
+        .pipeline-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        .metric-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-title { font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: bold; }
+        
+        .fps-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        .fps-value.bad { color: var(--c-cpu); text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+        .fps-value.good { color: var(--c-gpu); text-shadow: 0 0 10px rgba(74, 222, 128, 0.5); }
+
+        .pipeline-bar {
+            height: 30px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            display: flex;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .bar-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: #000;
+            transition: width 0.5s ease;
+        }
+
+        /* Panel 3: Code */
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+            flex-grow: 1;
+            white-space: pre-wrap;
+        }
+        
+        /* Panel 4: Controls */
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        button.danger { background: rgba(239, 68, 68, 0.15); color: var(--c-cpu); border-color: var(--c-cpu); }
+        button.danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.25); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+        button.success { background: rgba(74, 222, 128, 0.15); color: var(--c-gpu); border-color: var(--c-gpu); }
+        button.success:hover:not(:disabled) { background: rgba(74, 222, 128, 0.25); box-shadow: 0 0 15px rgba(74, 222, 128, 0.3); }
+
+        .kw { color: #c084fc; }
+        .func { color: var(--c-gpu); }
+        .comment { color: var(--text-dim); font-style: italic; }
+        .bad-prop { color: var(--c-cpu); text-decoration: line-through; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>GPU Hardware Compositing</h1>
+        <p>Main Thread Layout Thrashing vs Dedicated VRAM Textures</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Scene -->
+        <div class="panel" style="grid-row: 1 / span 2;">
+            <div class="panel-title">1. Layer Architecture <span class="status-badge" id="badge-arch">Idle</span></div>
+            <div class="scene-container" id="scene">
+                <div class="layer-stack" id="stack">
+                    <div class="layer layer-cpu" id="cpu-layer">
+                        <span style="position:absolute; top:10px; left:10px; color:var(--c-cpu); font-size:0.75rem;">Main Document (CPU)</span>
+                        <div class="map-element" id="map-target">Leaflet UI</div>
+                    </div>
+                    <div class="layer layer-gpu" id="gpu-layer">
+                        <span style="position:absolute; top:10px; left:10px; color:var(--c-gpu); font-size:0.75rem;">Compositor Layer (GPU VRAM)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Panel 2: Stats -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">2. Engine Performance <span class="status-badge" id="badge-perf">Idle</span></div>
+                <div class="pipeline-stats">
+                    <div class="metric-box">
+                        <span class="metric-title">Framerate</span>
+                        <span class="fps-value" id="fps">60 FPS</span>
+                    </div>
+                    
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <span class="metric-title">Frame Budget (16.6ms)</span>
+                        <div class="pipeline-bar" id="bar-main">
+                            <!-- JS, Style, Layout, Paint, Composite -->
+                            <div class="bar-segment" id="seg-js" style="width:20%; background:#f59e0b;">JS</div>
+                            <div class="bar-segment" id="seg-layout" style="width:20%; background:#ef4444;">Layout</div>
+                            <div class="bar-segment" id="seg-paint" style="width:40%; background:#8b5cf6;">Paint</div>
+                            <div class="bar-segment" id="seg-comp" style="width:20%; background:#4ade80;">Comp</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Code -->
+            <div class="panel" style="flex: 1;">
+                <div class="panel-title">3. Implementation Source</div>
+                <div class="code-block" id="code-viewer">
+<span class="comment">// Default State: All elements share 1 layer</span>
+<span class="kw">.leaflet-map</span> {
+  position: absolute;
+  <span style="color:var(--text)">/* No hardware acceleration hints */</span>
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Controls -->
+        <div class="master-controls">
+            <button id="btn-cpu" class="danger">▶ Animate width/left (CPU)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-gpu" class="success">▶ Animate transform (GPU)</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const UI = {
+            stack: document.getElementById('stack'),
+            cpuLayer: document.getElementById('cpu-layer'),
+            gpuLayer: document.getElementById('gpu-layer'),
+            mapTarget: document.getElementById('map-target'),
+            fps: document.getElementById('fps'),
+            code: document.getElementById('code-viewer'),
+            badgeArch: document.getElementById('badge-arch'),
+            badgePerf: document.getElementById('badge-perf'),
+            
+            segJs: document.getElementById('seg-js'),
+            segLayout: document.getElementById('seg-layout'),
+            segPaint: document.getElementById('seg-paint'),
+            segComp: document.getElementById('seg-comp')
+        };
+        
+        let fpsInterval;
+
+        document.getElementById('btn-cpu').addEventListener('click', () => {
+            document.getElementById('btn-cpu').disabled = true;
+            document.getElementById('btn-gpu').disabled = false;
+            
+            UI.stack.classList.remove('accelerated');
+            UI.stack.classList.add('thrashing');
+            
+            UI.cpuLayer.appendChild(UI.mapTarget);
+            
+            UI.badgeArch.className = 'status-badge cpu';
+            UI.badgeArch.innerText = 'Main Thread Blocked';
+            UI.badgePerf.className = 'status-badge cpu';
+            UI.badgePerf.innerText = 'Layout Thrashing';
+            
+            UI.code.innerHTML = `
+<span class="comment">// BAD: Animating layout properties</span>
+<span class="kw">.leaflet-map</span> {
+  <span class="bad-prop">left: 50px;</span> <span class="comment">// Triggers full reflow!</span>
+  <span class="bad-prop">width: 200px;</span>
+}
+            `;
+
+            UI.fps.className = 'fps-value bad';
+            
+            // Layout & Paint dominate budget
+            UI.segJs.style.width = '10%';
+            UI.segLayout.style.width = '50%';
+            UI.segPaint.style.width = '30%';
+            UI.segComp.style.width = '10%';
+            
+            clearInterval(fpsInterval);
+            fpsInterval = setInterval(() => {
+                UI.fps.innerText = Math.floor(Math.random() * (18 - 8) + 8) + ' FPS';
+            }, 100);
+        });
+
+        document.getElementById('btn-gpu').addEventListener('click', () => {
+            document.getElementById('btn-cpu').disabled = false;
+            document.getElementById('btn-gpu').disabled = true;
+            
+            UI.stack.classList.remove('thrashing');
+            UI.stack.classList.add('accelerated');
+            
+            UI.gpuLayer.appendChild(UI.mapTarget);
+            
+            UI.badgeArch.className = 'status-badge gpu';
+            UI.badgeArch.innerText = 'VRAM Promoted';
+            UI.badgePerf.className = 'status-badge gpu';
+            UI.badgePerf.innerText = 'Compositor Only';
+            
+            UI.code.innerHTML = `
+<span class="comment">// GOOD: Hardware acceleration hints</span>
+<span class="kw">.leaflet-map</span> {
+  <span class="func">transform</span>: translateZ(<span class="str">0</span>);
+  <span class="func">will-change</span>: transform;
+}
+            `;
+
+            UI.fps.className = 'fps-value good';
+            
+            // Compositor handles everything
+            UI.segJs.style.width = '0%';
+            UI.segLayout.style.width = '0%';
+            UI.segPaint.style.width = '0%';
+            UI.segComp.style.width = '100%';
+            
+            clearInterval(fpsInterval);
+            UI.fps.innerText = '60 FPS';
+            fpsInterval = setInterval(() => {
+                UI.fps.innerText = Math.random() > 0.9 ? '59 FPS' : '60 FPS';
+            }, 500);
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => location.reload());
+
+    </script>
+</body>
+</html>

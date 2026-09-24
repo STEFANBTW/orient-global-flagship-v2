@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map Initialization Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --orange: #fb923c;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active { border-color: var(--accent); box-shadow: var(--glow); }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .code-line.executing { background: rgba(56, 189, 248, 0.2); border-left: 3px solid var(--accent); }
+
+        /* DOM Tree Visualizer */
+        .dom-view {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex-grow: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dom-node {
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 5px;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .dom-node.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.1); box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.2); }
+        .dom-node.done { border-color: var(--green); }
+        
+        .dom-indent { margin-left: 20px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px; }
+        .node-tag { color: var(--purple); }
+        .node-attr { color: var(--accent); }
+        .node-val { color: var(--green); }
+
+        /* Mockup Map Box */
+        .map-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 120px;
+            height: 120px;
+            border: 2px dashed #444;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #666;
+            font-size: 0.7rem;
+            transition: all 0.4s;
+        }
+        
+        .map-box.injected {
+            border-style: solid;
+            border-color: var(--accent);
+            background: #1a1a1a;
+            color: var(--accent);
+        }
+        
+        .map-box.rendered {
+            background: 
+                linear-gradient(rgba(56,189,248,0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56,189,248,0.2) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-color: var(--green);
+        }
+
+        .log-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .log-entry { border-left: 2px solid var(--border); padding-left: 10px; animation: fadeIn 0.3s ease; }
+        .log-entry.api { border-left-color: var(--purple); color: var(--text); }
+        .log-entry.result { border-left-color: var(--green); color: var(--green); font-weight: bold;}
+        .log-entry.state { border-left-color: var(--orange); color: var(--orange); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) { background: rgba(56, 189, 248, 0.1); border-color: var(--accent); color: var(--accent); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.primary { background: rgba(56, 189, 248, 0.15); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+        .function { color: var(--yellow); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Leaflet Initialization</h1>
+        <p>DOM Hijacking and State Object Instantiation</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Flow / Architecture -->
+        <div class="panel" id="panel-vis">
+            <div class="panel-title">1. DOM Tree State <span class="status-badge" id="badge-vis">Ready</span></div>
+            <div class="dom-view" id="dom-view">
+                
+                <div class="dom-node" id="node-root">
+                    &lt;<span class="node-tag">div</span> <span class="node-attr">id</span>=<span class="node-val">"map"</span>&gt;
+                    
+                    <div id="dom-children" style="display: none; flex-direction: column; gap: 5px; margin-top: 5px;">
+                        <div class="dom-node dom-indent" id="node-pane">
+                            &lt;<span class="node-tag">div</span> <span class="node-attr">class</span>=<span class="node-val">"leaflet-pane leaflet-map-pane"</span>&gt;
+                            
+                            <div class="dom-node dom-indent" id="node-tile" style="display:none;">
+                                &lt;<span class="node-tag">div</span> <span class="node-attr">class</span>=<span class="node-val">"leaflet-pane leaflet-tile-pane"</span>&gt;&lt;/<span class="node-tag">div</span>&gt;
+                            </div>
+                            <div class="dom-node dom-indent" id="node-overlay" style="display:none;">
+                                &lt;<span class="node-tag">div</span> <span class="node-attr">class</span>=<span class="node-val">"leaflet-pane leaflet-overlay-pane"</span>&gt;&lt;/<span class="node-tag">div</span>&gt;
+                            </div>
+                            
+                            &lt;/<span class="node-tag">div</span>&gt;
+                        </div>
+                        <div class="dom-node dom-indent" id="node-control" style="display:none;">
+                            &lt;<span class="node-tag">div</span> <span class="node-attr">class</span>=<span class="node-val">"leaflet-control-container"</span>&gt;...&lt;/<span class="node-tag">div</span>&gt;
+                        </div>
+                    </div>
+
+                    &lt;/<span class="node-tag">div</span>&gt;
+                </div>
+
+                <div class="map-box" id="map-box">Empty &lt;div&gt;</div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. L.map() Execution <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="comment">// 1. Locate Target Container</span></span>
+<span class="code-line" id="line-1"><span class="keyword">const</span> mapContainer = document.getElementById(<span class="string">'map'</span>);</span>
+<span class="code-line" id="line-2"></span>
+<span class="code-line" id="line-3"><span class="comment">// 2. Initialize Internal Engine</span></span>
+<span class="code-line" id="line-4"><span class="keyword">const</span> map = <span class="function">L.map</span>(mapContainer);</span>
+<span class="code-line" id="line-5"></span>
+<span class="code-line" id="line-6"><span class="comment">// 3. Hijack DOM (Inject Panes)</span></span>
+<span class="code-line" id="line-7"><span class="comment">/* Engine creates 'map-pane', 'tile-pane', etc. */</span></span>
+<span class="code-line" id="line-8"></span>
+<span class="code-line" id="line-9"><span class="comment">// 4. Set Projection State</span></span>
+<span class="code-line" id="line-10">map.setView([<span class="number">51.505</span>, <span class="number">-0.09</span>], <span class="number">13</span>);</span></div>
+        </div>
+
+        <!-- Panel 3: Log -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-log">
+            <div class="panel-title">3. Engine Memory Log <span class="status-badge" id="badge-log">Waiting</span></div>
+            <div class="log-panel" id="log-output">
+                <div class="log-entry">Waiting for L.map() trigger...</div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Master Controls -->
+        <div class="master-controls">
+            <button id="btn-init" class="primary">Execute Init</button>
+            <div style="border-left: 1px solid var(--border); margin: 0 10px;"></div>
+            <button id="btn-step" class="primary" disabled>▶ Step State</button>
+            <button id="btn-play" disabled>▶▶ Auto-Play</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnInit = document.getElementById('btn-init');
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnPause = document.getElementById('btn-pause');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const logOutput = document.getElementById('log-output');
+        const nodeRoot = document.getElementById('node-root');
+        const domChildren = document.getElementById('dom-children');
+        const nodePane = document.getElementById('node-pane');
+        const nodeTile = document.getElementById('node-tile');
+        const nodeOverlay = document.getElementById('node-overlay');
+        const nodeControl = document.getElementById('node-control');
+        const mapBox = document.getElementById('map-box');
+
+        let resolveStep = null;
+        let isAutoPlaying = false;
+        let isPaused = false;
+        let isExecuting = false;
+
+        function log(message, type = 'normal') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `> ${message}`;
+            logOutput.appendChild(entry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function highlightLine(lineNumbers) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+            if(!Array.isArray(lineNumbers)) lineNumbers = [lineNumbers];
+            lineNumbers.forEach(num => {
+                const line = document.getElementById(`line-${num}`);
+                if (line) line.classList.add('executing');
+            });
+        }
+
+        function waitForStep() {
+            return new Promise(resolve => {
+                if (isAutoPlaying && !isPaused) {
+                    setTimeout(resolve, 1200);
+                } else {
+                    btnStep.disabled = false;
+                    btnPlay.disabled = false;
+                    btnPause.disabled = true;
+                    resolveStep = resolve;
+                }
+            });
+        }
+
+        btnStep.addEventListener('click', () => {
+            if (resolveStep) {
+                btnStep.disabled = true;
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPlay.addEventListener('click', () => {
+            isAutoPlaying = true;
+            isPaused = false;
+            btnPlay.disabled = true;
+            btnPause.disabled = false;
+            btnStep.disabled = true;
+            if (resolveStep) {
+                const r = resolveStep;
+                resolveStep = null;
+                r();
+            }
+        });
+
+        btnPause.addEventListener('click', () => {
+            isPaused = true;
+            btnPause.disabled = true;
+            btnPlay.disabled = false;
+            btnStep.disabled = false;
+        });
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        async function runInit() {
+            if (isExecuting) return;
+            isExecuting = true;
+            btnInit.disabled = true;
+
+            document.getElementById('panel-vis').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Executing';
+
+            // 1. Locate Target Container
+            highlightLine([0, 1]);
+            nodeRoot.classList.add('active');
+            log(`Locating DOM Element with id="map"...`, 'api');
+            await waitForStep();
+            log(`Element located. Verifying empty state.`, 'result');
+            await waitForStep();
+            
+            // 2. Initialize Internal Engine
+            highlightLine([3, 4]);
+            nodeRoot.classList.remove('active');
+            log(`Invoking L.map('map'). Instantiating core Map object in V8 Heap...`, 'api');
+            await waitForStep();
+            log(`Map Instance: { _container: HTMLDivElement, _panes: {}, _handlers: [] }`, 'state');
+            await waitForStep();
+            
+            // 3. Hijack DOM
+            highlightLine([6, 7]);
+            nodeRoot.classList.add('done');
+            domChildren.style.display = 'flex';
+            
+            log(`Hijacking DOM container. Injecting absolute-positioned leaflet-map-pane...`, 'warn');
+            nodePane.classList.add('active');
+            mapBox.classList.add('injected');
+            mapBox.innerText = 'Hijacked';
+            await waitForStep();
+            nodePane.classList.remove('active');
+            nodePane.classList.add('done');
+            
+            log(`Injecting sub-panes for rendering hierarchy (Z-Index ordering)...`, 'warn');
+            nodeTile.style.display = 'block';
+            nodeTile.classList.add('active');
+            await waitForStep();
+            nodeTile.classList.remove('active');
+            nodeTile.classList.add('done');
+            
+            nodeOverlay.style.display = 'block';
+            nodeOverlay.classList.add('active');
+            await waitForStep();
+            nodeOverlay.classList.remove('active');
+            nodeOverlay.classList.add('done');
+            
+            nodeControl.style.display = 'block';
+            nodeControl.classList.add('active');
+            await waitForStep();
+            nodeControl.classList.remove('active');
+            nodeControl.classList.add('done');
+
+            // 4. Set Projection State
+            highlightLine([9, 10]);
+            log(`map.setView([51.505, -0.09], 13) invoked.`, 'api');
+            await waitForStep();
+            
+            log(`Calculating Web Mercator EPSG:3857 projection bounds...`, 'math');
+            mapBox.classList.add('rendered');
+            mapBox.innerText = 'Render Ready';
+            await waitForStep();
+            
+            log(`Map Engine Initialization Complete. Ready for layers.`, 'result');
+            
+            document.getElementById('badge-code').className = 'status-badge done';
+            document.getElementById('badge-code').innerText = 'Idle';
+            document.getElementById('badge-vis').className = 'status-badge done';
+            document.getElementById('badge-vis').innerText = 'Engine Online';
+            
+            btnStep.disabled = true;
+            btnPlay.disabled = true;
+            isAutoPlaying = false;
+        }
+
+        btnInit.addEventListener('click', runInit);
+
+        btnReset.addEventListener('click', () => {
+            window.location.reload();
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "pdf-quiz-generator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "pdfjs-dist": "^4.0.379",
+    "@mlc-ai/web-llm": "^0.2.78",
+    "localforage": "^1.10.0"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "eslint-config-next": "15.1.0"
+  }
+}

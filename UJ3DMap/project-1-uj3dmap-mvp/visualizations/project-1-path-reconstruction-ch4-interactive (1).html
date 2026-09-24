@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Path Reconstruction (cameFrom) Simulation - UJ3DMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090b10;
+            --surface: rgba(15, 23, 42, 0.7);
+            --surface2: rgba(30, 41, 59, 0.8);
+            --border: rgba(51, 65, 85, 0.5);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --green: #4ade80;
+            --red: #f87171;
+            --purple: #c084fc;
+            --yellow: #facc15;
+            --glow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+            flex-grow: 1;
+            max-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .panel.active {
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--surface2);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-badge.active { background: var(--accent); color: #000; font-weight: bold; }
+        .status-badge.done { background: var(--green); color: #000; font-weight: bold; }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-line {
+            display: block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .code-line.executing {
+            background: rgba(56, 189, 248, 0.2);
+            border-left: 3px solid var(--accent);
+        }
+
+        .canvas-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Graph visualization styles */
+        .node {
+            position: absolute;
+            padding: 8px 12px;
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-weight: 600;
+            font-size: 0.8rem;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        
+        .node.target { border-color: var(--purple); box-shadow: 0 0 10px rgba(192, 132, 252, 0.5); }
+        .node.current { border-color: var(--accent); background: rgba(56, 189, 248, 0.2); box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
+        .node.path { border-color: var(--green); background: rgba(74, 222, 128, 0.2); }
+        
+        .edge {
+            position: absolute;
+            height: 2px;
+            background: var(--border);
+            transform-origin: 0 50%;
+            z-index: 1;
+            transition: background 0.3s;
+        }
+
+        .edge.active {
+            background: var(--accent);
+            height: 3px;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .arrow {
+            position: absolute;
+            width: 0; 
+            height: 0; 
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 10px solid var(--border);
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            transition: border-left-color 0.3s;
+        }
+
+        .edge.active + .arrow {
+            border-left-color: var(--accent);
+        }
+
+        /* Array State UI */
+        .state-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px;
+        }
+
+        .came-from-map {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+        }
+
+        .map-entry {
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+        .map-entry.active {
+            background: rgba(192, 132, 252, 0.2);
+            color: var(--purple);
+            font-weight: bold;
+        }
+
+        .array-vis {
+            display: flex;
+            align-items: center;
+            min-height: 50px;
+            gap: 5px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px dashed var(--border);
+            overflow-x: auto;
+        }
+
+        .array-slot {
+            background: var(--green);
+            color: #000;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            font-size: 0.8rem;
+            animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap;
+        }
+
+        @keyframes slideInLeft {
+            0% { transform: translateX(-30px); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        .master-controls {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        button {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .keyword { color: var(--purple); }
+        .variable { color: var(--accent); }
+        .string { color: var(--green); }
+        .comment { color: var(--text-dim); font-style: italic; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Path Reconstruction State Machine</h1>
+        <p>Reversing cameFrom pointers to construct optimal graph path via array unshift</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Panel 1: Graph Traversal Trace -->
+        <div class="panel" id="panel-stage">
+            <div class="panel-title">1. Graph Pointer Trace (cameFrom) <span class="status-badge" id="badge-stage">Ready</span></div>
+            <div class="canvas-container" id="graph-container">
+                <!-- Nodes and edges injected via JS -->
+            </div>
+        </div>
+
+        <!-- Panel 2: Source Code -->
+        <div class="panel" id="panel-code">
+            <div class="panel-title">2. Reconstruction Logic <span class="status-badge" id="badge-code">Idle</span></div>
+            <div class="code-block" id="code-container">
+<span class="code-line" id="line-0"><span class="keyword">function</span> <span class="variable">reconstructPath</span>(cameFrom, current) {</span>
+<span class="code-line" id="line-1">  <span class="keyword">const</span> path = [current]; <span class="comment">// Init array with target</span></span>
+<span class="code-line" id="line-2">  <span class="keyword">while</span> (cameFrom.has(current)) {</span>
+<span class="code-line" id="line-3">    current = cameFrom.get(current);</span>
+<span class="code-line" id="line-4">    path.unshift(current); <span class="comment">// Insert at index 0</span></span>
+<span class="code-line" id="line-5">  }</span>
+<span class="code-line" id="line-6">  <span class="keyword">return</span> path;</span>
+<span class="code-line" id="line-7">}</span>
+</div>
+        </div>
+
+        <!-- Panel 3: Internal State / Heap -->
+        <div class="panel" style="grid-column: 1 / -1;" id="panel-state">
+            <div class="panel-title">3. Heap State: Pointer Map & Output Array <span class="status-badge" id="badge-state">Waiting</span></div>
+            <div class="state-container">
+                <div style="color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase;">Map: cameFrom (Backpointers)</div>
+                <div class="came-from-map" id="map-vis">
+                    <!-- Map entries injected via JS -->
+                </div>
+                
+                <div style="color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; margin-top: 10px;">Array: path (Output Buffer)</div>
+                <div class="array-vis" id="array-vis">
+                    <!-- Array slots injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 4: Master Controls -->
+        <div class="master-controls">
+            <button id="btn-step" class="primary">▶ Step Algorithm</button>
+            <button id="btn-play">▶▶ Auto-Play</button>
+            <button id="btn-reset">↺ Reset</button>
+        </div>
+
+    </div>
+
+    <script>
+        const btnStep = document.getElementById('btn-step');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        const graphContainer = document.getElementById('graph-container');
+        const mapVis = document.getElementById('map-vis');
+        const arrayVis = document.getElementById('array-vis');
+
+        // Graph data mimicking map routing
+        const nodes = [
+            { id: 'Gate', x: 20, y: 50 },
+            { id: 'Senate', x: 120, y: 130 },
+            { id: 'Library', x: 220, y: 50 },
+            { id: 'ICT', x: 320, y: 130 }
+        ];
+        
+        // cameFrom map mapping node -> its parent
+        const cameFromData = {
+            'Senate': 'Gate',
+            'Library': 'Senate',
+            'ICT': 'Library'
+        };
+
+        let state = 0; // Execution step
+        let currentLoopNode = 'ICT'; // Start backwards from destination
+        let pathArray = [];
+        let autoPlayTimer = null;
+        let loopIter = 0;
+
+        function clearHighlight() {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('executing'));
+            document.querySelectorAll('.map-entry').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.node').forEach(el => el.classList.remove('current'));
+            document.querySelectorAll('.edge').forEach(el => el.classList.remove('active'));
+        }
+
+        function highlightLine(lineNum) {
+            clearHighlight();
+            const line = document.getElementById(`line-${lineNum}`);
+            if (line) line.classList.add('executing');
+        }
+
+        // Initialize Graph Visuals
+        function initGraph() {
+            graphContainer.innerHTML = '';
+            
+            // Draw Edges based on cameFrom
+            Object.entries(cameFromData).forEach(([childId, parentId]) => {
+                const child = nodes.find(n => n.id === childId);
+                const parent = nodes.find(n => n.id === parentId);
+                
+                const dx = parent.x - child.x;
+                const dy = parent.y - child.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                const edge = document.createElement('div');
+                edge.className = 'edge';
+                edge.id = `edge-${childId}-${parentId}`;
+                edge.style.width = `${dist}px`;
+                edge.style.left = `${child.x + 40}px`; // offset for node center
+                edge.style.top = `${child.y + 15}px`;
+                edge.style.transform = `rotate(${angle}deg)`;
+                
+                graphContainer.appendChild(edge);
+            });
+
+            // Draw Nodes
+            nodes.forEach(n => {
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.id = `node-${n.id}`;
+                node.innerText = n.id;
+                node.style.left = `${n.x}px`;
+                node.style.top = `${n.y}px`;
+                if(n.id === 'ICT') node.classList.add('target');
+                graphContainer.appendChild(node);
+            });
+            
+            // Init Map UI
+            mapVis.innerHTML = 'cameFrom = {<br>';
+            Object.entries(cameFromData).forEach(([k, v]) => {
+                mapVis.innerHTML += `  <span class="map-entry" id="map-${k}">"<span class="string">${k}</span>": "<span class="string">${v}</span>"</span>,<br>`;
+            });
+            mapVis.innerHTML += '}';
+            
+            arrayVis.innerHTML = '';
+        }
+
+        async function stepExecution() {
+            document.getElementById('panel-code').classList.add('active');
+            document.getElementById('badge-code').className = 'status-badge active';
+            document.getElementById('badge-code').innerText = 'Executing';
+            document.getElementById('badge-state').className = 'status-badge active';
+            document.getElementById('badge-state').innerText = 'Allocating';
+
+            // State Machine Logic
+            if (state === 0) {
+                // Initialize
+                highlightLine(1);
+                currentLoopNode = 'ICT';
+                pathArray = [currentLoopNode];
+                document.getElementById(`node-${currentLoopNode}`).classList.add('current');
+                
+                const slot = document.createElement('div');
+                slot.className = 'array-slot';
+                slot.innerText = currentLoopNode;
+                arrayVis.appendChild(slot);
+                state = 1;
+            } 
+            else if (state === 1) {
+                // Loop condition check
+                highlightLine(2);
+                const hasParent = cameFromData.hasOwnProperty(currentLoopNode);
+                
+                if (hasParent) {
+                    const mapEntry = document.getElementById(`map-${currentLoopNode}`);
+                    if (mapEntry) {
+                        mapEntry.classList.add('active');
+                    }
+                    state = 2; // Move to get()
+                } else {
+                    state = 4; // Exit loop
+                }
+            }
+            else if (state === 2) {
+                // Update current
+                highlightLine(3);
+                const parent = cameFromData[currentLoopNode];
+                
+                // Highlight edge and parent node
+                const edge = document.getElementById(`edge-${currentLoopNode}-${parent}`);
+                if (edge) edge.classList.add('active');
+                
+                document.getElementById(`node-${parent}`).classList.add('current');
+                document.getElementById(`node-${currentLoopNode}`).classList.add('path');
+                
+                currentLoopNode = parent;
+                state = 3;
+            }
+            else if (state === 3) {
+                // unshift operation
+                highlightLine(4);
+                pathArray.unshift(currentLoopNode);
+                
+                // Visually insert at beginning
+                const slot = document.createElement('div');
+                slot.className = 'array-slot';
+                slot.innerText = currentLoopNode;
+                arrayVis.insertBefore(slot, arrayVis.firstChild);
+                
+                state = 1; // Back to condition
+            }
+            else if (state === 4) {
+                // Return
+                highlightLine(6);
+                document.getElementById(`node-${currentLoopNode}`).classList.add('path');
+                document.getElementById('badge-code').className = 'status-badge done';
+                document.getElementById('badge-code').innerText = 'Finished';
+                document.getElementById('badge-state').className = 'status-badge done';
+                document.getElementById('badge-state').innerText = 'Array Complete';
+                
+                btnStep.disabled = true;
+                btnPlay.disabled = true;
+                if(autoPlayTimer) clearInterval(autoPlayTimer);
+            }
+        }
+
+        btnStep.addEventListener('click', stepExecution);
+        
+        btnPlay.addEventListener('click', () => {
+            btnPlay.disabled = true;
+            btnStep.disabled = true;
+            autoPlayTimer = setInterval(() => {
+                if(state <= 4) stepExecution();
+            }, 800);
+        });
+
+        btnReset.addEventListener('click', () => {
+            if(autoPlayTimer) clearInterval(autoPlayTimer);
+            state = 0;
+            currentLoopNode = 'ICT';
+            pathArray = [];
+            clearHighlight();
+            initGraph();
+            btnStep.disabled = false;
+            btnPlay.disabled = false;
+            document.getElementById('badge-code').className = 'status-badge';
+            document.getElementById('badge-code').innerText = 'Idle';
+            document.getElementById('panel-code').classList.remove('active');
+            document.getElementById('badge-state').className = 'status-badge';
+            document.getElementById('badge-state').innerText = 'Waiting';
+        });
+
+        // Bootstrap
+        initGraph();
+
+    </script>
+</body>
+</html>
