@@ -580,15 +580,15 @@ const Navbar: React.FC<{
  transition={shouldSkipAnimation ? { duration: 0 } : { duration: 1.5, delay: isReady ? 2.9 + ((navLinks.length + 1) * 0.1) : 0, ease: [0.76, 0, 0.24, 1] }}
  className={`flex items-center gap-1 sm:gap-3 ${isMobile ? 'pl-4 border-l border-transparent' : ''}`}
  >
+   <button onClick={toggleTheme} className={`p-1.5 sm:p-2 rounded-full transition-all duration-300 text-foreground hover:text-primary`}>
+ <span className="material-icons text-sm sm:text-base">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+ </button>
     <button onClick={() => setCurrentView('login')} className={`p-1.5 sm:p-2 rounded-full transition-all duration-300 text-foreground hover:text-primary`} title="User Dashboard">
    <span className="material-icons text-sm sm:text-base">person</span>
    </button>
    <button onClick={() => setCurrentView('admin')} className={`p-1.5 sm:p-2 rounded-full transition-all duration-300 text-foreground hover:text-primary`} title="Admin Dashboard">
    <span className="material-icons text-sm sm:text-base">admin_panel_settings</span>
    </button>
-   <button onClick={toggleTheme} className={`p-1.5 sm:p-2 rounded-full transition-all duration-300 text-foreground hover:text-primary`}>
- <span className="material-icons text-sm sm:text-base">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
- </button>
  {isMobile && (
  <button 
  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -3028,5 +3028,7 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
 
 

@@ -194,16 +194,7 @@ const ReservationsScreen: React.FC<ReservationsScreenProps> = ({ onNavigateToMen
 
 
 
- {/* AI Assistant: The Concierge */}
- <div className="fixed bottom-24 right-6 z-50 group">
- <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-foreground text-background px-3 py-1 rounded text-xs text-background whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity border border-transparent">
- Ask The Concierge
- </div>
- <button className="w-16 h-16 rounded-full bg-gradient-to-br from-[#ffd700] to-[#b8860b] shadow-xl shadow-yellow-900/40 flex items-center justify-center transform hover:scale-110 transition-transform duration-300 relative overflow-hidden">
- <div className="absolute inset-0 bg-card/20 animate-pulse"></div>
- <span className="material-icons text-foreground text-3xl font-bold">theater_comedy</span>
- </button>
- </div>
+ 
  </div>
  );
 };
