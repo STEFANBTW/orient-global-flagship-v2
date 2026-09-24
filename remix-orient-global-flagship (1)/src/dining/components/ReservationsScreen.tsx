@@ -6,14 +6,7 @@ interface ReservationsScreenProps {
 
 const ReservationsScreen: React.FC<ReservationsScreenProps> = ({ onNavigateToMenu }) => {
   const TIMES = ['5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM', '9:30 PM'];
-  const MOCK_RESERVED_TIMES: Record<string, string[]> = {
-    "M2": ["7:00 PM", "7:30 PM", "8:00 PM"],
-    "M6": ["5:00 PM", "5:30 PM"],
-    "B2": ["8:00 PM", "8:30 PM", "9:00 PM"],
-    "P2": ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM"],
-    "M4": ["6:00 PM", "6:30 PM"]
-  };
-
+  
   const [tooltip, setTooltip] = useState<{show: boolean, x: number, y: number, id: string, seats: string, desc: string}>({
     show: false, x: 0, y: 0, id: '', seats: '', desc: ''
   });
@@ -90,7 +83,7 @@ const ReservationsScreen: React.FC<ReservationsScreenProps> = ({ onNavigateToMen
  </section>
 
  {/* Section 2: Unified Reservation Form */}
- <section className="py-16 px-6 relative bg-card transition-colors" id="floor-plan">
+ <section className="py-8 md:py-16 px-0 md:px-6 relative bg-card transition-colors" id="floor-plan">
  <div className="max-w-7xl mx-auto">
  <div className="text-center mb-12">
  <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">Reserve Your Table</h2>
@@ -177,21 +170,21 @@ const ReservationsScreen: React.FC<ReservationsScreenProps> = ({ onNavigateToMen
  </div>
  </div>
  </div>
- {/* Mini Gallery */}
+ {/* Bento Grid Gallery */}
  <div className="mt-20">
  <h4 className="text-xl font-bold text-foreground mb-6 border-l-4 border-primary pl-4">Past Events Gallery</h4>
- <div className="grid grid-cols-2 md:grid-cols-4 gap-3 h-80">
- <div className="col-span-2 row-span-2 relative overflow-hidden rounded-lg group">
+ <div className="grid grid-cols-2 md:grid-cols-4 grid-rows-2 gap-3 h-[400px] md:h-[500px]">
+ <div className="col-span-2 row-span-2 relative overflow-hidden rounded-none group">
  <img alt="Long banquet table with candles" className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJSOEfy1uJQdgDqGWc1IemM3lHFGr3tll1HhiqWazGB5r6R_8Ly1YTGwM-P-_qzbPKcd0VUQjITZk8HJHa65zxtv4Qt4aFoAxXTW6rHhECDNilhSdD19ASth5inMS7osmUlVuuveCBcRc6UXpb9P6qzjz6RD1v1xY60L6s8JlFjgjw69IgJ_z_19vODB1gXIzA9rZfWJ5CvaRZIKQVOKpsUtAqqbV13WsA0Ov0xuXe2wqFFA-aQg918SxgooN4Jo6LYlu2Z6OZ1ady"/>
  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
  </div>
- <div className="relative overflow-hidden rounded-lg group">
+ <div className="relative overflow-hidden rounded-none group col-span-1 row-span-1">
  <img alt="Detailed cocktail shot" className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGTun2jiwF4ZlK-9Y5G5NTO4lje8X2bWHEZybGGUxWn_oTRPBR0XXTTM5CN99j31RXivgXd-1JpZjOpD6uowUltWAqMI4JXIzmZSA6ci0aTI3dOGhJcWt0N3NAZ2lu3DARQJT0Qc6B0m-tXwy5SuLiZnaqRl-zuNbpj_-GzkYtxE_xna1SPQ6uIj4SRUzTGbA8vcRwxfWKlz-l3X95BcVKshaS6QBTylxmINcx8ZBfbvRYp0P3Uf9wsTgQHGJ5lky2z-2m0Y5ANnIe"/>
  </div>
- <div className="relative overflow-hidden rounded-lg group">
+ <div className="relative overflow-hidden rounded-none group col-span-1 row-span-1">
  <img alt="Happy couple dining" className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqNwMz6y9xntz3uZ9rTjiHrQsbjTOi4xUXMif1BnL2dJoPm1wNmUzlEGpVNJCKbtnUtBexZ4-xffZ2PPRFaplEqC_BMwUHiqIMfSM1eNtX0rzSptgxtQLtOSURylhh9XYs-dJgQ59wc7yEm9A43UhPZIOKXwtv0tp_5Ypo5HGIGt6zP1AkFepJn8f4hoxJaNSoKd-dkVBzl7is3GfAtRkLCg5wgknWTKB7yHaxOkmUvl_x-G8pm5dQTcd0ZITrPApuB6yf4BijS90l"/>
  </div>
- <div className="col-span-2 relative overflow-hidden rounded-lg group">
+ <div className="col-span-2 relative overflow-hidden rounded-none group row-span-1">
  <img alt="Plated gourmet food overhead" className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5GtUzp-YVlOJ65tIH6ETdbvCfa_7uK4hYxFiGjRpK9jpeoC5Mvw0RcOaWcQXBIPs8sDSF9PbTqXBXMmeC2GgEI1z3NdAUacFlDYLuuv33qreElmANarbVzlEvBTGDOJsxvqoDxLUtI5SDEIeIXUII9fDmjIlJ-xj9MkeiEDql1XSEiREwRbNDAXhcOssuq0ZtefnNM52uhBidofgBf515jzWqWMyeyT2O09HS8QY4FxdkGZqQc5XZr6vfBorlcNpJtXQaUbACChsn"/>
  </div>
  </div>

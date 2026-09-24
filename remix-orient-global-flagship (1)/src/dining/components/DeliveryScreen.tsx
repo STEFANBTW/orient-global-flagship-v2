@@ -1,26 +1,60 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { orderService, CustomerOrder } from '../../services/orderService';
+import { getActiveConsumerUser } from '../../services/userService';
 
 const DeliveryScreen: React.FC = () => {
- return (
+  const [showAllBundles, setShowAllBundles] = useState(false);
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const activeUser = getActiveConsumerUser();
+    const userId = activeUser?.id || 'usr_guest';
+    const unsub = orderService.subscribeToOrders((allOrders) => {
+      const myOrders = allOrders.filter(o => o.customerId === userId);
+      setOrders(myOrders);
+      if (myOrders.length > 0) {
+        setSelectedOrderId(prev => {
+          if (!prev || !myOrders.find(o => o.id === prev)) {
+            return myOrders[0].id;
+          }
+          return prev;
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const selectedOrder = orders.find(o => o.id === selectedOrderId) || orders[0];
+
+  const navigateToMenu = () => {
+    window.dispatchEvent(new CustomEvent('orient:navigate-dining', { detail: 'menu' }));
+  };
+
+  const handleSupport = () => {
+    alert('Connecting you to support...');
+  };
+
+  const handleAddToCart = (item: string) => {
+    alert(`${item} added to cart!`);
+  };
+
+  return (
  <div className="bg-background min-h-screen text-foreground font-sans pb-24">
  {/* Map Hero */}
  <section className="relative w-full h-[60vh] overflow-hidden">
  <div className="absolute top-4 left-4 right-4 md:right-auto md:w-72 md:top-6 md:left-6 z-10 bg-card/90 backdrop-blur-md p-5 rounded-xl shadow-lg border border-border ">
  <h1 className="text-2xl font-bold text-foreground mb-1.5 leading-tight">Live Delivery in Jos</h1>
- <p className="text-foreground/80 mb-3 text-xs">Real-time tracking of our fleet. We are currently experiencing higher than usual volume in Rayfield.</p>
+ <p className="text-foreground/80 mb-3 text-xs">We deliver to every corner of Jos.</p>
  <div className="flex items-center space-x-2 mb-3">
- <span className="relative flex h-2.5 w-2.5">
- <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
- <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
- </span>
  <span className="text-xs font-semibold text-primary">12 Bikes Active Now</span>
  </div>
  <div className="flex space-x-2">
- <button className="flex-1 bg-primary hover:bg-primary/90 text-white font-medium py-2.5 px-3 rounded-lg shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
+ <button onClick={navigateToMenu} className="flex-1 bg-primary hover:bg-primary/90 text-white font-medium py-2.5 px-3 rounded-lg shadow-md transition-all flex items-center justify-center space-x-2 text-sm">
  <span className="material-icons text-sm">restaurant_menu</span>
  <span>Order Now</span>
  </button>
- <button className="p-2.5 bg-background hover:bg-background dark:hover:bg-foreground text-background text-foreground/80 rounded-lg transition-colors">
+ <button onClick={() => alert('Locating...')} className="p-2.5 bg-background hover:bg-background dark:hover:bg-foreground text-background text-foreground/80 rounded-lg transition-colors">
  <span className="material-icons text-sm">my_location</span>
  </button>
  </div>
@@ -52,7 +86,8 @@ const DeliveryScreen: React.FC = () => {
  <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent"></div>
  </section>
 
- <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-20 pb-16">
+ <div className="relative z-20 bg-white dark:bg-[#1a1a1a] w-full pt-12 pb-16">
+ <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
  {/* Quick Bundles */}
  <section className="mb-16">
  <div className="flex items-end justify-between mb-6">
@@ -60,82 +95,184 @@ const DeliveryScreen: React.FC = () => {
  <h2 className="text-3xl font-bold text-foreground mb-1.5">Quick Bundles</h2>
  <p className="text-muted-foreground text-base">Curated packs for every occasion. Delivered in 30 mins.</p>
  </div>
- <a href="#" className="text-primary font-semibold hover:text-primary/80 flex items-center transition-colors text-sm">
+ <button onClick={navigateToMenu} className="text-primary font-semibold hover:text-primary/80 flex items-center transition-colors text-sm">
  View Full Menu <span className="material-icons text-xs ml-1">arrow_forward</span>
- </a>
+ </button>
  </div>
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
  <BundleCard 
  title="Family Sunday Feast"
  price="₦12,500"
  desc="A generous platter serving 4-6 people. Includes Jollof Rice, Grilled Chicken, Coleslaw, and 4 drinks."
- image="https://lh3.googleusercontent.com/aida-public/AB6AXuDb4jYAwiSzsSE0f88hkB0QM4WxQgnbjkmWeXJKBGpFwJyo3atGSSKVmj7bQv1yyyUsa4xVmRrhnvx_y5_HpkD70eFIfk7AlI4tKiM16SQRwZ--BKf4eQu1EPPTl5v8eprpsrnOkhH3aJfK0txxhJJ_9vhbTnlXIpC9z52awSNItSypu8QXd8RJ8Wg1b3EM7rvuHvbu7VSoRXHFmacbm_Ekf3Z_RTmuNuWSso2xrpp1Uj-9n20LZkAfrA7swyC_2w2nFU9bO-juZwMQ"
+ image="/generated_images/family_feast.jpg"
  badge="Top Seller"
  people="4-6 ppl"
  time="45m"
+ onAddToCart={() => handleAddToCart('Family Sunday Feast')}
  />
  <BundleCard 
  title="Student Exam Pack"
  price="₦3,200"
  desc="Late night fuel for study sessions. Large Pizza (Pepperoni or BBQ) + Energy Drink."
- image="https://lh3.googleusercontent.com/aida-public/AB6AXuBqqsgyAfMtr__rQY4L2rlmmJY-oF0IFTGlXJkbSOQn_nfdvr3fpcLOy-yEJkT5Put4cCaQnDgJnBNRqg8QOvBzy-CcB4cfZmwwGm5bmgU9_EfKiuHVdBo2GfHhv6j4_9-hf9OL-97Rw2sBnP6RWnsP-T8zua2Xz5R3CcYnJRNCY8l9IQMmae4aSNcY_aXypYF687EandLvkTdwAn0XNzpQFbTUeFV7qw8_k_ZyeFCa6YoL_c1cwjghtUtXp_8L7tJYpwyppsHWh8f8"
+ image="/generated_images/student_pack.jpg"
  badge="-15% Off"
  badgeColor="bg-red-500 text-background"
  people="1-2 ppl"
  time="Instant"
  icon="bolt"
+ onAddToCart={() => handleAddToCart('Student Exam Pack')}
  />
  <BundleCard 
  title="Date Night Special"
  price="₦8,000"
  desc="Romantic dinner for two. Choice of Pasta, Dessert to share, and a bottle of non-alcoholic wine."
- image="https://lh3.googleusercontent.com/aida-public/AB6AXuAADh_95xJWf_8MMXJHj1UiGBaivkDn3LlrijtnNGXBeIJLGUmMah2YDkHP8byJYBhFh_gQ7vO2HzJYsuRK7aYvYghZFiORsXyCUfEp4ohJOPcKZnYbF5c8oaxOl5mon0L4sDSLay5F2BH9AI-5wnGNhLoLcS3vS_bPkKt7NfrzmWV2p7OBv7EEnkGARHAf80W3vlboGiP2-qMCq3DMO1p8dsUiI0S_NtPI76wqGy7XjJAY3s4jBKLDYtj4WfFTN5NJ7YztNNIcRhKF"
+ image="/generated_images/date_night.jpg"
  people="2 ppl"
  time="40m"
  icon="favorite"
+ onAddToCart={() => handleAddToCart('Date Night Special')}
  />
+ {showAllBundles && (
+ <>
+ <BundleCard 
+ title="Office Lunch Pack"
+ price="₦15,000"
+ desc="Assorted meals for the team. 5 varieties of Rice dishes, 5 sides, and 5 drinks."
+ image="/generated_images/family_feast.jpg"
+ people="5 ppl"
+ time="60m"
+ onAddToCart={() => handleAddToCart('Office Lunch Pack')}
+ />
+ <BundleCard 
+ title="Game Night Snacks"
+ price="₦5,500"
+ desc="Perfect for game night. Chicken wings, Suya, Fries, and large Soda."
+ image="https://lh3.googleusercontent.com/aida-public/AB6AXuBqqsgyAfMtr__rQY4L2rlmmJY-oF0IFTGlXJkbSOQn_nfdvr3fpcLOy-yEJkT5Put4cCaQnDgJnBNRqg8QOvBzy-CcB4cfZmwwGm5bmgU9_EfKiuHVdBo2GfHhv6j4_9-hf9OL-97Rw2sBnP6RWnsP-T8zua2Xz5R3CcYnJRNCY8l9IQMmae4aSNcY_aXypYF687EandLvkTdwAn0XNzpQFbTUeFV7qw8_k_ZyeFCa6YoL_c1cwjghtUtXp_8L7tJYpwyppsHWh8f8"
+ badge="New"
+ badgeColor="bg-blue-500 text-white"
+ people="3-4 ppl"
+ time="35m"
+ icon="sports_esports"
+ onAddToCart={() => handleAddToCart('Game Night Snacks')}
+ />
+ <BundleCard 
+ title="Healthy Breakfast"
+ price="₦4,200"
+ desc="Start your day right. Oatmeal, Fresh Fruit Parfait, and fresh Orange Juice."
+ image="https://lh3.googleusercontent.com/aida-public/AB6AXuAADh_95xJWf_8MMXJHj1UiGBaivkDn3LlrijtnNGXBeIJLGUmMah2YDkHP8byJYBhFh_gQ7vO2HzJYsuRK7aYvYghZFiORsXyCUfEp4ohJOPcKZnYbF5c8oaxOl5mon0L4sDSLay5F2BH9AI-5wnGNhLoLcS3vS_bPkKt7NfrzmWV2p7OBv7EEnkGARHAf80W3vlboGiP2-qMCq3DMO1p8dsUiI0S_NtPI76wqGy7XjJAY3s4jBKLDYtj4WfFTN5NJ7YztNNIcRhKF"
+ people="1 ppl"
+ time="25m"
+ icon="spa"
+ onAddToCart={() => handleAddToCart('Healthy Breakfast')}
+ />
+ </>
+ )}
+ </div>
+ <div className="mt-6 flex justify-center">
+ <button 
+ onClick={() => setShowAllBundles(!showAllBundles)} 
+ className="text-foreground/70 hover:text-foreground font-medium text-sm flex items-center border border-border px-4 py-2 rounded-full transition-colors"
+ >
+ {showAllBundles ? 'View Less' : 'View More'}
+ <span className="material-icons text-sm ml-1">{showAllBundles ? 'expand_less' : 'expand_more'}</span>
+ </button>
  </div>
  </section>
 
  {/* Tracking */}
- <section className="mb-16 grid grid-cols-1 lg:grid-cols-12 gap-10">
- <div className="lg:col-span-4">
- <div className="sticky top-24">
- <h2 className="text-2xl font-bold text-foreground mb-3">Track Your Order</h2>
- <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
- <div className="flex justify-between items-center mb-3 pb-3 border-b border-border ">
- <span className="text-xs text-muted-foreground ">Order ID</span>
- <span className="font-mono font-bold text-base">#4092</span>
- </div>
- <div className="mb-5">
- <div className="flex justify-between text-xs mb-1">
- <span className="text-muted-foreground">Estimated Arrival</span>
- <span className="font-bold text-foreground ">14:35 PM</span>
- </div>
- <div className="w-full bg-background h-1.5 rounded-full overflow-hidden">
- <div className="bg-primary h-full w-3/4 rounded-full"></div>
- </div>
- </div>
- <button className="w-full bg-background hover:bg-background dark:hover:bg-foreground text-background text-foreground font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center text-sm">
- <span className="material-icons text-xs mr-2">support_agent</span> Contact Support
- </button>
- </div>
- </div>
- </div>
- <div className="lg:col-span-8">
- <div className="bg-card rounded-xl p-6 border border-border shadow-sm">
- <div className="relative">
- <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-background "></div>
- <div className="absolute left-5 top-5 h-3/5 w-0.5 bg-primary"></div>
- 
- <TimelineItem icon="receipt_long" title="Order Received" time="13:45 PM" text="We have received your order and payment." completed />
- <TimelineItem icon="skillet" title="Kitchen Prep" time="13:55 PM" text="Chef Emeka is preparing your 'Family Sunday Feast'." completed />
- <TimelineItem icon="check_circle" title="Quality Check" text="Ensuring everything is hot and packed correctly." active subText="In Progress..." />
- <TimelineItem icon="two_wheeler" title="In Transit" text="Driver assigned: Musa." />
- <TimelineItem icon="home" title="Arrived" text="Enjoy your meal!" />
- </div>
- </div>
- </div>
+ <section className="mb-16">
+  {orders.length === 0 ? (
+    <div className="text-center py-12 bg-card rounded-xl border border-border shadow-sm">
+      <span className="material-icons text-5xl text-muted-foreground mb-4 opacity-50">local_shipping</span>
+      <h2 className="text-xl font-bold text-foreground mb-2">Track Your Order</h2>
+      <p className="text-muted-foreground text-sm">When you place an order, track it here.</p>
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <div className="lg:col-span-4">
+        <div className="sticky top-24">
+          <h2 className="text-2xl font-bold text-foreground mb-3">Track Your Order</h2>
+          <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            {orders.map(order => (
+              <div 
+                key={order.id} 
+                onClick={() => setSelectedOrderId(order.id)}
+                className={`bg-card p-5 rounded-xl border cursor-pointer transition-colors ${selectedOrderId === order.id ? 'border-primary shadow-md' : 'border-border shadow-sm hover:border-primary/50'}`}
+              >
+                <div className="flex justify-between items-center mb-3 pb-3 border-b border-border ">
+                  <span className="text-xs text-muted-foreground ">Order ID</span>
+                  <span className="font-mono font-bold text-base">{order.id}</span>
+                </div>
+                <div className="mb-5">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Status</span>
+                    <span className="font-bold text-foreground capitalize">{order.status.replace(/_/g, ' ')}</span>
+                  </div>
+                  <div className="w-full bg-background h-1.5 rounded-full overflow-hidden mt-2">
+                    <div className={`h-full rounded-full bg-primary ${
+                      order.status === 'awaiting_chef' ? 'w-1/5' :
+                      (order.status === 'preparing' || order.status === 'ten_min_warning' || order.status === 'five_min_warning') ? 'w-2/5' :
+                      order.status === 'ready' ? 'w-3/5' :
+                      order.status === 'completed' ? 'w-full' : 'w-1/12'
+                    }`}></div>
+                  </div>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); handleSupport(); }} className="w-full bg-background hover:bg-background dark:hover:bg-foreground text-background text-foreground font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center text-sm">
+                  <span className="material-icons text-xs mr-2">support_agent</span> Contact Support
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="lg:col-span-8">
+        {selectedOrder && (
+          <div className="bg-card rounded-xl p-6 border border-border shadow-sm h-full">
+            <div className="relative">
+              <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-background "></div>
+              
+              <TimelineItem 
+                icon="receipt_long" 
+                title="Order Placed" 
+                time={new Date(selectedOrder.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 
+                text="We have received your order." 
+                completed={true} 
+                active={selectedOrder.status === 'awaiting_chef'} 
+              />
+              <TimelineItem 
+                icon="skillet" 
+                title="Chef Confirmed" 
+                text={selectedOrder.chefConfirmedAt ? "The kitchen is preparing your order." : "Waiting for chef to confirm."}
+                completed={selectedOrder.status !== 'awaiting_chef' && selectedOrder.status !== 'cancelled'} 
+                active={selectedOrder.status === 'preparing' || selectedOrder.status === 'ten_min_warning' || selectedOrder.status === 'five_min_warning'} 
+              />
+              <TimelineItem 
+                icon="check_circle" 
+                title="Order is Ready" 
+                text="Your order is packed and ready." 
+                completed={selectedOrder.status === 'ready' || selectedOrder.status === 'completed'}
+                active={selectedOrder.status === 'ready'} 
+              />
+              <TimelineItem 
+                icon="two_wheeler" 
+                title="In Transit" 
+                text="Driver assigned." 
+                completed={selectedOrder.status === 'completed'}
+                active={false}
+              />
+              <TimelineItem 
+                icon="home" 
+                title="Arrived" 
+                text="Enjoy your meal!" 
+                completed={selectedOrder.status === 'completed'}
+                active={selectedOrder.status === 'completed'}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )}
  </section>
 
  {/* Area Specials */}
@@ -144,32 +281,55 @@ const DeliveryScreen: React.FC = () => {
  <h2 className="text-2xl font-bold text-foreground mb-3">Delivery Zones & Fees</h2>
  <p className="text-muted-foreground text-sm">Transparent pricing for every neighborhood in Jos. Fees go directly to supporting our riders.</p>
  </div>
- <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
- <ZoneCard 
- name="Rayfield" 
- badge="Fastest" 
- badgeColor="bg-green-100 text-green-700" 
- fee="₦500" 
- time="15-25 min" 
- freeOver="₦5,000" 
- />
- <ZoneCard 
- name="Tudun Wada" 
- badge="Busy" 
- badgeColor="bg-yellow-100 text-yellow-700" 
- fee="₦700" 
- time="30-45 min" 
- freeOver="₦7,500" 
- popular
- />
- <ZoneCard 
- name="Jos South" 
- fee="₦1,200" 
- time="45-60 min" 
- freeOver="₦12,000" 
- />
+ <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm overflow-x-auto">
+ <table className="w-full text-left border-collapse min-w-[500px]">
+ <thead>
+ <tr className="bg-background border-b border-border">
+ <th className="py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Destination</th>
+ <th className="py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Est. Time</th>
+ <th className="py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Delivery Fee</th>
+ <th className="py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Free Delivery Over</th>
+ </tr>
+ </thead>
+ <tbody className="divide-y divide-border">
+ <tr className="hover:bg-background/50 transition-colors">
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">Rayfield</td>
+ <td className="py-3 px-4 text-sm text-foreground">15-25 min</td>
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">₦500</td>
+ <td className="py-3 px-4 text-sm text-primary">₦5,000</td>
+ </tr>
+ <tr className="hover:bg-background/50 transition-colors">
+ <td className="py-3 px-4 text-sm font-semibold text-foreground flex items-center">
+ Tudun Wada
+ <span className="ml-2 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded">POPULAR</span>
+ </td>
+ <td className="py-3 px-4 text-sm text-foreground">30-45 min</td>
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">₦700</td>
+ <td className="py-3 px-4 text-sm text-primary">₦7,500</td>
+ </tr>
+ <tr className="hover:bg-background/50 transition-colors">
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">Jos South</td>
+ <td className="py-3 px-4 text-sm text-foreground">45-60 min</td>
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">₦1,200</td>
+ <td className="py-3 px-4 text-sm text-primary">₦12,000</td>
+ </tr>
+ <tr className="hover:bg-background/50 transition-colors">
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">Bukuru</td>
+ <td className="py-3 px-4 text-sm text-foreground">50-65 min</td>
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">₦1,500</td>
+ <td className="py-3 px-4 text-sm text-primary">₦15,000</td>
+ </tr>
+ <tr className="hover:bg-background/50 transition-colors">
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">Lamingo</td>
+ <td className="py-3 px-4 text-sm text-foreground">25-40 min</td>
+ <td className="py-3 px-4 text-sm font-semibold text-foreground">₦800</td>
+ <td className="py-3 px-4 text-sm text-primary">₦8,000</td>
+ </tr>
+ </tbody>
+ </table>
  </div>
  </section>
+ </div>
  </div>
  {/* Floating Status Widget (Bottom Right) */}
  <div className="fixed bottom-24 right-6 z-40 hidden md:block">
@@ -202,7 +362,7 @@ const TimelineItem = ({ icon, title, time, text, subText, active, completed }: a
  </div>
 );
 
-const BundleCard = ({ title, price, desc, image, badge, badgeColor, people, time, icon }: any) => (
+const BundleCard = ({ title, price, desc, image, badge, badgeColor, people, time, icon, onAddToCart }: any) => (
  <div className="group bg-card rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-border cursor-pointer">
  <div className="relative h-56 overflow-hidden">
  <img src={image} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" alt={title} />
@@ -223,33 +383,12 @@ const BundleCard = ({ title, price, desc, image, badge, badgeColor, people, time
  <span className="flex items-center"><span className="material-icons text-xs mr-1">{icon || 'group'}</span> {people}</span>
  <span className="flex items-center"><span className="material-icons text-xs mr-1">schedule</span> {time}</span>
  </div>
- <button className="bg-primary/10 hover:bg-primary hover:text-white text-primary font-semibold py-1.5 px-3.5 rounded-lg transition-colors text-xs">
+ <button 
+ onClick={(e) => { e.stopPropagation(); onAddToCart && onAddToCart(); }}
+ className="bg-primary/10 hover:bg-primary hover:text-white text-primary font-semibold py-1.5 px-3.5 rounded-lg transition-colors text-xs"
+ >
  Add to Cart
  </button>
- </div>
- </div>
- </div>
-);
-
-const ZoneCard = ({ name, badge, badgeColor, fee, time, freeOver, popular }: any) => (
- <div className={`bg-card rounded-lg p-5 border transition-colors relative overflow-hidden ${popular ? 'border-primary shadow-md' : 'border-border hover:border-primary/50'}`}>
- {popular && <div className="absolute top-0 right-0 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded-bl-lg">POPULAR</div>}
- <div className="flex items-center justify-between mb-3.5">
- <h3 className="font-bold text-lg text-foreground ">{name}</h3>
- {badge && <span className={`${badgeColor} text-[10px] font-bold px-1.5 py-0.5 rounded`}>{badge}</span>}
- </div>
- <div className="space-y-2.5">
- <div className="flex justify-between text-xs">
- <span className="text-muted-foreground">Delivery Fee</span>
- <span className="font-bold text-foreground ">{fee}</span>
- </div>
- <div className="flex justify-between text-xs">
- <span className="text-muted-foreground">Avg. Time</span>
- <span className="font-bold text-foreground ">{time}</span>
- </div>
- <div className="flex justify-between text-xs pt-2.5 border-t border-border ">
- <span className="text-primary font-medium">Free Delivery</span>
- <span className="font-bold text-foreground ">Orders &gt; {freeOver}</span>
  </div>
  </div>
  </div>

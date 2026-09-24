@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import DashboardScreen from './components/DashboardScreen';
 import MenuScreen from './components/MenuScreen';
 import AboutScreen from './components/AboutScreen';
 import DeliveryScreen from './components/DeliveryScreen';
 import ReservationsScreen from './components/ReservationsScreen';
 
-export type DiningView = 'dashboard' | 'menu' | 'about' | 'delivery' | 'reservations';
+export type DiningView = 'menu' | 'about' | 'delivery' | 'reservations';
 
 export const DiningNav: React.FC<{ navHidden: boolean, currentView: DiningView, setView: (v: DiningView) => void }> = ({ navHidden, currentView, setView }) => {
   const [isMobile, setIsMobile] = useState(false);
@@ -57,20 +56,6 @@ export const DiningNav: React.FC<{ navHidden: boolean, currentView: DiningView, 
           ))}
         </div>
         <div className="flex-1 flex justify-end shrink-0">
-          <button 
-            onClick={() => {
-              setView('dashboard');
-              document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            title="Dashboard"
-            className={`p-1.5 rounded-full transition-all duration-300 flex items-center justify-center ${
-              currentView === 'dashboard'
-                ? 'bg-primary text-white shadow-lg shadow-primary/25' 
-                : 'bg-neutral-100 hover:bg-neutral-200/80 text-neutral-600 hover:text-neutral-950 dark:bg-neutral-800/80 dark:hover:bg-neutral-700 dark:text-neutral-400 dark:hover:text-white'
-            }`}
-          >
-            <span className="material-icons text-base">person</span>
-          </button>
         </div>
       </div>
     </div>
@@ -90,13 +75,6 @@ export const DiningApp: React.FC<{ currentView: DiningView; setView?: (v: Dining
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard':
-        return (
-          <DashboardScreen
-            onNavigateToMenu={() => setView?.('menu')}
-            onNavigateToReservations={() => setView?.('reservations')}
-          />
-        );
       case 'menu': return <MenuScreen />;
       case 'about': return <AboutScreen />;
       case 'delivery': return <DeliveryScreen />;

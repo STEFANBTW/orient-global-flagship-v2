@@ -1,9 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, 'src', 'dining', 'components', 'UnifiedCheckout.tsx');
+
+const content = `import React, { useState, useRef, useEffect } from 'react';
 import { getActiveConsumerUser, updateActiveConsumerUserDetails, saveUser, setActiveConsumerUser, AppUser, MOCK_NIGERIAN_USERS } from '@/services/userService';
 import { orderService, OrderItem } from '@/services/orderService';
 import { INITIAL_PRODUCTS_CATALOG } from '@/data/productsCatalog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-
 
 interface UnifiedCheckoutProps {
   isOpen: boolean;
@@ -16,90 +19,21 @@ interface UnifiedCheckoutProps {
   onNavigateToDashboard?: () => void;
 }
 
-
-
-
-
-const CustomDatePicker = ({ selectedDate, onChange }: { selectedDate: string, onChange: (d: string) => void }) => {
-  const [open, setOpen] = useState(false);
-  
-  const getLocalObj = (dateStr: string) => {
-    if (!dateStr) return undefined;
-    const [y, m, d] = dateStr.split('-');
-    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-  };
-  const dateObj = getLocalObj(selectedDate);
-  
-  const MiniCalendar = () => {
-    const [currentMonth, setCurrentMonth] = useState(dateObj || new Date());
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-
-    const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-    const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-
-    return (
-      <div className="p-4 w-72 bg-card rounded-xl border border-border shadow-lg">
-        <div className="flex justify-between items-center mb-4">
-          <button onClick={(e) => { e.preventDefault(); prevMonth(); }} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center h-8 w-8"><span className="material-icons text-sm">chevron_left</span></button>
-          <span className="font-bold text-sm text-foreground">{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-          <button onClick={(e) => { e.preventDefault(); nextMonth(); }} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center h-8 w-8"><span className="material-icons text-sm">chevron_right</span></button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 mb-2 text-center">
-          {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <span key={d} className="text-xs font-bold text-muted-foreground">{d}</span>)}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: firstDay }).map((_, i) => <div key={'empty'+i} />)}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
-            const isPast = date < today;
-            const isSelected = dateObj && date.toDateString() === dateObj.toDateString();
-            return (
-              <button
-                key={i}
-                disabled={isPast}
-                onClick={(e) => {
-                  e.preventDefault();
-                  const y = date.getFullYear();
-                  const m = String(date.getMonth() + 1).padStart(2, '0');
-                  const d = String(date.getDate()).padStart(2, '0');
-                  onChange(`${y}-${m}-${d}`);
-                  setOpen(false);
-                }}
-                className={`h-8 w-8 mx-auto text-sm flex items-center justify-center rounded-full transition-colors ${
-                  isPast ? 'text-muted-foreground opacity-30 cursor-not-allowed bg-muted/30' 
-                  : isSelected ? 'bg-primary text-primary-foreground font-bold shadow-md' 
-                  : 'hover:bg-muted text-foreground'
-                }`}
-              >
-                {i + 1}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-  
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          onClick={(e) => { e.preventDefault(); setOpen(true); }}
-          className={`w-full p-3.5 bg-background border border-border rounded-xl text-foreground font-medium outline-none hover:border-primary/50 text-left flex justify-between items-center transition-colors ${!selectedDate ? 'text-muted-foreground' : ''}`}
-        >
-          {dateObj ? dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }) : "Select a date"}
-          <span className="material-icons text-muted-foreground">calendar_today</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 z-[100000] border-none bg-transparent shadow-none" align="start">
-        <MiniCalendar />
-      </PopoverContent>
-    </Popover>
-  );
+const MOCK_RESERVED_TIMES: Record<string, string[]> = {
+  "M1": ["1:00 PM", "1:30 PM", "7:00 PM"],
+  "M2": ["12:30 PM", "1:00 PM", "6:30 PM", "7:00 PM", "7:30 PM"],
+  "M3": ["2:00 PM", "2:30 PM", "8:00 PM"],
+  "M4": ["1:00 PM", "1:30 PM", "2:00 PM", "6:00 PM", "6:30 PM"],
+  "M5": ["7:30 PM", "8:00 PM", "8:30 PM"],
+  "M6": ["12:00 PM", "12:30 PM", "5:00 PM", "5:30 PM"],
+  "M7": ["1:30 PM", "2:00 PM", "8:00 PM"],
+  "B1": ["1:00 PM", "6:00 PM", "6:30 PM"],
+  "B2": ["8:00 PM", "8:30 PM", "9:00 PM"],
+  "B3": ["12:30 PM", "1:00 PM", "7:00 PM"],
+  "B4": ["2:00 PM", "2:30 PM"],
+  "P1": ["1:00 PM", "1:30 PM", "2:00 PM", "7:00 PM", "7:30 PM", "8:00 PM"],
+  "P2": ["12:00 PM", "12:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM"],
+  "P3": ["8:30 PM", "9:00 PM"]
 };
 
 // Internal component for the Circular Time Picker
@@ -122,7 +56,7 @@ const CircularTimePicker = ({
   // Sync internal state if value prop changes externally (e.g. initial load)
   useEffect(() => {
     if (value) {
-      const match = value.match(/(\d+):(\d+)\s+(AM|PM)/);
+      const match = value.match(/(\\d+):(\\d+)\\s+(AM|PM)/);
       if (match) {
         setHour(parseInt(match[1], 10));
         setMinute(parseInt(match[2], 10));
@@ -134,7 +68,7 @@ const CircularTimePicker = ({
   const updateExternalValue = (h: number, m: number, p: 'AM' | 'PM') => {
     const formattedHour = h.toString();
     const formattedMinute = m.toString().padStart(2, '0');
-    onChange(`${formattedHour}:${formattedMinute} ${p}`);
+    onChange(\`\${formattedHour}:\${formattedMinute} \${p}\`);
   };
 
   const handleHourClick = (h: number) => {
@@ -158,14 +92,14 @@ const CircularTimePicker = ({
     const radius = 40; // percentage
     const left = 50 + radius * Math.cos(angle);
     const top = 50 + radius * Math.sin(angle);
-    return { left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' };
+    return { left: \`\${left}%\`, top: \`\${top}%\`, transform: 'translate(-50%, -50%)' };
   };
 
   const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
   // Helper to check if a specific hour/min is entirely unavailable (complex to do perfectly, so we just let them pick and validate on selection, but for UX we can show red if the exact string is in unavailableTimes)
-  const currentFormatted = `${hour}:${minute.toString().padStart(2, '0')} ${period}`;
+  const currentFormatted = \`\${hour}:\${minute.toString().padStart(2, '0')} \${period}\`;
   const isCurrentlyUnavailable = unavailableTimes.includes(currentFormatted);
 
   return (
@@ -175,14 +109,14 @@ const CircularTimePicker = ({
         <div className="flex items-baseline text-3xl font-black text-foreground tracking-tight">
           <button 
             onClick={() => setView('hour')} 
-            className={`hover:text-primary transition-colors ${view === 'hour' ? 'text-primary' : ''}`}
+            className={\`hover:text-primary transition-colors \${view === 'hour' ? 'text-primary' : ''}\`}
           >
             {hour}
           </button>
           <span className="mx-1 text-muted-foreground opacity-50">:</span>
           <button 
             onClick={() => setView('minute')} 
-            className={`hover:text-primary transition-colors ${view === 'minute' ? 'text-primary' : ''}`}
+            className={\`hover:text-primary transition-colors \${view === 'minute' ? 'text-primary' : ''}\`}
           >
             {minute.toString().padStart(2, '0')}
           </button>
@@ -190,13 +124,13 @@ const CircularTimePicker = ({
         <div className="flex flex-col gap-1 ml-2 text-xs font-bold">
           <button 
             onClick={() => handlePeriodClick('AM')} 
-            className={`px-2 py-0.5 rounded ${period === 'AM' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+            className={\`px-2 py-0.5 rounded \${period === 'AM' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}\`}
           >
             AM
           </button>
           <button 
             onClick={() => handlePeriodClick('PM')} 
-            className={`px-2 py-0.5 rounded ${period === 'PM' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+            className={\`px-2 py-0.5 rounded \${period === 'PM' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}\`}
           >
             PM
           </button>
@@ -216,7 +150,7 @@ const CircularTimePicker = ({
               key={'h'+h}
               onClick={() => handleHourClick(h)}
               style={getPositionStyle(i, 12)}
-              className={`absolute w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${isSelected ? 'bg-primary text-white shadow-md scale-110' : 'text-foreground hover:bg-muted'}`}
+              className={\`absolute w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all \${isSelected ? 'bg-primary text-white shadow-md scale-110' : 'text-foreground hover:bg-muted'}\`}
             >
               {h}
             </button>
@@ -230,7 +164,7 @@ const CircularTimePicker = ({
               key={'m'+m}
               onClick={() => handleMinuteClick(m)}
               style={getPositionStyle(i, 12)}
-              className={`absolute w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${isSelected ? 'bg-primary text-white shadow-md scale-110' : 'text-foreground hover:bg-muted'}`}
+              className={\`absolute w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all \${isSelected ? 'bg-primary text-white shadow-md scale-110' : 'text-foreground hover:bg-muted'}\`}
             >
               {m.toString().padStart(2, '0')}
             </button>
@@ -249,12 +183,10 @@ const CircularTimePicker = ({
 };
 
 
-const EMPTY_ITEMS: OrderItem[] = [];
-
 export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({ 
   isOpen, 
   onClose, 
-  initialItems = EMPTY_ITEMS, 
+  initialItems = [], 
   source,
   variant = 'modal',
   onSuccess,
@@ -285,33 +217,6 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
   
   // Mobile Clock Modal State
   const [showMobileClock, setShowMobileClock] = useState(false);
-  const [fetchedReservations, setFetchedReservations] = useState<{tableId: string, date: string, time: string}[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-    const fetchReservations = async () => {
-      try {
-        const orders = await orderService.getOrders();
-        const parsed = orders
-          .filter(o => o.tableNumber && o.status !== 'cancelled' && o.status !== 'completed')
-          .map(o => {
-             const match = o.tableNumber?.match(/(.+) \((.+) @ (.+)\)/);
-             if (match) return { tableId: match[1], date: match[2], time: match[3] };
-             return null;
-          })
-          .filter(Boolean) as {tableId: string, date: string, time: string}[];
-        
-        if (isMounted) setFetchedReservations(parsed);
-      } catch (e) {
-        console.error("Failed to fetch reservations", e);
-      }
-    };
-    if (isOpen) {
-      fetchReservations();
-    }
-    return () => { isMounted = false; };
-  }, [isOpen]);
-
 
   useEffect(() => {
     try {
@@ -387,8 +292,8 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
     }
     
     // Check if the currently selected time is in the unavailable array
-    if (selectedTableId && selectedTime && currentTableReservedTimes.includes(selectedTime)) {
-      setTimeErrorToast(`This time (${selectedTime}) has already been selected.`);
+    if (selectedTableId && selectedTime && MOCK_RESERVED_TIMES[selectedTableId]?.includes(selectedTime)) {
+      setTimeErrorToast(\`This time (\${selectedTime}) has already been selected.\`);
       setTimeout(() => setTimeErrorToast(null), 2500);
       return;
     }
@@ -411,7 +316,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
         customerEmail: userToUse.email || 'guest@orient.app',
         customerPhone: userToUse.phone,
         division: 'dining',
-        tableNumber: orderType === 'dine-in' ? `${selectedTableId} (${selectedDate} @ ${selectedTime})` : undefined,
+        tableNumber: orderType === 'dine-in' ? \`\${selectedTableId} (\${selectedDate} @ \${selectedTime})\` : undefined,
         shippingAddress: orderType === 'take-away' && takeawayMethod === 'delivery' ? deliveryAddress : 'Pick-up / Dine-in',
         notes: preferences,
         items: items,
@@ -422,7 +327,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
       
       sessionStorage.removeItem('orient_pending_reservation');
       sessionStorage.setItem('orient_active_order_notification', JSON.stringify({
-        tableNumber: orderType === 'dine-in' ? `${selectedTableId} (${selectedDate} @ ${selectedTime})` : undefined,
+        tableNumber: orderType === 'dine-in' ? \`\${selectedTableId} (\${selectedDate} @ \${selectedTime})\` : undefined,
         orderId: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
         status: 'awaiting_chef',
         timestamp: Date.now()
@@ -446,7 +351,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
       return;
     }
     const newUser: AppUser = {
-      id: `usr_${Date.now()}`,
+      id: \`usr_\${Date.now()}\`,
       name: signupForm.name,
       phone: signupForm.phone,
       email: signupForm.email,
@@ -462,8 +367,8 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
     setShowAuthModal(false);
     
     // Check time conflict again just in case
-    if (selectedTableId && selectedTime && currentTableReservedTimes.includes(selectedTime)) {
-      setTimeErrorToast(`This time (${selectedTime}) has already been selected.`);
+    if (selectedTableId && selectedTime && MOCK_RESERVED_TIMES[selectedTableId]?.includes(selectedTime)) {
+      setTimeErrorToast(\`This time (\${selectedTime}) has already been selected.\`);
       setTimeout(() => setTimeErrorToast(null), 2500);
       return;
     }
@@ -477,8 +382,8 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
     window.dispatchEvent(new CustomEvent('orient_consumer_user_changed', { detail: user }));
     setShowAuthModal(false);
     
-    if (selectedTableId && selectedTime && currentTableReservedTimes.includes(selectedTime)) {
-      setTimeErrorToast(`This time (${selectedTime}) has already been selected.`);
+    if (selectedTableId && selectedTime && MOCK_RESERVED_TIMES[selectedTableId]?.includes(selectedTime)) {
+      setTimeErrorToast(\`This time (\${selectedTime}) has already been selected.\`);
       setTimeout(() => setTimeErrorToast(null), 2500);
       return;
     }
@@ -497,14 +402,12 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
 
   const getTableClass = (id: string) => {
     if (selectedTableId === id) return "fill-primary/30 stroke-primary stroke-2 cursor-pointer";
-    const hasRes = fetchedReservations.some(r => r.tableId === id && r.date === selectedDate);
+    const hasRes = MOCK_RESERVED_TIMES[id]?.length > 0;
     if (hasRes) return "fill-white dark:fill-[#2d2018] stroke-red-500/40 dark:stroke-red-400/40 stroke-1 hover:fill-red-500/10 cursor-pointer transition-colors";
     return "fill-white dark:fill-[#2d2018] stroke-gray-300 dark:stroke-white/20 stroke-1 hover:fill-gray-100 dark:hover:fill-[#3d2b20] cursor-pointer transition-colors";
   };
 
-  const currentTableReservedTimes = fetchedReservations
-    .filter(r => r.tableId === selectedTableId && r.date === selectedDate)
-    .map(r => r.time);
+  const currentTableReservedTimes = selectedTableId ? (MOCK_RESERVED_TIMES[selectedTableId] || []) : [];
   const isSelectedTimeUnavailable = selectedTime && currentTableReservedTimes.includes(selectedTime);
 
   const content = (
@@ -533,23 +436,21 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
           </h3>
           {currentStep === 1 && (
             <div className="space-y-4 animate-fade-in-up">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setOrderType('dine-in')}
-                  className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${orderType === 'dine-in' ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-[1.02]' : 'hover:border-primary border-border bg-background'}`}
+                  className={\`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all \${orderType === 'dine-in' ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-[1.02]' : 'hover:border-primary border-border bg-background'}\`}
                 >
                   <span className="material-icons text-2xl">restaurant</span>
                   <span className="font-bold">Dine-In</span>
                 </button>
-                {source !== 'reservation' && (
                 <button
                   onClick={() => setOrderType('take-away')}
-                  className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${orderType === 'take-away' ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-[1.02]' : 'hover:border-primary border-border bg-background'}`}
+                  className={\`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all \${orderType === 'take-away' ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-[1.02]' : 'hover:border-primary border-border bg-background'}\`}
                 >
                   <span className="material-icons text-2xl">takeout_dining</span>
                   <span className="font-bold">Take-Away</span>
                 </button>
-                )}
               </div>
 
               {orderType === 'take-away' && (
@@ -558,13 +459,13 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                   <div className="flex gap-3">
                     <button
                       onClick={() => setTakeawayMethod('pickup')}
-                      className={`flex-1 p-3 rounded-lg border text-sm font-medium transition-colors ${takeawayMethod === 'pickup' ? 'bg-foreground text-background border-foreground' : 'hover:bg-muted border-border bg-background text-foreground'}`}
+                      className={\`flex-1 p-3 rounded-lg border text-sm font-medium transition-colors \${takeawayMethod === 'pickup' ? 'bg-foreground text-background border-foreground' : 'hover:bg-muted border-border bg-background text-foreground'}\`}
                     >
                       Pickup
                     </button>
                     <button
                       onClick={() => setTakeawayMethod('delivery')}
-                      className={`flex-1 p-3 rounded-lg border text-sm font-medium transition-colors ${takeawayMethod === 'delivery' ? 'bg-foreground text-background border-foreground' : 'hover:bg-muted border-border bg-background text-foreground'}`}
+                      className={\`flex-1 p-3 rounded-lg border text-sm font-medium transition-colors \${takeawayMethod === 'delivery' ? 'bg-foreground text-background border-foreground' : 'hover:bg-muted border-border bg-background text-foreground'}\`}
                     >
                       Delivery
                     </button>
@@ -611,15 +512,15 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                       
                       {/* Detailed SVG Map */}
                       <svg className="w-full min-w-[500px] md:min-w-[600px] h-auto drop-shadow-sm select-none" viewBox="0 0 800 500">
-                        <rect className="fill-background dark:fill-card" height="500" rx="12" width="800" x="0" y="0"></rect>
+                        <rect className="fill-white dark:fill-[#221710]" height="500" rx="12" width="800" x="0" y="0"></rect>
                         
                         <path d="M 50 50 L 550 50 L 550 350 L 50 350 Z" fill="none" className="stroke-border dark:stroke-[#3d2b20]" strokeWidth="2"></path>
                         <text className="fill-muted-foreground" fontSize="13" fontWeight="bold" letterSpacing="2" x="65" y="80">MAIN DINING HALL</text>
                         
-                        <path d="M 50 370 L 550 370 L 550 480 L 50 480 Z" className="fill-secondary dark:fill-card stroke-border dark:stroke-border" strokeWidth="2"></path>
+                        <path d="M 50 370 L 550 370 L 550 480 L 50 480 Z" className="fill-muted/20 dark:fill-[#2d2018] stroke-border dark:stroke-[#3d2b20]" strokeWidth="2"></path>
                         <text className="fill-muted-foreground" fontSize="13" fontWeight="bold" letterSpacing="2" x="65" y="400">THE SUNSET BALCONY</text>
                         
-                        <path d="M 570 50 L 750 50 L 750 480 L 570 480 Z" className="fill-muted dark:fill-muted stroke-border dark:stroke-border" strokeWidth="2"></path>
+                        <path d="M 570 50 L 750 50 L 750 480 L 570 480 Z" className="fill-muted/30 dark:fill-[#1a110c] stroke-border dark:stroke-[#3d2b20]" strokeWidth="2"></path>
                         <text className="fill-muted-foreground" fontSize="13" fontWeight="bold" letterSpacing="2" x="585" y="80">PRIVATE SUITES</text>
 
                         {/* Main Hall Tables */}
@@ -688,7 +589,12 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                   {/* 30% Column: Specs, Date, Reserved Times, Time Slots */}
                   <div className="lg:col-span-4 flex flex-col space-y-4 bg-muted/20 border border-border/80 rounded-2xl p-4 sm:p-5">
                     
-                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Reservation Date</label>
+                        <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-2.5 bg-background border border-border rounded-xl text-foreground font-medium outline-none focus:border-primary/50" />
+                      </div>
+                    </div>
 
                     {!selectedTableId ? (
                       <div className="py-12 px-4 text-center border-2 border-dashed border-border rounded-xl bg-background mt-4">
@@ -717,7 +623,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {currentTableReservedTimes.map((time, idx) => (
-                                <span key={idx} className="px-2 py-1 text-[10px] font-bold rounded bg-red-500/20 border border-red-500/40">
+                                <span key={idx} className="px-2 py-1 text-[10px] font-bold rounded bg-red-500/20 border border-red-500/40 line-through">
                                   {time}
                                 </span>
                               ))}
@@ -737,7 +643,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                               onChange={(val) => {
                                 setSelectedTime(val);
                                 if (currentTableReservedTimes.includes(val)) {
-                                  setTimeErrorToast(`This time (${val}) has already been selected.`);
+                                  setTimeErrorToast(\`This time (\${val}) has already been selected.\`);
                                   setTimeout(() => setTimeErrorToast(null), 2500);
                                 }
                               }}
@@ -753,7 +659,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                             >
                               <span className="flex items-center gap-2">
                                 <span className="material-icons text-primary text-xl">schedule</span>
-                                {selectedTime || "Choose Time"}
+                                {selectedTime || "Select a time"}
                               </span>
                               <span className="material-icons text-muted-foreground">chevron_right</span>
                             </button>
@@ -893,7 +799,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
                 onChange={(val) => {
                   setSelectedTime(val);
                   if (currentTableReservedTimes.includes(val)) {
-                    setTimeErrorToast(`This time (${val}) has already been selected.`);
+                    setTimeErrorToast(\`This time (\${val}) has already been selected.\`);
                     setTimeout(() => setTimeErrorToast(null), 2500);
                   }
                 }}
@@ -995,3 +901,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
     </>
   );
 };
+`;
+
+fs.writeFileSync(filePath, content, 'utf8');
+console.log('Successfully wrote UnifiedCheckout.tsx');
