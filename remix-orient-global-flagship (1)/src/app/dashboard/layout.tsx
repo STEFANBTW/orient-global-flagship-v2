@@ -187,54 +187,44 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
   }
 
   return (
-    <div className="admin-dashboard min-h-screen w-full bg-background font-display text-foreground flex flex-col">
+    <div className="admin-dashboard min-h-screen w-full bg-background font-display text-foreground flex flex-col overflow-x-hidden">
       {/* ========================================================================= */}
-      {/* UNIFIED SINGLE TOP BAR                                                    */}
+      {/* UNIFIED SINGLE COMPACT TOP BAR                                            */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-50 w-full bg-transparent backdrop-blur-md px-4 sm:px-6 py-2.5 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 w-full max-w-full bg-background/80 backdrop-blur-md px-3 sm:px-6 py-2 shadow-2xs border-b border-border/20">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full">
           
           {/* ===================================================================== */}
-          {/* TOP LEFT: Orient Icon, "Orient CMS", & Back to Storefront Underneath  */}
+          {/* TOP LEFT: Orient Icon & Title (Single Line, Responsive Truncate)      */}
           {/* ===================================================================== */}
-          <div className="flex flex-col items-start shrink-0">
+          <div className="flex items-center gap-2 min-w-0 shrink">
             <Link 
               to="/dashboard" 
-              className="flex items-center gap-2 group hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 group hover:opacity-90 transition-opacity min-w-0"
             >
               {/* Orient Icon */}
               <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-xs shrink-0">
                 <Store className="w-4 h-4" />
               </div>
               {/* Exact Name: Orient CMS or Orient Customer Dashboard */}
-              <span className="text-base font-bold tracking-tight text-foreground leading-none">
+              <span className="text-sm sm:text-base font-bold tracking-tight text-foreground leading-none truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">
                 {isAdminMode ? 'Orient CMS' : 'Orient Customer Dashboard'}
               </span>
             </Link>
-
-            {/* Back to Storefront button directly under Orient CMS */}
-            <button
-              onClick={() => onCancel ? onCancel() : navigate('/')}
-              className="mt-5 flex items-center gap-1 text-[16px] font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
-              title="Return to public storefront"
-            >
-              <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
-              <span>Back to Storefront</span>
-            </button>
           </div>
 
           {/* ===================================================================== */}
           {/* CENTER: Navigation Dropdown (Overview, Divisions, Notifications)       */}
           {/* ===================================================================== */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button 
                   id="btn-nav-division-dropdown"
-                  className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-background hover:bg-muted text-foreground transition-colors text-sm font-semibold shadow-xs"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-background hover:bg-muted text-foreground transition-colors text-xs sm:text-sm font-semibold shadow-xs"
                 >
-                  <span className="max-w-[140px] sm:max-w-[200px] truncate">{currentNavLabel}</span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground ml-0.5 shrink-0" />
+                  <span className="max-w-[90px] xs:max-w-[130px] sm:max-w-[180px] md:max-w-[220px] truncate">{currentNavLabel}</span>
+                  <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground ml-0.5 shrink-0" />
                 </button>
               </DropdownMenuTrigger>
 
@@ -327,21 +317,32 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
           </div>
 
           {/* ===================================================================== */}
-          {/* TOP RIGHT: Home, Search, Refresh, Notifications, Profile, Theme       */}
+          {/* TOP RIGHT: Store, Home, Search, Refresh, Notifications, Profile, Theme */}
           {/* ===================================================================== */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
+            {/* 0. Store Button (Placed in front of Home on the same line) */}
+            <button
+              onClick={() => onCancel ? onCancel() : navigate('/')}
+              id="btn-header-storefront"
+              className="p-1.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0 flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+              title="Return to public storefront"
+            >
+              <Store className="w-4 h-4 text-primary" />
+              <span className="hidden lg:inline text-xs font-bold">Store</span>
+            </button>
+
             {/* 1. Home Icon (No border, simple clean icon) */}
             <Link
               to="/dashboard"
               id="btn-header-home"
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+              className="p-1.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
               title="Dashboard Overview Home"
             >
               <Home className="w-4 h-4" />
             </Link>
 
-            {/* 2. Compact Search Bar with centered magnifying glass */}
-            <div className="relative hidden md:flex items-center min-w-[150px] lg:min-w-[190px]">
+            {/* 2. Compact Responsive Search Bar */}
+            <div className="relative hidden xl:flex items-center w-36 lg:w-44">
               <Search className="w-3.5 h-3.5 absolute left-3 pointer-events-none text-muted-foreground" />
               <Input
                 id="header-search-bar"
@@ -351,7 +352,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
                   window.dispatchEvent(new CustomEvent('header-search-changed', { detail: e.target.value }));
                 }}
                 placeholder="Search..."
-                className="h-8 pl-8 pr-2.5 text-xs bg-[#f8fafc] dark:bg-[#1a1a1a] text-foreground rounded-lg border-none focus:ring-0 focus-visible:ring-0"
+                className="h-8 pl-8 pr-2.5 text-xs bg-[#f8fafc] dark:bg-[#1a1a1a] text-foreground rounded-lg border-none focus:ring-0 focus-visible:ring-0 w-full"
               />
             </div>
 
@@ -362,10 +363,10 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
               size="icon"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+              className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
               title="Sync & Refresh Data"
             >
-              <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RotateCcw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
 
             {/* 4. Notification Bell Icon (Comes BEFORE profile button, no border) */}

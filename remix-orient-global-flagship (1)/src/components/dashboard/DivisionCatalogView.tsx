@@ -37,7 +37,8 @@ import {
   Droplets,
   Layers,
   ExternalLink,
-  Truck
+  Truck,
+  MoreVertical
 } from 'lucide-react';
 
 const getCategoryIcon = (catName: string) => {
@@ -63,6 +64,12 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 
 interface DivisionConfig {
@@ -236,8 +243,8 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     });
   }, [products, selectedCategory, searchQuery]);
 
-  // Chef order status filter
-  const [chefOrderFilter, setChefOrderFilter] = useState<'all' | 'pending' | 'cooking' | 'ready' | 'in_transit' | 'completed'>('all');
+  // Chef order status filter (Default to 'current' as requested)
+  const [chefOrderFilter, setChefOrderFilter] = useState<'current' | 'all' | 'pending' | 'cooking' | 'ready' | 'in_transit' | 'completed'>('current');
 
   // Division Orders for chef display - STRICT DIVISION ISOLATION
   const divisionOrders = useMemo(() => {
@@ -270,6 +277,12 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
   }, [divisionOrders]);
 
   const displayedChefOrders = useMemo(() => {
+    if (chefOrderFilter === 'current') {
+      return divisionOrders.filter(o => {
+        const s = getDisplayStatus(o.status);
+        return s !== 'Completed' && s !== 'Cancelled';
+      });
+    }
     if (chefOrderFilter === 'all') return divisionOrders;
     return divisionOrders.filter(o => {
       const s = getDisplayStatus(o.status).toLowerCase().replace(/ /g, '_');
@@ -920,13 +933,19 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
           {/* Chef Status Filter Pills */}
           <div className="flex items-center gap-1.5 flex-wrap pb-1">
-            {(['all', 'pending', 'cooking', 'ready', 'in_transit', 'completed'] as const).map((filterKey) => {
-              const label = filterKey === 'all' ? 'All' :
+            {(['current', 'all', 'pending', 'cooking', 'ready', 'in_transit', 'completed'] as const).map((filterKey) => {
+              const label = filterKey === 'current' ? 'Current' :
+                            filterKey === 'all' ? 'All' :
                             filterKey === 'pending' ? 'Pending' :
                             filterKey === 'cooking' ? 'Cooking' :
                             filterKey === 'ready' ? 'Ready' :
                             filterKey === 'in_transit' ? 'In Transit' : 'Completed';
-              const count = filterKey === 'all' 
+              const count = filterKey === 'current'
+                ? divisionOrders.filter(o => {
+                    const s = getDisplayStatus(o.status);
+                    return s !== 'Completed' && s !== 'Cancelled';
+                  }).length
+                : filterKey === 'all' 
                 ? divisionOrders.length 
                 : divisionOrders.filter(o => getDisplayStatus(o.status).toLowerCase().replace(/ /g, '_') === filterKey).length;
 
@@ -934,7 +953,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                 <button
                   key={filterKey}
                   onClick={() => setChefOrderFilter(filterKey)}
-                  className={`px-2.5 py-1 text-xs rounded-lg transition-colors font-medium capitalize ${
+                  className={`px-2.5 py-1 text-xs rounded-lg transition-colors font-medium capitalize cursor-pointer ${
                     chefOrderFilter === filterKey
                       ? 'bg-foreground text-background font-semibold'
                       : 'bg-muted/50 text-muted-foreground hover:text-foreground'
@@ -1002,13 +1021,25 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                         >
                           {displayStatus}
                         </Badge>
-                        <button
-                          onClick={() => handleDeleteOrder(order.id)}
-                          className="p-1 text-muted-foreground hover:text-red-500 transition-colors cursor-pointer rounded-md hover:bg-red-500/10"
-                          title="Delete order permanently"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded-md hover:bg-muted/50"
+                              title="Order options"
+                            >
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40 bg-card border border-border/50 shadow-md rounded-xl p-1 z-50">
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-500/10 cursor-pointer text-xs font-semibold gap-2 py-1.5"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                              <span>Delete Order</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
 
@@ -1233,7 +1264,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
       {/* 4. THIRD ROW: Inventory Grid & SKU Catalog */}
       <div className="space-y-4 pt-4 border-t border-border/30">
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+        <div className="sticky top-[48px] sm:top-[50px] z-30 bg-background/95 backdrop-blur-md py-3 -mx-2 px-2 sm:-mx-4 sm:px-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-b border-border/20 shadow-2xs rounded-xl">
           {/* Dynamic Category Tabs with Category Icons on the LEFT hand side */}
           <div className="flex flex-wrap items-center gap-2">
             {config.categories.map(cat => {
@@ -1268,7 +1299,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
           </div>
 
           {/* Search Input */}
-          <div className="relative flex items-center w-full sm:w-72">
+          <div className="relative flex items-center w-full sm:w-72 shrink-0">
             <Search className="w-4 h-4 absolute left-3 text-muted-foreground pointer-events-none z-10 shrink-0" />
             <Input 
               id="input-search-division-products"
