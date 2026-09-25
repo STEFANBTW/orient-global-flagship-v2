@@ -6,7 +6,7 @@ import {
   ArrowUpRight, ExternalLink, Moon, Sun, Monitor, Laptop, Smartphone,
   Settings, LogOut, ChevronDown, CheckCircle2, Star, Shield, Zap,
   Sparkles, Bot, MessageSquare, Send, Paperclip, Mic, MicOff, Image as ImageIcon,
-  Smile, MoreHorizontal, History, Volume2
+  Smile, MoreHorizontal, History, Volume2, VolumeX, ChefHat, Utensils
 } from 'lucide-react';
 // ...
 import Lenis from 'lenis';
@@ -35,6 +35,7 @@ import { useOrderTimerManager } from './src/hooks/useOrderTimerManager';
 import { QuickOrderModal } from './src/components/QuickOrderModal';
 import { ConsumerUserSwitcher } from './src/components/ConsumerUserSwitcher';
 import { getActiveConsumerUser, getActiveAdminUser } from './src/services/userService';
+import { orderService, playAlertSound } from './src/services/orderService';
 
 // --- Utility: Magnetic Tilt Hook ---
 function useMagneticTilt() {
@@ -2003,25 +2004,166 @@ const VoicesSection: React.FC = () => {
 
 const ChatBot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<{role: 'user' | 'bot', text: string | React.ReactNode, images?: string[]}[]>([]);
+  const [messages, setMessages] = useState<Array<{
+    id?: string;
+    role: 'user' | 'bot';
+    text: string | React.ReactNode;
+    images?: string[];
+    orderDraft?: {
+      items: Array<{ id?: string; name: string; quantity: number; price: number }>;
+      totalAmount: number;
+      notes?: string;
+      confirmed?: boolean;
+      orderId?: string;
+    };
+  }>>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isVoiceOutputEnabled, setIsVoiceOutputEnabled] = useState(true);
+  const [pendingOrder, setPendingOrder] = useState<{
+    items: Array<{ id?: string; name: string; quantity: number; price: number }>;
+    totalAmount: number;
+    notes?: string;
+  } | null>(null);
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isTyping]);
 
-  const handleSend = async () => {
-    if (!input.trim() && attachedImages.length === 0) return;
+  // Refined Text-to-Speech (Speaks AURA's replies)
+  const speakText = (text: string) => {
+    if (!isVoiceOutputEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const clean = text
+        .replace(/[*_#`~]/g, '')
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/₦/g, 'Naira ');
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const refinedVoice = voices.find(v => (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Female') || v.name.includes('UK')) && v.lang.startsWith('en')) || voices.find(v => v.lang.startsWith('en'));
+      if (refinedVoice) utterance.voice = refinedVoice;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Speech synthesis error:', e);
+    }
+  };
+
+  // Autonomous Navigation Helper
+  const executeNav = (sectionId: string) => {
+    const s = (sectionId || '').toLowerCase();
+    if (s.includes('dining') || s.includes('restaurant') || s.includes('menu')) {
+      window.dispatchEvent(new CustomEvent('orient:navigate-dining', { detail: { sectionId: 'menu' } }));
+      const el = document.getElementById('dining') || document.getElementById('restaurant') || document.getElementById('menu');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      const navMsg = 'Certainly. Navigating you to the Orient Dining Menu.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('order')) {
+      window.dispatchEvent(new CustomEvent('orient:open-order'));
+      const navMsg = 'Opening your active kitchen orders tracker.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('bakery')) {
+      const el = document.getElementById('bakery');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      const navMsg = 'Navigating you to Orient Artisanal Bakery.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        const navMsg = `Navigating you to the ${sectionId} section.`;
+        setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+        speakText(navMsg);
+      } else {
+        const navMsg = `Navigating you to ${sectionId}.`;
+        setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+        speakText(navMsg);
+      }
+    }
+  };
+
+  // Order Placement Execution Helper
+  const executeOrderPlacement = async (orderData: {
+    items: Array<{ id?: string; name: string; quantity: number; price: number }>;
+    totalAmount: number;
+    customerName?: string;
+    tableNumber?: string;
+    deliveryAddress?: string;
+    notes?: string;
+  }, messageIndex?: number) => {
+    try {
+      setIsTyping(true);
+      const activeUser = getActiveConsumerUser();
+      const placed = await orderService.placeOrder({
+        customerName: orderData.customerName || activeUser?.name || 'Orient Flagship Guest',
+        customerPhone: activeUser?.phone || '+234 800 000 0000',
+        tableNumber: orderData.tableNumber || 'VIP Table 4',
+        shippingAddress: orderData.deliveryAddress || 'Amada Plaza, Rayfield, Jos',
+        notes: orderData.notes || 'Placed via AURA AI Concierge',
+        division: 'dining',
+        items: orderData.items.map(it => ({
+          id: it.id || `PRD-D-${Math.floor(Math.random() * 20 + 1).toString().padStart(3, '0')}`,
+          name: it.name,
+          quantity: it.quantity,
+          price: it.price || 10,
+          division: 'dining'
+        })),
+        totalAmount: orderData.totalAmount || (orderData.items.reduce((acc, i) => acc + (i.price || 10) * i.quantity, 0))
+      });
+
+      playAlertSound('placed');
+      setPendingOrder(null);
+
+      if (typeof messageIndex === 'number') {
+        setMessages(prev => prev.map((m, idx) => idx === messageIndex && m.orderDraft ? {
+          ...m,
+          orderDraft: { ...m.orderDraft, confirmed: true, orderId: placed.id }
+        } : m));
+      }
+
+      const confirmMsg = `Your order #${placed.id} has been confirmed and dispatched to our kitchen! Estimated preparation time is 11 minutes. Our chefs have begun preparing your dishes.`;
+      setMessages(prev => [...prev, {
+        id: `msg-${Date.now()}`,
+        role: 'bot',
+        text: confirmMsg,
+        orderDraft: {
+          items: orderData.items,
+          totalAmount: orderData.totalAmount,
+          confirmed: true,
+          orderId: placed.id
+        }
+      }]);
+
+      speakText(confirmMsg);
+    } catch (err: any) {
+      console.error('Failed to place order:', err);
+      const errMsg = 'I apologize, but there was an issue sending your order to the kitchen. Please try again momentarily.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: errMsg }]);
+      speakText(errMsg);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleSend = async (overrideText?: string) => {
+    const textToSend = typeof overrideText === 'string' ? overrideText : input;
+    if (!textToSend.trim() && attachedImages.length === 0) return;
     
-    const userMsg = input;
+    const userMsg = textToSend;
     const currentImages = [...attachedImages];
     
     setMessages(prev => [...prev, { 
+      id: `user-${Date.now()}`,
       role: 'user', 
       text: userMsg,
       images: currentImages
@@ -2030,16 +2172,6 @@ const ChatBot: React.FC = () => {
     setInput('');
     setAttachedImages([]);
     setIsTyping(true);
-
-    const executeNav = (sectionId: string) => {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-        setMessages(prev => [...prev, { role: 'bot', text: `Certainly. I have navigated you to the ${sectionId} section.` }]);
-      } else {
-        setMessages(prev => [...prev, { role: 'bot', text: `I attempted to take you to the ${sectionId}, but I am unable to locate it on the map.` }]);
-      }
-    };
 
     let handled = false;
 
@@ -2065,16 +2197,43 @@ const ChatBot: React.FC = () => {
             if (fc.name === 'navigateToSection') {
               const sectionId = (fc.args as any)?.sectionId;
               if (sectionId) executeNav(sectionId);
+            } else if (fc.name === 'prepareOrder') {
+              const draft = {
+                items: (fc.args as any)?.items || [],
+                totalAmount: (fc.args as any)?.totalAmount || 0,
+                notes: (fc.args as any)?.notes || '',
+                confirmed: false
+              };
+              setPendingOrder(draft);
+              const botText = data.text || `I have prepared your order for ${draft.items.map((i: any) => `${i.quantity}× ${i.name}`).join(', ')} (Total: ₦${draft.totalAmount}). Shall I confirm and place this order for you?`;
+              setMessages(prev => [...prev, {
+                id: `bot-${Date.now()}`,
+                role: 'bot',
+                text: botText,
+                orderDraft: draft
+              }]);
+              speakText(botText);
+            } else if (fc.name === 'placeOrder') {
+              const orderData = {
+                items: (fc.args as any)?.items || pendingOrder?.items || [],
+                totalAmount: (fc.args as any)?.totalAmount || pendingOrder?.totalAmount || 0,
+                customerName: (fc.args as any)?.customerName,
+                tableNumber: (fc.args as any)?.tableNumber,
+                deliveryAddress: (fc.args as any)?.deliveryAddress,
+                notes: (fc.args as any)?.notes || pendingOrder?.notes
+              };
+              executeOrderPlacement(orderData);
             }
           }
         } else if (data.text) {
-          setMessages(prev => [...prev, { role: 'bot', text: data.text }]);
+          setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: 'bot', text: data.text }]);
+          speakText(data.text);
         } else {
-          setMessages(prev => [...prev, { role: 'bot', text: 'I am here to serve. How may I assist you?' }]);
+          const fallbackGreeting = 'I am here to serve. How may I assist you with our dining menu or orders today?';
+          setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: 'bot', text: fallbackGreeting }]);
+          speakText(fallbackGreeting);
         }
         handled = true;
-      } else {
-        console.warn('/api/chat returned status:', res.status);
       }
     } catch (apiErr) {
       console.warn('API /api/chat error, attempting client-side fallback:', apiErr);
@@ -2103,9 +2262,18 @@ const ChatBot: React.FC = () => {
             model: 'gemini-2.5-flash',
             contents: { parts },
             config: {
-              systemInstruction: 'You are AURA, the Orient Luxury Concierge for Orient Global Flagship in Jos, Plateau State, Nigeria. Your primary goal is to help visitors navigate the website and divisions: bakery, market, restaurant, dining, lounge, games, water, and location. If a user asks to see a division or section, you MUST invoke the navigateToSection tool. Be brief, elite, and polite. You can also analyze images if provided.',
+              systemInstruction: `You are AURA, Orient Luxury AI Concierge for Orient Global Flagship in Jos.
+Full Menu:
+Proteins: Peppered & Grilled Beef (₦10), Spiced Chicken (₦10), Peppered Pork Chops (₦10), Goat Meat & Catfish Platter (₦10).
+Rice: Smoky Jollof (₦10), Fried Rice (₦10), White Rice Ayamase (₦10), Coconut Rice (₦10).
+Soups: Egusi (₦10), Efo Riro (₦10), Seafood Okra (₦10), Ogbono & Afang (₦10), Pounded Yam (₦10), Amala (₦10).
+Pasta/Yam: Asaro (₦10), Jollof Spaghetti (₦10), Fried Yam & Plantain (₦10).
+Sides: Moi Moi (₦10), Dodo (₦10), Pepper Soup (₦10).
+When asked about items not on menu, offer closest alternatives.
+When asked to order, use prepareOrder tool and ask confirmation before calling placeOrder.
+Use navigateToSection when user wants to see sections.`,
               tools: [{
-                functionDeclarations: [navigateToSectionTool]
+                functionDeclarations: [navigateToSectionTool, prepareOrderTool, placeOrderTool]
               }],
             }
           });
@@ -2115,12 +2283,37 @@ const ChatBot: React.FC = () => {
               if (fc.name === 'navigateToSection') {
                 const sectionId = (fc.args as any)?.sectionId;
                 if (sectionId) executeNav(sectionId);
+              } else if (fc.name === 'prepareOrder') {
+                const draft = {
+                  items: (fc.args as any)?.items || [],
+                  totalAmount: (fc.args as any)?.totalAmount || 0,
+                  notes: (fc.args as any)?.notes || '',
+                  confirmed: false
+                };
+                setPendingOrder(draft);
+                const botText = response.text || `I have prepared your order for ${draft.items.map((i: any) => `${i.quantity}× ${i.name}`).join(', ')} (Total: ₦${draft.totalAmount}). Shall I confirm and place this order for you?`;
+                setMessages(prev => [...prev, {
+                  id: `bot-${Date.now()}`,
+                  role: 'bot',
+                  text: botText,
+                  orderDraft: draft
+                }]);
+                speakText(botText);
+              } else if (fc.name === 'placeOrder') {
+                const orderData = {
+                  items: (fc.args as any)?.items || pendingOrder?.items || [],
+                  totalAmount: (fc.args as any)?.totalAmount || pendingOrder?.totalAmount || 0,
+                  customerName: (fc.args as any)?.customerName,
+                  tableNumber: (fc.args as any)?.tableNumber,
+                  deliveryAddress: (fc.args as any)?.deliveryAddress,
+                  notes: (fc.args as any)?.notes || pendingOrder?.notes
+                };
+                executeOrderPlacement(orderData);
               }
             }
           } else if (response.text) {
-            setMessages(prev => [...prev, { role: 'bot', text: response.text }]);
-          } else {
-            setMessages(prev => [...prev, { role: 'bot', text: 'I am here to serve. How may I assist you?' }]);
+            setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: 'bot', text: response.text }]);
+            speakText(response.text);
           }
           handled = true;
         } catch (clientErr) {
@@ -2130,7 +2323,9 @@ const ChatBot: React.FC = () => {
     }
 
     if (!handled) {
-      setMessages(prev => [...prev, { role: 'bot', text: 'I apologize, but I am currently updating my navigational systems. Please try again momentarily.' }]);
+      const errMsg = 'I apologize, but I am currently updating my navigational systems. Please try again momentarily.';
+      setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: 'bot', text: errMsg }]);
+      speakText(errMsg);
     }
     setIsTyping(false);
   };
@@ -2148,25 +2343,48 @@ const ChatBot: React.FC = () => {
     });
   };
 
+  // Speech-to-Text with auto-dispatch
   const startVoiceInput = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Speech recognition not supported in this browser.');
+      alert('Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    
-    recognition.onstart = () => setIsRecording(true);
-    recognition.onend = () => setIsRecording(false);
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript);
-    };
-    
-    recognition.start();
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognitionRef.current = recognition;
+
+      recognition.onstart = () => setIsRecording(true);
+      recognition.onend = () => setIsRecording(false);
+      recognition.onerror = (e: any) => {
+        console.warn('Speech recognition error:', e);
+        setIsRecording(false);
+      };
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setInput(transcript);
+          handleSend(transcript);
+        }
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.warn('Failed to start speech recognition:', err);
+      setIsRecording(false);
+    }
   };
 
   const chatbotVars = {
@@ -2193,119 +2411,246 @@ const ChatBot: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className='absolute bottom-0 right-0 w-[85vw] sm:w-[15vw] sm:min-w-[340px] max-h-[80vh] sm:max-h-[85vh] h-[80vh] sm:h-[85vh] rounded-[1.5rem] shadow-[0_30px_90px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden bg-transparent backdrop-blur-[45px] border border-white/20'
+              className='absolute bottom-0 right-0 w-[90vw] sm:w-[380px] max-h-[85vh] h-[85vh] rounded-[1.75rem] shadow-[0_30px_90px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden bg-card/95 backdrop-blur-[50px] border border-border'
             >
               {/* Header */}
-              <div className='px-6 py-4 flex items-center justify-between bg-white/10 dark:bg-black/40 border-b border-white/10 dark:border-white/5'>
+              <div className='px-5 py-3.5 flex items-center justify-between bg-surface/80 border-b border-border'>
                 <div className='flex items-center gap-3'>
+                  <div className='w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary border border-primary/30 shadow-inner'>
+                    <Sparkles size={18} />
+                  </div>
                   <div>
-                    <h4 className='text-[var(--cb-fg)] font-black uppercase tracking-tight text-sm leading-none'>
-                        Hi, I'm AURA
+                    <h4 className='text-foreground font-black uppercase tracking-tight text-xs sm:text-sm leading-none flex items-center gap-1.5'>
+                      AURA Concierge
+                      <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse' />
                     </h4>
+                    <p className='text-muted-foreground text-[10px] font-medium tracking-wide mt-0.5'>Orient Global Flagship</p>
                   </div>
                 </div>
-                <button onClick={() => setIsOpen(false)} className='text-[var(--cb-muted)] hover:text-[var(--cb-fg)] transition-colors p-2 hover:bg-white/5 rounded-full'>
-                  <X size={18} />
-                </button>
+                
+                <div className='flex items-center gap-1'>
+                  {/* Voice Output Toggle (Mute/Unmute) */}
+                  <button 
+                    onClick={() => {
+                      setIsVoiceOutputEnabled(prev => !prev);
+                      if (isVoiceOutputEnabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                      }
+                    }} 
+                    className={`p-1.5 rounded-lg transition-colors hover:bg-muted ${isVoiceOutputEnabled ? 'text-primary' : 'text-muted-foreground'}`}
+                    title={isVoiceOutputEnabled ? 'Voice response enabled (Click to mute)' : 'Voice response muted (Click to enable)'}
+                  >
+                    {isVoiceOutputEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                  </button>
+
+                  <button onClick={() => setIsOpen(false)} className='text-muted-foreground hover:text-foreground transition-colors p-1.5 hover:bg-muted rounded-lg'>
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Chat Area */}
-              <div ref={scrollRef} className='flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide'>
+              <div ref={scrollRef} className='flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-hide'>
                 {messages.length === 0 && (
-                  <div className='bg-[var(--cb-primary)]/5 backdrop-blur-sm border border-[var(--cb-primary)]/10 p-5 rounded-2xl rounded-tl-none self-start max-w-[90%]'>
-                    <p className='text-[var(--cb-fg)]/80 text-xs leading-relaxed italic font-medium'>
-                      "I am AURA. I can help you navigate or find information. How may I serve you?"
+                  <div className='bg-primary/10 border border-primary/20 p-4 rounded-2xl rounded-tl-none self-start max-w-[95%] shadow-sm'>
+                    <p className='text-foreground text-xs leading-relaxed font-medium'>
+                      "Welcome to Orient Global Flagship. I am AURA, your luxury concierge. Ask me anything about our restaurant menu, speak directly to place an order, or explore our divisions."
                     </p>
-                  </div>
-                )}
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className='max-w-[90%] space-y-2'>
-                    <div className={`p-3 rounded-2xl text-[13px] leading-relaxed font-medium shadow-sm border ${m.role === 'user' 
-                      ? 'bg-[var(--cb-primary)]/20 border-[var(--cb-primary)]/20 text-[var(--cb-fg)] rounded-br-none' 
-                      : 'bg-white/5 dark:bg-white/5 border-white/10 text-[var(--cb-fg)]/90 rounded-bl-none'}`}>
-                      {m.text}
-                      {m.images && m.images.length > 0 && (
-                        <div className='grid grid-cols-2 gap-1.5 mt-2'>
-                          {m.images.map((img, idx) => (
-                            <img key={idx} src={img} className='rounded-lg w-full h-20 object-cover shadow-sm' alt='Attached' referrerPolicy='no-referrer' />
-                          ))}
-                        </div>
-                      )}
+                    <div className='mt-3 flex flex-wrap gap-1.5'>
+                      <button 
+                        onClick={() => handleSend("What is on the restaurant menu today?")}
+                        className='text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-primary hover:text-white transition-all px-2.5 py-1 rounded-full border border-border shadow-xs'
+                      >
+                        🍽️ View Menu
+                      </button>
+                      <button 
+                        onClick={() => handleSend("Do you have steak or pizza?")}
+                        className='text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-primary hover:text-white transition-all px-2.5 py-1 rounded-full border border-border shadow-xs'
+                      >
+                        🔍 Alternatives
+                      </button>
+                      <button 
+                        onClick={() => handleSend("Order 2 plates of Smoky Jollof Rice")}
+                        className='text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-primary hover:text-white transition-all px-2.5 py-1 rounded-full border border-border shadow-xs'
+                      >
+                        ⚡ Order Food
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className='flex justify-start'>
-                  <div className='bg-white/10 border border-white/20 p-3 rounded-2xl rounded-bl-none flex gap-1 shadow-sm'>
-                    <span className='w-1 h-1 bg-primary rounded-full animate-bounce' />
-                    <span className='w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:0.2s]' />
-                    <span className='w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:0.4s]' />
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* Attached Images Preview */}
-            {attachedImages.length > 0 && (
-              <div className='px-4 py-2 flex gap-1.5 overflow-x-auto bg-white/5 border-t border-white/10 scrollbar-hide'>
-                {attachedImages.map((img, idx) => (
-                  <div key={idx} className='relative flex-shrink-0 group'>
-                    <img src={img} className='w-10 h-10 rounded-lg object-cover border border-white/20' alt='Preview' referrerPolicy='no-referrer' />
-                    <button 
-                      onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
-                      className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-sm scale-75'
-                    >
-                      <X size={10} />
-                    </button>
+                {messages.map((m, i) => (
+                  <div key={m.id || i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className='max-w-[92%] space-y-2'>
+                      <div className={`p-3.5 rounded-2xl text-[12.5px] leading-relaxed font-medium shadow-xs border ${m.role === 'user' 
+                        ? 'bg-primary text-primary-foreground rounded-br-none border-primary' 
+                        : 'bg-muted/70 border-border text-foreground rounded-bl-none'}`}>
+                        <div className='whitespace-pre-wrap'>{m.text}</div>
+                        
+                        {m.images && m.images.length > 0 && (
+                          <div className='grid grid-cols-2 gap-1.5 mt-2'>
+                            {m.images.map((img, idx) => (
+                              <img key={idx} src={img} className='rounded-lg w-full h-20 object-cover shadow-sm' alt='Attached' referrerPolicy='no-referrer' />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Interactive Order Confirmation Card */}
+                        {m.orderDraft && !m.orderDraft.confirmed && (
+                          <div className='mt-3 p-3 rounded-xl bg-card border border-primary/30 shadow-md text-foreground'>
+                            <div className='flex items-center justify-between pb-2 border-b border-border mb-2.5'>
+                              <div className='flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary'>
+                                <ChefHat size={14} />
+                                <span>Order Summary</span>
+                              </div>
+                              <span className='text-[10px] bg-primary/20 text-primary font-bold px-2 py-0.5 rounded-full'>
+                                Confirm Stage
+                              </span>
+                            </div>
+
+                            <div className='space-y-1.5 text-xs mb-3'>
+                              {m.orderDraft.items.map((item, itemIdx) => (
+                                <div key={itemIdx} className='flex items-center justify-between text-muted-foreground'>
+                                  <span>{item.quantity}× <span className='text-foreground font-semibold'>{item.name}</span></span>
+                                  <span className='font-mono font-bold text-foreground'>₦{(item.price || 10) * item.quantity}</span>
+                                </div>
+                              ))}
+                              <div className='pt-2 border-t border-border flex items-center justify-between font-bold text-foreground text-sm'>
+                                <span>Total Amount:</span>
+                                <span className='font-mono text-primary'>₦{m.orderDraft.totalAmount}</span>
+                              </div>
+                            </div>
+
+                            <div className='flex items-center gap-2 pt-1'>
+                              <button
+                                onClick={() => executeOrderPlacement(m.orderDraft!, i)}
+                                className='flex-1 py-2 px-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5'
+                              >
+                                <CheckCircle2 size={14} />
+                                <span>Confirm & Place Order</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setPendingOrder(null);
+                                  setMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, orderDraft: undefined } : msg));
+                                }}
+                                className='py-2 px-3 rounded-xl border border-border hover:bg-muted text-xs text-muted-foreground font-bold transition-all'
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Order Confirmed Badge */}
+                        {m.orderDraft && m.orderDraft.confirmed && (
+                          <div className='mt-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2'>
+                            <div className='flex items-center gap-2 text-emerald-500'>
+                              <CheckCircle2 size={16} />
+                              <span className='text-xs font-bold'>Order #{m.orderDraft.orderId || 'CONFIRMED'} Dispatched</span>
+                            </div>
+                            <button
+                              onClick={() => window.dispatchEvent(new CustomEvent('orient:open-order'))}
+                              className='text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2 py-1 rounded-lg hover:bg-emerald-600 transition-all'
+                            >
+                              Track
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
-              </div>
-            )}
 
-            {/* Input Area */}
-            <div className='p-4 pt-1'>
-              <div className='flex items-center gap-1.5 bg-white/10 dark:bg-white/5 backdrop-blur-md rounded-xl border border-white/20 px-3 py-2.5 focus-within:border-primary/30 transition-all shadow-inner relative'>
-                <input 
-                  type='file' 
-                  ref={fileInputRef} 
-                  className='hidden' 
-                  accept='image/*' 
-                  multiple 
-                  onChange={handleImageUpload} 
-                />
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className='p-1.5 text-[var(--cb-muted)] hover:text-[var(--cb-primary)] transition-colors hover:bg-white/5 rounded-lg'
-                  title='Attach images'
-                >
-                  <Paperclip size={16} />
-                </button>
-                <button 
-                  onClick={startVoiceInput}
-                  className={`p-1.5 transition-colors hover:bg-white/5 rounded-lg ${isRecording ? 'text-red-500 animate-pulse' : 'text-[var(--cb-muted)] hover:text-[var(--cb-primary)]'}`}
-                  title='Voice input'
-                >
-                  <Mic size={16} />
-                </button>
-                <input 
-                  value={input} 
-                  onChange={(e) => setInput(e.target.value)} 
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
-                  placeholder='Ask...' 
-                  className='bg-transparent border-none focus:ring-0 text-[var(--cb-fg)] text-xs flex-1 placeholder:text-[var(--cb-muted)] font-medium py-1' 
-                />
-                <button 
-                  onClick={handleSend} 
-                  disabled={!input.trim() && attachedImages.length === 0}
-                  className='w-8 h-8 rounded-lg bg-primary text-foreground flex items-center justify-center hover:bg-orange-500 transition-all disabled:opacity-50'
-                >
-                  <ArrowRight size={16} strokeWidth={3} />
-                </button>
+                {isTyping && (
+                  <div className='flex justify-start'>
+                    <div className='bg-muted/70 border border-border p-3 rounded-2xl rounded-bl-none flex items-center gap-1.5 shadow-xs'>
+                      <span className='w-1.5 h-1.5 bg-primary rounded-full animate-bounce' />
+                      <span className='w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]' />
+                      <span className='w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]' />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </motion.div>
+
+              {/* Voice Listening Banner */}
+              {isRecording && (
+                <div className='px-4 py-2 bg-red-500/15 border-t border-red-500/20 flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                    <span className='w-2 h-2 rounded-full bg-red-500 animate-ping' />
+                    <span className='text-xs font-bold text-red-500 tracking-wide'>Listening to your voice... Speak now</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (recognitionRef.current) recognitionRef.current.stop();
+                      setIsRecording(false);
+                    }}
+                    className='text-[10px] uppercase font-bold text-muted-foreground hover:text-foreground'
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+
+              {/* Attached Images Preview */}
+              {attachedImages.length > 0 && (
+                <div className='px-4 py-2 flex gap-1.5 overflow-x-auto bg-muted/30 border-t border-border scrollbar-hide'>
+                  {attachedImages.map((img, idx) => (
+                    <div key={idx} className='relative flex-shrink-0 group'>
+                      <img src={img} className='w-10 h-10 rounded-lg object-cover border border-border' alt='Preview' referrerPolicy='no-referrer' />
+                      <button 
+                        onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
+                        className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-sm scale-75'
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Input Area */}
+              <div className='p-3.5 pt-1.5 bg-surface/50 border-t border-border'>
+                <div className='flex items-center gap-1.5 bg-muted/60 rounded-xl border border-border px-3 py-2 focus-within:border-primary/50 transition-all relative'>
+                  <input 
+                    type='file' 
+                    ref={fileInputRef} 
+                    className='hidden' 
+                    accept='image/*' 
+                    multiple 
+                    onChange={handleImageUpload} 
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className='p-1.5 text-muted-foreground hover:text-primary transition-colors hover:bg-background/50 rounded-lg'
+                    title='Attach image'
+                  >
+                    <Paperclip size={16} />
+                  </button>
+                  <button 
+                    onClick={startVoiceInput}
+                    className={`p-1.5 transition-all rounded-lg ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-muted-foreground hover:text-primary hover:bg-background/50'}`}
+                    title='Talk to AURA (Voice input)'
+                  >
+                    <Mic size={16} />
+                  </button>
+                  <input 
+                    value={input} 
+                    onChange={(e) => setInput(e.target.value)} 
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
+                    placeholder={isRecording ? 'Listening...' : 'Type or speak to order...'} 
+                    className='bg-transparent border-none focus:ring-0 text-foreground text-xs flex-1 placeholder:text-muted-foreground font-medium py-1 focus:outline-none' 
+                  />
+                  <button 
+                    onClick={() => handleSend()} 
+                    disabled={!input.trim() && attachedImages.length === 0}
+                    className='w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-all disabled:opacity-40 disabled:hover:bg-primary shadow-xs'
+                  >
+                    <ArrowRight size={15} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
@@ -2318,143 +2663,16 @@ const ChatBot: React.FC = () => {
             whileHover={{ scale: 1.05 }} 
             whileTap={{ scale: 0.95 }} 
             onClick={() => setIsOpen(true)} 
-            className='w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 overflow-hidden relative shadow-[0_15px_45px_rgba(0,0,0,0.2)] text-stone-900' style={{ backgroundColor: '#f29e0d' }}
+            className='w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-500 overflow-hidden relative shadow-[0_15px_45px_rgba(242,158,13,0.35)] text-stone-900 bg-primary group'
           >
-            <motion.div key='bot' initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} className='flex flex-col items-center'>
-              <span className="material-icons text-xl sm:text-2xl">smart_toy</span>
+            <motion.div key='bot' initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} className='flex flex-col items-center text-primary-foreground'>
+              <Sparkles size={24} className='group-hover:rotate-12 transition-transform duration-300' />
             </motion.div>
           </motion.button>
         )}
       </AnimatePresence>
     </div>
   );
-};
-const Login: React.FC<{ onLogin: () => void, onCancel: () => void }> = ({ onLogin, onCancel }) => {
- const [username, setUsername] = useState('');
- const [password, setPassword] = useState('');
- const [error, setError] = useState('');
-
- const handleSubmit = (e: React.FormEvent) => {
- e.preventDefault();
- if (username === 'admin' && password === 'orient2024') {
- onLogin();
- } else {
- setError('Invalid credentials');
- }
- };
-
- return (
- <div className="min-h-screen flex items-center justify-center bg-background px-4">
- <div className="max-w-md w-full p-8 rounded-[3rem] border border-transparent shadow-2xl bg-surface/80 backdrop-blur-xl">
- <div className="text-center mb-8">
- <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-background font-heading font-black text-3xl shadow-[0_0_30px_rgba(242,158,13,0.4)] mb-6">O</div>
- <h2 className="text-3xl font-black text-foreground uppercase tracking-tighter">Admin Access</h2>
- <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest mt-2">Orient Global Systems</p>
- </div>
- <form onSubmit={handleSubmit} className="space-y-6">
- {error && <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold text-center">{error}</div>}
- <div>
- <label className="block text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Username</label>
- <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-muted border border-transparent rounded-2xl py-4 px-6 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="Enter username" />
- </div>
- <div>
- <label className="block text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">Password</label>
- <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-muted border border-transparent rounded-2xl py-4 px-6 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" placeholder="Enter password" />
- </div>
- <div className="flex gap-4 pt-4">
- <button type="button" onClick={onCancel} className="flex-1 py-4 rounded-2xl border border-transparent text-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-muted transition-all">Cancel</button>
- <button type="submit" className="flex-1 py-4 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Login</button>
- </div>
- </form>
- </div>
- </div>
- );
-};
-
-const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
- const divisions = ['Bakery', 'Market', 'Restaurant', 'Games', 'Water', 'Lounge'];
- const [activeTab, setActiveTab] = useState(divisions[0]);
-
- return (
- <div className="min-h-screen bg-background pt-24 pb-12 px-4 md:px-12">
- <div className="max-w-7xl mx-auto">
- <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
- <div>
- <h1 className="text-4xl md:text-5xl font-black text-foreground uppercase tracking-tighter font-heading">Command Center</h1>
- <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest mt-2">Manage Orient Global Divisions</p>
- </div>
- <button onClick={onLogout} className="flex items-center gap-2 px-6 py-3 rounded-full border border-transparent text-foreground font-black uppercase tracking-widest text-xs hover:bg-red-500 hover:text-white hover:border-red-500 transition-all group">
- <span className="material-icons text-sm group-hover:-translate-x-1 transition-transform">logout</span>
- Sign Out
- </button>
- </div>
-
- <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
- <div className="lg:col-span-1 space-y-2">
- {divisions.map(div => (
- <button 
- key={div}
- onClick={() => setActiveTab(div)}
- className={`w-full text-left px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-between ${activeTab === div ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-surface text-muted-foreground hover:bg-muted border border-transparent'}`}
- >
- {div}
- <span className="material-icons text-lg">{activeTab === div ? 'chevron_right' : ''}</span>
- </button>
- ))}
- </div>
- 
- <div className="lg:col-span-3">
- <div className="rounded-[3rem] p-8 md:p-12 border border-transparent shadow-2xl bg-surface/60 backdrop-blur-xl">
- <div className="flex items-center gap-4 mb-8">
- <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
- <span className="material-icons text-2xl">settings_applications</span>
- </div>
- <h2 className="text-3xl font-black text-foreground uppercase tracking-tight">{activeTab} Configuration</h2>
- </div>
- 
- <div className="space-y-8">
- <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
- <div>
- <label className="block text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-3">Division Name</label>
- <input type="text" defaultValue={activeTab} className="w-full bg-muted border border-transparent rounded-2xl py-4 px-6 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" />
- </div>
- <div>
- <label className="block text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-3">Status</label>
- <select className="w-full bg-muted border border-transparent rounded-2xl py-4 px-6 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium appearance-none">
- <option>Active / Operational</option>
- <option>Maintenance Mode</option>
- <option>Coming Soon</option>
- </select>
- </div>
- </div>
- 
- <div>
- <label className="block text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-3">Hero Description</label>
- <textarea rows={4} defaultValue={`Experience the finest ${activeTab.toLowerCase()} offerings at Orient Global.`} className="w-full bg-muted border border-transparent rounded-2xl py-4 px-6 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium resize-none"></textarea>
- </div>
-
- <div>
- <label className="block text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-3">Featured Image URL</label>
- <div className="flex gap-4">
- <input type="text" defaultValue={`https://images.unsplash.com/photo-placeholder-${activeTab.toLowerCase()}`} className="flex-1 bg-muted border border-transparent rounded-2xl py-4 px-6 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium" />
- <button className="px-6 py-4 rounded-2xl bg-surface-foreground text-background font-black uppercase tracking-widest text-xs hover:opacity-90 transition-all">Preview</button>
- </div>
- </div>
-
- <div className="pt-8 border-t border-transparent flex justify-end gap-4">
- <button className="px-8 py-4 rounded-2xl border border-transparent text-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-muted transition-all">Discard Changes</button>
- <button className="px-8 py-4 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center gap-2">
- <span className="material-icons text-sm">save</span>
- Save Configuration
- </button>
- </div>
- </div>
- </div>
- </div>
- </div>
- </div>
- </div>
- );
 };
 
 export function useHomeSnapScroll({
