@@ -32,11 +32,11 @@ import {
   DialogFooter 
 } from '@/components/ui/dialog';
 import { useRoles } from '@/context/role-context';
-import { useNotifications } from '@/context/NotificationContext';
 import { useToast } from '@/hooks/use-toast';
-import { orderService, CustomerOrder } from '@/services/orderService';
+import { orderService, CustomerOrder, getDisplayStatus } from '@/services/orderService';
 import { getActiveConsumerUser, AppUser } from '@/services/userService';
 import { OrderTracker } from './OrderTracker';
+import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
 
 interface TableReservation {
   id: string;
@@ -54,7 +54,6 @@ export default function UserDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser, notifications, markNotificationRead } = useRoles();
-  const { requestDevicePermission, devicePermissionStatus } = useNotifications();
 
   const handleGoToRestaurantMenu = () => {
     // Dispatch global event to navigate App.tsx to the public Restaurant Menu page
@@ -79,7 +78,7 @@ export default function UserDashboard() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [reservations, setReservations] = useState<TableReservation[]>([]);
   const [activeTab, setActiveTab] = useState<'orders' | 'tracking' | 'reservations' | 'notifications'>('orders');
-  const [historyFilter, setHistoryFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'pending' | 'cooking' | 'ready' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
 
@@ -158,15 +157,24 @@ export default function UserDashboard() {
   }, [activeConsumer.id]);
 
   // Derived lists
-  const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
-  const pastOrders = orders.filter(o => o.status === 'completed' || o.status === 'cancelled');
+  const activeOrders = orders.filter(o => {
+    const s = getDisplayStatus(o.status);
+    return s !== 'Completed' && s !== 'Cancelled';
+  });
+  const pastOrders = orders.filter(o => {
+    const s = getDisplayStatus(o.status);
+    return s === 'Completed' || s === 'Cancelled';
+  });
 
   // Filtered orders
   const displayedOrders = orders.filter(o => {
+    const status = getDisplayStatus(o.status);
     const matchesFilter = 
       historyFilter === 'all' ? true :
-      historyFilter === 'active' ? (o.status !== 'completed' && o.status !== 'cancelled') :
-      (o.status === 'completed' || o.status === 'cancelled');
+      historyFilter === 'pending' ? status === 'Pending' :
+      historyFilter === 'cooking' ? status === 'Cooking' :
+      historyFilter === 'ready' ? status === 'Ready' :
+      status === 'Completed';
 
     const matchesSearch = searchQuery === '' ||
       o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -263,31 +271,9 @@ export default function UserDashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       
-      {/* LAPTOP NOTIFICATION ENABLE BUTTON */}
+      {/* NOTIFICATION TOGGLE BUTTON */}
       <div className="flex justify-end">
-        <button
-          onClick={async () => {
-            const ok = await requestDevicePermission();
-            if (ok) {
-              toast({ title: 'Notifications Active 🔔', description: 'Your laptop is now configured for desktop alerts.' });
-            } else {
-              toast({ 
-                title: 'Browser Permission Required', 
-                description: 'Please allow notification permissions in your browser or address bar.',
-                variant: 'destructive'
-              });
-            }
-          }}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer bg-[#ffffff] dark:bg-[#232323] border border-slate-200 ${
-            devicePermissionStatus === 'granted'
-              ? 'text-foreground dark:border-[#383838] shadow-xs opacity-100'
-              : 'text-slate-700 dark:text-gray-400 dark:border-transparent opacity-100 dark:opacity-20 dark:hover:opacity-50 shadow-xs'
-          }`}
-          title={devicePermissionStatus === 'granted' ? 'Notifications Enabled' : 'Click to Enable Notifications'}
-        >
-          <Bell className={`w-3.5 h-3.5 shrink-0 ${devicePermissionStatus === 'granted' ? 'text-orange-500' : 'text-slate-600 dark:text-gray-400'}`} />
-          <span>Enable Notifications</span>
-        </button>
+        <NotificationToggleButton />
       </div>
 
       {/* ========================================================================= */}
@@ -580,37 +566,30 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Filter Pills */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setHistoryFilter('all')}
-                    className={`px-3 py-1 text-xs rounded-lg transition-colors font-medium ${
-                      historyFilter === 'all'
-                        ? 'bg-foreground text-background font-semibold'
-                        : 'bg-muted/50 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    All ({orders.length})
-                  </button>
-                  <button
-                    onClick={() => setHistoryFilter('active')}
-                    className={`px-3 py-1 text-xs rounded-lg transition-colors font-medium ${
-                      historyFilter === 'active'
-                        ? 'bg-foreground text-background font-semibold'
-                        : 'bg-muted/50 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Active ({activeOrders.length})
-                  </button>
-                  <button
-                    onClick={() => setHistoryFilter('completed')}
-                    className={`px-3 py-1 text-xs rounded-lg transition-colors font-medium ${
-                      historyFilter === 'completed'
-                        ? 'bg-foreground text-background font-semibold'
-                        : 'bg-muted/50 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Completed ({pastOrders.length})
-                  </button>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {(['all', 'pending', 'cooking', 'ready', 'completed'] as const).map((filterKey) => {
+                    const label = filterKey === 'all' ? 'All' :
+                                  filterKey === 'pending' ? 'Pending' :
+                                  filterKey === 'cooking' ? 'Cooking' :
+                                  filterKey === 'ready' ? 'Ready' : 'Completed';
+                    const count = filterKey === 'all' 
+                      ? orders.length 
+                      : orders.filter(o => getDisplayStatus(o.status).toLowerCase() === filterKey).length;
+
+                    return (
+                      <button
+                        key={filterKey}
+                        onClick={() => setHistoryFilter(filterKey)}
+                        className={`px-3 py-1 text-xs rounded-lg transition-colors font-medium capitalize ${
+                          historyFilter === filterKey
+                            ? 'bg-foreground text-background font-semibold'
+                            : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {label} ({count})
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -642,8 +621,13 @@ export default function UserDashboard() {
                               </span>
                             </div>
 
-                            <Badge variant="outline" className="text-[10px] font-bold border-none bg-muted">
-                              {isCompleted ? 'Completed' : isCancelled ? 'Cancelled' : order.status}
+                            <Badge variant="outline" className={`text-[10px] font-bold border-none ${
+                              getDisplayStatus(order.status) === 'Pending' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                              getDisplayStatus(order.status) === 'Cooking' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                              getDisplayStatus(order.status) === 'Ready' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                              'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                            }`}>
+                              {getDisplayStatus(order.status)}
                             </Badge>
                           </div>
 

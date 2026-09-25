@@ -16,7 +16,27 @@ export interface OrderItem {
   image?: string;
 }
 
-export type OrderStatus = 'awaiting_chef' | 'confirmed' | 'preparing' | 'ten_min_warning' | 'five_min_warning' | 'ready' | 'completed' | 'cancelled';
+export type OrderStatus =
+  | 'pending'
+  | 'awaiting_chef'
+  | 'cooking'
+  | 'preparing'
+  | 'confirmed'
+  | 'ten_min_warning'
+  | 'five_min_warning'
+  | 'ready'
+  | 'completed'
+  | 'cancelled';
+
+export function getDisplayStatus(status: OrderStatus | string): 'Pending' | 'Cooking' | 'Ready' | 'Completed' | 'Cancelled' {
+  const s = (status || '').toLowerCase();
+  if (s === 'pending' || s === 'awaiting_chef') return 'Pending';
+  if (s === 'cooking' || s === 'preparing' || s === 'confirmed' || s === 'ten_min_warning' || s === 'five_min_warning') return 'Cooking';
+  if (s === 'ready') return 'Ready';
+  if (s === 'completed') return 'Completed';
+  if (s === 'cancelled') return 'Cancelled';
+  return 'Pending';
+}
 
 export interface CustomerOrder {
   id: string;
@@ -162,7 +182,7 @@ export const orderService = {
       notes: input.notes?.trim() || '',
       items: sanitizedItems,
       totalAmount,
-      status: 'awaiting_chef',
+      status: input.status || 'pending',
       prepDurationMinutes: input.prepDurationMinutes || 11,
       timerEndsAt: null,
       chefConfirmedAt: null,
@@ -196,8 +216,8 @@ export const orderService = {
       orderId,
       type: 'order_placed',
       recipient: 'user',
-      title: 'Order Placed Successfully! 🛒',
-      message: `Your order #${orderId} (${sanitizedItems.length} items, ₦${totalAmount.toLocaleString()}) has been sent to the kitchen. Waiting for chef confirmation.`,
+      title: 'Order Sent to Kitchen 🍳',
+      message: 'Your order has been successfully sent to the kitchen.',
       read: false,
       createdAt: nowIso
     };
@@ -209,7 +229,7 @@ export const orderService = {
       orderId,
       type: 'order_placed',
       recipient: 'cms',
-      title: '🔔 New Order Incoming (Awaiting Chef)',
+      title: '🔔 New Order Incoming (Pending)',
       message: `Order #${orderId} from ${newOrder.customerName} (${newOrder.tableNumber}) needs chef confirmation. Total: ₦${totalAmount.toLocaleString()}`,
       read: false,
       createdAt: nowIso
@@ -271,10 +291,10 @@ export const orderService = {
       }
     } catch (e) {}
 
-    // 2. Update Order with 'preparing', timerEndsAt, chefConfirmedAt
+    // 2. Update Order with 'cooking', timerEndsAt, chefConfirmedAt
     const updatedOrder: CustomerOrder = {
       ...order,
-      status: 'preparing',
+      status: 'cooking',
       prepDurationMinutes: prepDuration,
       timerEndsAt,
       chefConfirmedAt: nowIso,
@@ -286,7 +306,7 @@ export const orderService = {
     try {
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, {
-        status: 'preparing',
+        status: 'cooking',
         prepDurationMinutes: prepDuration,
         timerEndsAt,
         chefConfirmedAt: nowIso,
@@ -311,8 +331,8 @@ export const orderService = {
       orderId,
       type: 'order_confirmed',
       recipient: 'user',
-      title: '👨‍🍳 Chef Started Your Order!',
-      message: `The kitchen has confirmed Order #${orderId} and started preparation. Estimated time: ${prepDuration} minutes.`,
+      title: '👨‍🍳 Order Confirmed by Chef',
+      message: `Your order has been confirmed by the chef and will be ready in ${prepDuration} minutes.`,
       read: false,
       createdAt: nowIso
     };
@@ -323,8 +343,8 @@ export const orderService = {
       orderId,
       type: 'order_confirmed',
       recipient: 'cms',
-      title: 'Preparation Started',
-      message: `Chef confirmed Order #${orderId}. ${prepDuration}m timer started. Stock decremented automatically.`,
+      title: 'Cooking Started',
+      message: `Chef confirmed Order #${orderId} and started cooking (${prepDuration}m).`,
       read: false,
       createdAt: nowIso
     };
@@ -336,7 +356,6 @@ export const orderService = {
 
   /**
    * 3. Trigger 10-Minute Warning Alert
-   * - Dispatches notification to User: "10 minutes before the end of waiting time, please get ready!"
    */
   sendTenMinuteWarning: async (orderId: string): Promise<void> => {
     const order = await orderService.getOrderById(orderId);
@@ -370,8 +389,8 @@ export const orderService = {
       orderId,
       type: 'ten_min_warning',
       recipient: 'user',
-      title: '⏱️ 10 Minutes Remaining — Get Ready!',
-      message: `Your Order #${orderId} is almost done! There are only 10 minutes left before it's ready. Please get ready.`,
+      title: '⏱️ 10 Minutes Remaining',
+      message: 'Your meal will be ready in 10 minutes.',
       read: false,
       createdAt: nowIso
     };
@@ -382,7 +401,7 @@ export const orderService = {
       orderId,
       type: 'ten_min_warning',
       recipient: 'cms',
-      title: '10-Min Customer Alert Dispatched',
+      title: '10m Warning Sent',
       message: `10-minute warning sent to customer for Order #${orderId}.`,
       read: false,
       createdAt: nowIso
@@ -424,8 +443,8 @@ export const orderService = {
       orderId,
       type: 'five_min_warning',
       recipient: 'user',
-      title: '⚡ 5 Minutes — Come Collect Your Order!',
-      message: `Your Order #${orderId} is almost ready! Only 5 minutes remaining. Please make your way to collect it — it's best served hot!`,
+      title: '⚡ 5 Minutes Remaining',
+      message: 'Your meal will be ready in 5 minutes.',
       read: false,
       createdAt: nowIso
     };
@@ -436,7 +455,7 @@ export const orderService = {
       orderId,
       type: 'five_min_warning',
       recipient: 'cms',
-      title: '5-Min Customer Alert Dispatched',
+      title: '5m Warning Sent',
       message: `5-minute warning sent to customer for Order #${orderId}.`,
       read: false,
       createdAt: nowIso
@@ -447,7 +466,7 @@ export const orderService = {
   },
 
   /**
-   * 4. Mark Order as Ready / Completed
+   * 4. Mark Order as Ready
    */
   markOrderReady: async (orderId: string): Promise<CustomerOrder> => {
     const order = await orderService.getOrderById(orderId);
@@ -479,12 +498,24 @@ export const orderService = {
       orderId,
       type: 'order_ready',
       recipient: 'user',
-      title: '🎉 Your Order is Ready!',
-      message: `Order #${orderId} is fresh, hot, and ready for you! Enjoy your meal.`,
+      title: '🎉 Meal Ready!',
+      message: 'Your meal is ready.',
       read: false,
       createdAt: nowIso
     };
     await orderService.sendNotification(userNotif);
+
+    const cmsNotif: AppNotification = {
+      id: `NOTIF-C-${Date.now()}`,
+      orderId,
+      type: 'order_ready',
+      recipient: 'cms',
+      title: 'Order Ready',
+      message: `Order #${orderId} marked ready.`,
+      read: false,
+      createdAt: nowIso
+    };
+    await orderService.sendNotification(cmsNotif);
 
     playAlertSound('ready');
     return updatedOrder;
@@ -518,7 +549,41 @@ export const orderService = {
       safeStorage.setItem('orient_last_user_order', JSON.stringify(updatedOrder));
     } catch (e) {}
 
+    if (status === 'completed') {
+      const userNotif: AppNotification = {
+        id: `NOTIF-U-${Date.now()}`,
+        orderId,
+        type: 'info',
+        recipient: 'user',
+        title: 'Order Completed ✅',
+        message: 'Thank you for patronizing us. This order is finished.',
+        read: false,
+        createdAt: nowIso
+      };
+      await orderService.sendNotification(userNotif);
+
+      const cmsNotif: AppNotification = {
+        id: `NOTIF-C-${Date.now()}`,
+        orderId,
+        type: 'info',
+        recipient: 'cms',
+        title: 'Order Completed',
+        message: `Order #${orderId} is finished and payment confirmed.`,
+        read: false,
+        createdAt: nowIso
+      };
+      await orderService.sendNotification(cmsNotif);
+      playAlertSound('ready');
+    }
+
     return updatedOrder;
+  },
+
+  /**
+   * Chef: Finish and Payment Confirmed
+   */
+  finishAndConfirmPayment: async (orderId: string): Promise<CustomerOrder> => {
+    return orderService.updateOrderStatus(orderId, 'completed');
   },
 
   /**

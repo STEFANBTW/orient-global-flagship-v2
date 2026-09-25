@@ -416,7 +416,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
         notes: preferences,
         items: items,
         totalAmount: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        status: 'awaiting_chef',
+        status: 'pending',
         prepDurationMinutes: 15
       });
       
@@ -424,7 +424,7 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
       sessionStorage.setItem('orient_active_order_notification', JSON.stringify({
         tableNumber: orderType === 'dine-in' ? `${selectedTableId} (${selectedDate} @ ${selectedTime})` : undefined,
         orderId: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-        status: 'awaiting_chef',
+        status: 'pending',
         timestamp: Date.now()
       }));
 

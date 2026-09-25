@@ -33,7 +33,7 @@ export function useOrderTimerManager() {
         const now = Date.now();
 
         for (const order of orders) {
-          if (order.status === 'preparing' || order.status === 'ten_min_warning') {
+          if (order.status === 'cooking' || order.status === 'preparing' || order.status === 'ten_min_warning') {
             if (!order.timerEndsAt) continue;
             const remainingMs = order.timerEndsAt - now;
 

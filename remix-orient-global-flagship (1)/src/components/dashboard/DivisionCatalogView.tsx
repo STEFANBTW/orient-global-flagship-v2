@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { cmsApi } from '@/services/cmsApi';
-import { orderService, CustomerOrder, playAlertSound } from '@/services/orderService';
+import { orderService, CustomerOrder, playAlertSound, getDisplayStatus } from '@/services/orderService';
 import { ProductItem } from '@/data/productsCatalog';
 import { ProductEditorModal } from './ProductEditorModal';
+import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
 
 import { sheetsSync } from '@/services/sheetsSync';
 import { getActiveConsumerUser } from '@/services/userService';
@@ -234,11 +235,12 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     });
   }, [products, selectedCategory, searchQuery]);
 
-  // Active Orders for chef display - STRICT DIVISION ISOLATION
-  const activeOrders = useMemo(() => {
-    return orders.filter(o => {
-      if (o.status === 'completed' || o.status === 'cancelled') return false;
+  // Chef order status filter
+  const [chefOrderFilter, setChefOrderFilter] = useState<'all' | 'pending' | 'cooking' | 'ready' | 'completed'>('all');
 
+  // Division Orders for chef display - STRICT DIVISION ISOLATION
+  const divisionOrders = useMemo(() => {
+    return orders.filter(o => {
       const orderDiv = (o as any).division || o.items[0]?.division;
       if (orderDiv) {
         return orderDiv.toLowerCase() === divisionId.toLowerCase();
@@ -258,6 +260,18 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
       return matchesSku;
     });
   }, [orders, divisionId]);
+
+  const activeOrders = useMemo(() => {
+    return divisionOrders.filter(o => {
+      const s = getDisplayStatus(o.status);
+      return s !== 'Completed' && s !== 'Cancelled';
+    });
+  }, [divisionOrders]);
+
+  const displayedChefOrders = useMemo(() => {
+    if (chefOrderFilter === 'all') return divisionOrders;
+    return divisionOrders.filter(o => getDisplayStatus(o.status).toLowerCase() === chefOrderFilter);
+  }, [divisionOrders, chefOrderFilter]);
 
   const handleDeleteOrder = async (orderId: string) => {
     if (window.confirm(`Are you sure you want to delete order #${orderId}?`)) {
@@ -859,7 +873,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
         {/* Right Column: Orders */}
         <div className="bg-card rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-border/30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/30">
             <div className="flex items-center gap-2.5">
               <div className="bg-[#f8fafc] dark:bg-slate-800 text-foreground p-2 rounded-xl">
                 <ChefHat className="w-4 h-4 text-muted-foreground" />
@@ -876,21 +890,52 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                 <p className="text-[11px] text-muted-foreground">{operationsConfig.subtitle}</p>
               </div>
             </div>
+
+            {/* Chef Notification Toggle Button */}
+            <NotificationToggleButton />
           </div>
 
-          {activeOrders.length === 0 ? (
+          {/* Chef Status Filter Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap pb-1">
+            {(['all', 'pending', 'cooking', 'ready', 'completed'] as const).map((filterKey) => {
+              const label = filterKey === 'all' ? 'All' :
+                            filterKey === 'pending' ? 'Pending' :
+                            filterKey === 'cooking' ? 'Cooking' :
+                            filterKey === 'ready' ? 'Ready' : 'Completed';
+              const count = filterKey === 'all' 
+                ? divisionOrders.length 
+                : divisionOrders.filter(o => getDisplayStatus(o.status).toLowerCase() === filterKey).length;
+
+              return (
+                <button
+                  key={filterKey}
+                  onClick={() => setChefOrderFilter(filterKey)}
+                  className={`px-2.5 py-1 text-xs rounded-lg transition-colors font-medium capitalize ${
+                    chefOrderFilter === filterKey
+                      ? 'bg-foreground text-background font-semibold'
+                      : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {displayedChefOrders.length === 0 ? (
             <div className="text-center py-8 bg-[#f8fafc] dark:bg-slate-800/40 rounded-xl p-4">
               <ShoppingBag className="w-7 h-7 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-foreground">No active orders in queue</p>
+              <p className="text-xs font-semibold text-foreground">No orders in {chefOrderFilter === 'all' ? 'queue' : chefOrderFilter}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">Orders appear here automatically when customer transactions occur.</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-              {activeOrders.map((order) => {
-                const isAwaitingChef = order.status === 'awaiting_chef';
-                const isPreparing = order.status === 'preparing' || order.status === 'ten_min_warning';
-                const isReady = order.status === 'ready';
-                const isWarning = order.status === 'ten_min_warning';
+              {displayedChefOrders.map((order) => {
+                const displayStatus = getDisplayStatus(order.status);
+                const isPending = displayStatus === 'Pending';
+                const isCooking = displayStatus === 'Cooking';
+                const isReady = displayStatus === 'Ready';
+                const isCompleted = displayStatus === 'Completed';
 
                 let remainingText = '';
                 if (order.timerEndsAt) {
@@ -916,12 +961,12 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                         <Badge 
                           className={`text-[9px] font-bold uppercase border-none ${
                             isReady ? 'bg-emerald-600 text-white' :
-                            isWarning ? 'bg-red-600 text-white' :
-                            isAwaitingChef ? 'bg-orange-500 text-white' :
-                            'bg-orange-600 text-white'
+                            isCooking ? 'bg-orange-600 text-white' :
+                            isPending ? 'bg-amber-500 text-white' :
+                            'bg-slate-600 text-white'
                           }`}
                         >
-                          {isReady ? 'Ready' : isWarning ? '10m Alert' : isAwaitingChef ? 'Awaiting Chef' : 'Preparing'}
+                          {displayStatus}
                         </Badge>
                         <button
                           onClick={() => handleDeleteOrder(order.id)}
@@ -942,7 +987,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                       ))}
                     </div>
 
-                    {isAwaitingChef && (
+                    {isPending && (
                       <div className="bg-amber-500/10 p-2 rounded-lg border-none text-xs flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300 font-semibold text-[11px]">
                           <Clock className="w-3.5 h-3.5 text-amber-500" />
@@ -954,7 +999,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                       </div>
                     )}
 
-                    {isPreparing && (
+                    {isCooking && (
                       <div className="bg-orange-500/10 p-2 rounded-lg border-none text-xs flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-orange-700 dark:text-orange-300 font-semibold text-[11px]">
                           <Timer className="w-3.5 h-3.5 animate-spin text-orange-500" />
@@ -967,7 +1012,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                     )}
 
                     <div className="pt-1 flex flex-col gap-1.5">
-                      {isAwaitingChef && (
+                      {isPending && (
                         <div className="grid grid-cols-2 gap-1.5">
                           <Button
                             id={`btn-chef-confirm-${order.id}`}
@@ -976,22 +1021,22 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                             className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1 border-none transition-colors duration-200"
                           >
                             <ChefHat className="w-3.5 h-3.5" />
-                            Confirm & Start
+                            Confirm and Start
                           </Button>
                           <Button
                             id={`btn-mark-ready-early-${order.id}`}
                             size="sm"
                             onClick={() => handleChefReady(order.id)}
                             className="h-8 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs gap-1 border-none transition-colors duration-200"
-                            title="Mark order ready early before starting timer"
+                            title="Mark order ready early"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            Mark Ready
+                            Ready
                           </Button>
                         </div>
                       )}
 
-                      {isPreparing && (
+                      {isCooking && (
                         <div className="grid grid-cols-2 gap-1.5">
                           <Button
                             id={`btn-test-10m-${order.id}`}
@@ -1010,28 +1055,39 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                             className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1 h-7 border-none transition-colors duration-200"
                           >
                             <CheckCircle2 className="w-3 h-3" />
-                            Mark Ready
+                            Ready
                           </Button>
                         </div>
                       )}
 
-                      <Button
-                        id={`btn-finish-payment-${order.id}`}
-                        size="sm"
-                        onClick={() => {
-                          orderService.updateOrderStatus(order.id, 'completed').then(() => {
+                      {(isReady || isCooking) && (
+                        <Button
+                          id={`btn-finish-payment-${order.id}`}
+                          size="sm"
+                          onClick={async () => {
+                            await orderService.finishAndConfirmPayment(order.id);
                             toast({
                               title: "Order Completed & Payment Confirmed",
-                              description: `Order #${order.id} is marked as ready and payment is confirmed.`
+                              description: `Order #${order.id} is finished and payment is confirmed.`
                             });
                             loadData();
-                          });
-                        }}
-                        className="w-full text-xs font-bold h-8 bg-emerald-700 hover:bg-emerald-800 text-white border-none transition-colors duration-200 gap-1"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Finish Order (Payment Confirmed)
-                      </Button>
+                          }}
+                          className="w-full text-xs font-bold h-8 bg-emerald-700 hover:bg-emerald-800 text-white border-none transition-colors duration-200 gap-1"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Finish and Payment Confirmed
+                        </Button>
+                      )}
+
+                      {isCompleted && (
+                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Finished & Payment Confirmed</span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-mono">Completed</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

@@ -16,6 +16,8 @@ interface NotificationContextType {
   removeNotification: (id: string) => void;
   requestDevicePermission: () => Promise<boolean>;
   devicePermissionStatus: NotificationPermission | 'unsupported';
+  isNotificationsEnabled: boolean;
+  toggleNotifications: () => Promise<boolean>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -25,6 +27,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [devicePermissionStatus, setDevicePermissionStatus] = useState<NotificationPermission | 'unsupported'>(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
   );
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('orient_notifications_enabled');
+        if (saved !== null) return saved !== 'false';
+      }
+    } catch (e) {}
+    return true;
+  });
   // Track notification IDs we have already shown a device alert for (prevents duplicate popups on refresh)
   const seenNotifIds = useRef<Set<string>>(new Set());
   // Track when this session started so we don't re-alert old notifications
@@ -71,6 +82,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   const fireDeviceNotification = (title: string, body: string) => {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (!isNotificationsEnabled) return;
     if (Notification.permission === 'granted') {
       try {
         new Notification(title, { body, icon: '/favicon.ico' });
@@ -105,6 +117,25 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
 
+  const toggleNotifications = async (): Promise<boolean> => {
+    if (isNotificationsEnabled) {
+      setIsNotificationsEnabled(false);
+      try {
+        localStorage.setItem('orient_notifications_enabled', 'false');
+      } catch (e) {}
+      return false;
+    } else {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
+        await requestDevicePermission();
+      }
+      setIsNotificationsEnabled(true);
+      try {
+        localStorage.setItem('orient_notifications_enabled', 'true');
+      } catch (e) {}
+      return true;
+    }
+  };
+
   const addNotification = (notification: Omit<Notification, 'id' | 'timestamp'>) => {
     const newNotification: Notification = {
       ...notification,
@@ -129,7 +160,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       addNotification,
       removeNotification,
       requestDevicePermission,
-      devicePermissionStatus
+      devicePermissionStatus,
+      isNotificationsEnabled,
+      toggleNotifications
     }}>
       {children}
       {/* Toast overlay */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CustomerOrder } from '../../services/orderService';
+import { CustomerOrder, getDisplayStatus } from '../../services/orderService';
 
 interface OrderTrackerProps {
   orders: CustomerOrder[];
@@ -11,6 +11,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orders }) => {
   );
 
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) || orders[0];
+  const selectedDisplayStatus = selectedOrder ? getDisplayStatus(selectedOrder.status) : 'Pending';
 
   const handleSupport = () => {
     alert('Connecting you to support...');
@@ -34,56 +35,60 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orders }) => {
         <div className="sticky top-24">
           <h2 className="text-2xl font-bold text-foreground mb-3">Track Your Order</h2>
           <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                onClick={() => setSelectedOrderId(order.id)}
-                className={`bg-card p-5 rounded-xl border cursor-pointer transition-colors ${
-                  selectedOrderId === order.id
-                    ? 'border-primary shadow-md'
-                    : 'border-border shadow-sm hover:border-primary/50'
-                }`}
-              >
-                <div className="flex justify-between items-center mb-3 pb-3 border-b border-border ">
-                  <span className="text-xs text-muted-foreground ">Order ID</span>
-                  <span className="font-mono font-bold text-base">{order.id}</span>
-                </div>
-                <div className="mb-5">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Status</span>
-                    <span className="font-bold text-foreground capitalize">
-                      {order.status.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <div className="w-full bg-background h-1.5 rounded-full overflow-hidden mt-2">
-                    <div
-                      className={`h-full rounded-full bg-primary ${
-                        order.status === 'awaiting_chef'
-                          ? 'w-1/5'
-                          : order.status === 'preparing' ||
-                            order.status === 'ten_min_warning' ||
-                            order.status === 'five_min_warning'
-                          ? 'w-2/5'
-                          : order.status === 'ready'
-                          ? 'w-3/5'
-                          : order.status === 'completed'
-                          ? 'w-full'
-                          : 'w-1/12'
-                      }`}
-                    ></div>
-                  </div>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSupport();
-                  }}
-                  className="w-full bg-background hover:bg-background dark:hover:bg-foreground text-background text-foreground font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center text-sm"
+            {orders.map((order) => {
+              const statusName = getDisplayStatus(order.status);
+              return (
+                <div
+                  key={order.id}
+                  onClick={() => setSelectedOrderId(order.id)}
+                  className={`bg-card p-5 rounded-xl border cursor-pointer transition-colors ${
+                    selectedOrderId === order.id
+                      ? 'border-primary shadow-md'
+                      : 'border-border shadow-sm hover:border-primary/50'
+                  }`}
                 >
-                  <span className="material-icons text-xs mr-2">support_agent</span> Contact Support
-                </button>
-              </div>
-            ))}
+                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-border ">
+                    <span className="text-xs text-muted-foreground ">Order ID</span>
+                    <span className="font-mono font-bold text-base">{order.id}</span>
+                  </div>
+                  <div className="mb-5">
+                    <div className="flex justify-between items-center text-xs mb-1">
+                      <span className="text-muted-foreground">Status</span>
+                      <span className={`font-bold px-2 py-0.5 rounded-md text-[11px] ${
+                        statusName === 'Pending' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                        statusName === 'Cooking' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                        statusName === 'Ready' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                        'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {statusName}
+                      </span>
+                    </div>
+                    <div className="w-full bg-background h-1.5 rounded-full overflow-hidden mt-2">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          statusName === 'Pending'
+                            ? 'w-1/4 bg-amber-500'
+                            : statusName === 'Cooking'
+                            ? 'w-2/4 bg-orange-500'
+                            : statusName === 'Ready'
+                            ? 'w-3/4 bg-emerald-500'
+                            : 'w-full bg-primary'
+                        }`}
+                      ></div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSupport();
+                    }}
+                    className="w-full bg-background hover:bg-background dark:hover:bg-foreground text-background text-foreground font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center text-sm"
+                  >
+                    <span className="material-icons text-xs mr-2">support_agent</span> Contact Support
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -95,55 +100,56 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orders }) => {
 
               <TimelineItem
                 icon="receipt_long"
-                title="Order Placed"
+                title="Order Placed (Pending)"
                 time={new Date(selectedOrder.createdAt).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
-                text="We have received your order."
+                text="Your order has been successfully sent to the kitchen."
                 completed={true}
-                active={selectedOrder.status === 'awaiting_chef'}
+                active={selectedDisplayStatus === 'Pending'}
               />
               <TimelineItem
                 icon="skillet"
-                title="Chef Confirmed"
+                title="Chef Confirmed (Cooking)"
                 text={
                   selectedOrder.chefConfirmedAt
-                    ? 'The kitchen is preparing your order.'
-                    : 'Waiting for chef to confirm.'
+                    ? `Your order has been confirmed by the chef and is cooking (${selectedOrder.prepDurationMinutes || 15}m prep time).`
+                    : 'Waiting for chef to confirm and start cooking.'
                 }
                 completed={
-                  selectedOrder.status !== 'awaiting_chef' &&
-                  selectedOrder.status !== 'cancelled'
+                  selectedDisplayStatus === 'Cooking' ||
+                  selectedDisplayStatus === 'Ready' ||
+                  selectedDisplayStatus === 'Completed'
                 }
-                active={
-                  selectedOrder.status === 'preparing' ||
-                  selectedOrder.status === 'ten_min_warning' ||
-                  selectedOrder.status === 'five_min_warning'
-                }
+                active={selectedDisplayStatus === 'Cooking'}
               />
               <TimelineItem
                 icon="check_circle"
                 title="Order is Ready"
-                text="Your order is packed and ready."
+                text="Your meal is ready."
                 completed={
-                  selectedOrder.status === 'ready' || selectedOrder.status === 'completed'
+                  selectedDisplayStatus === 'Ready' || selectedDisplayStatus === 'Completed'
                 }
-                active={selectedOrder.status === 'ready'}
+                active={selectedDisplayStatus === 'Ready'}
               />
               <TimelineItem
                 icon="two_wheeler"
-                title="In Transit"
-                text="Driver assigned."
-                completed={selectedOrder.status === 'completed'}
+                title="In Transit / Counter Pickup"
+                text={selectedOrder.shippingAddress && selectedOrder.shippingAddress !== 'Pick-up / Dine-in' ? 'Order dispatched for delivery.' : 'Ready for table or counter pickup.'}
+                completed={selectedDisplayStatus === 'Completed'}
                 active={false}
               />
               <TimelineItem
                 icon="home"
-                title="Arrived"
-                text="Enjoy your meal!"
-                completed={selectedOrder.status === 'completed'}
-                active={selectedOrder.status === 'completed'}
+                title="Finish and Payment Confirmed (Completed)"
+                text={
+                  selectedDisplayStatus === 'Completed'
+                    ? 'Thank you for patronizing us. This order is finished.'
+                    : 'Awaiting final order completion and payment confirmation.'
+                }
+                completed={selectedDisplayStatus === 'Completed'}
+                active={selectedDisplayStatus === 'Completed'}
               />
             </div>
           </div>
