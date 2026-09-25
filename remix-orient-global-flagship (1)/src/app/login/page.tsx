@@ -107,7 +107,7 @@ export default function LoginPage({ onCancel }: { onCancel?: () => void }) {
                     type="text" 
                     value={name}
                     onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                     placeholder="Enter your full name"
                     required
                   />
@@ -124,7 +124,7 @@ export default function LoginPage({ onCancel }: { onCancel?: () => void }) {
                     type="tel" 
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\s-]/g, ''))}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono placeholder:text-muted-foreground transition-colors"
                     placeholder="+234 800 000 0000"
                     required
                   />

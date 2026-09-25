@@ -127,7 +127,7 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
                     type="text" 
                     value={name}
                     onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    className="w-full h-11 px-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                    className="w-full h-11 px-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                     placeholder="First Name"
                     required
                   />
@@ -141,7 +141,7 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
                     type="text" 
                     value={surname}
                     onChange={(e) => setSurname(e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    className="w-full h-11 px-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                    className="w-full h-11 px-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                     placeholder="Surname"
                     required
                   />
@@ -160,7 +160,7 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
                       type="tel" 
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\s-]/g, ''))}
-                      className="w-full h-11 pl-10 pr-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono"
+                      className="w-full h-11 pl-10 pr-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono placeholder:text-muted-foreground transition-colors"
                       placeholder="+234 800 000 0000"
                       required
                     />
@@ -177,7 +177,7 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
                       type="email" 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full h-11 pl-10 pr-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                      className="w-full h-11 pl-10 pr-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                       placeholder="admin@orientglobal.ng"
                       required
                     />
@@ -196,7 +196,7 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
                     type="date" 
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium cursor-pointer"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium cursor-pointer placeholder:text-muted-foreground transition-colors"
                     required
                   />
                 </div>
@@ -211,12 +211,12 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
                   <select 
                     value={role}
                     onChange={(e) => setRole(e.target.value as any)}
-                    className="w-full h-11 px-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold cursor-pointer"
+                    className="w-full h-11 px-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold cursor-pointer transition-colors"
                     required
                   >
-                    <option value="boss" className="bg-[#1a1a1a] text-foreground py-2 font-semibold">Boss (Tier 01)</option>
-                    <option value="hod" className="bg-[#1a1a1a] text-foreground py-2 font-semibold">HOD (Tier 02)</option>
-                    <option value="staff" className="bg-[#1a1a1a] text-foreground py-2 font-semibold">Staff (Tier 03)</option>
+                    <option value="boss" className="bg-card text-foreground dark:bg-[#1a1a1a] py-2 font-semibold">Boss (Tier 01)</option>
+                    <option value="hod" className="bg-card text-foreground dark:bg-[#1a1a1a] py-2 font-semibold">HOD (Tier 02)</option>
+                    <option value="staff" className="bg-card text-foreground dark:bg-[#1a1a1a] py-2 font-semibold">Staff (Tier 03)</option>
                   </select>
                 </div>
 
@@ -227,12 +227,12 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
                   <select 
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold cursor-pointer"
+                    className="w-full h-11 px-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold cursor-pointer transition-colors"
                     required
                   >
-                    <option value="global" className="bg-[#1a1a1a] text-foreground py-2 font-semibold">Global (All Divisions)</option>
+                    <option value="global" className="bg-card text-foreground dark:bg-[#1a1a1a] py-2 font-semibold">Global (All Divisions)</option>
                     {DIVISIONS.map((d) => (
-                      <option key={d.id} value={d.id} className="bg-[#1a1a1a] text-foreground py-2 font-semibold">{d.name}</option>
+                      <option key={d.id} value={d.id} className="bg-card text-foreground dark:bg-[#1a1a1a] py-2 font-semibold">{d.name}</option>
                     ))}
                   </select>
                 </div>
@@ -253,7 +253,7 @@ export default function AdminSignupPage({ onCancel }: { onCancel?: () => void })
               </button>
             </form>
 
-            <div className="text-center text-xs font-medium text-muted-foreground pt-3 border-t border-[#1a1a1a]">
+            <div className="text-center text-xs font-medium text-muted-foreground pt-3 border-t border-border dark:border-[#1a1a1a]">
               Already enrolled?{' '}
               <Link to="/admin-login" className="text-primary hover:underline font-bold">
                 Admin Login

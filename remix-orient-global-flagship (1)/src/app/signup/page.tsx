@@ -129,7 +129,7 @@ export default function SignupPage({ onCancel }: { onCancel?: () => void }) {
                     type="text" 
                     value={name}
                     onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    className="w-full h-11 px-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                    className="w-full h-11 px-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                     placeholder="First Name"
                     required
                   />
@@ -143,7 +143,7 @@ export default function SignupPage({ onCancel }: { onCancel?: () => void }) {
                     type="text" 
                     value={surname}
                     onChange={(e) => setSurname(e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    className="w-full h-11 px-3 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                    className="w-full h-11 px-3 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                     placeholder="Surname"
                   />
                 </div>
@@ -159,7 +159,7 @@ export default function SignupPage({ onCancel }: { onCancel?: () => void }) {
                     type="tel" 
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\s-]/g, ''))}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono placeholder:text-muted-foreground transition-colors"
                     placeholder="+234 800 000 0000"
                     required
                   />
@@ -176,7 +176,7 @@ export default function SignupPage({ onCancel }: { onCancel?: () => void }) {
                     type="email" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -215,7 +215,7 @@ export default function SignupPage({ onCancel }: { onCancel?: () => void }) {
               </button>
             </form>
 
-            <div className="text-center text-xs font-medium text-muted-foreground pt-2 border-t border-[#1a1a1a]">
+            <div className="text-center text-xs font-medium text-muted-foreground pt-2 border-t border-border dark:border-[#1a1a1a]">
               Already have an account?{' '}
               <Link to="/login" className="text-orange-500 hover:underline font-bold">
                 Sign in

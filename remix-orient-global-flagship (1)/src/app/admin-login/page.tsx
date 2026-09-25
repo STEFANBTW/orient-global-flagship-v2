@@ -127,7 +127,7 @@ export default function AdminLoginPage({ onCancel }: { onCancel?: () => void }) 
                     type="text" 
                     value={name}
                     onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z\s'-]/g, ''))}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium placeholder:text-muted-foreground transition-colors"
                     placeholder="Boss / Admin Name"
                     required
                   />
@@ -144,7 +144,7 @@ export default function AdminLoginPage({ onCancel }: { onCancel?: () => void }) 
                     type="tel" 
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\s-]/g, ''))}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border-none bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono"
+                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 dark:border-none bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium font-mono placeholder:text-muted-foreground transition-colors"
                     placeholder="+234 800 000 0001"
                     required
                   />
@@ -160,8 +160,8 @@ export default function AdminLoginPage({ onCancel }: { onCancel?: () => void }) 
                 <button
                   type="button"
                   onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-                  className={`w-full h-11 px-4 rounded-xl bg-[#1a1a1a] text-foreground text-sm font-semibold flex items-center justify-between cursor-pointer transition-all border ${
-                    isRoleDropdownOpen ? 'border-orange-500 ring-1 ring-orange-500/50' : 'border-transparent hover:bg-[#222222]'
+                  className={`w-full h-11 px-4 rounded-xl bg-neutral-100 dark:bg-[#1a1a1a] text-foreground text-sm font-semibold flex items-center justify-between cursor-pointer transition-all border ${
+                    isRoleDropdownOpen ? 'border-orange-500 ring-1 ring-orange-500/50' : 'border-neutral-200 dark:border-transparent hover:bg-neutral-200/70 dark:hover:bg-[#222222]'
                   }`}
                 >
                   <span>{ROLE_OPTIONS.find(r => r.value === role)?.label || 'Select Role'}</span>
@@ -176,7 +176,7 @@ export default function AdminLoginPage({ onCancel }: { onCancel?: () => void }) 
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.98 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl p-1.5 space-y-1 backdrop-blur-xl"
+                      className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-card dark:bg-[#1e1e1e] border border-border dark:border-white/10 rounded-xl shadow-2xl p-1.5 space-y-1 backdrop-blur-xl"
                     >
                       {ROLE_OPTIONS.map((opt) => {
                         const isSelected = role === opt.value;
@@ -191,7 +191,7 @@ export default function AdminLoginPage({ onCancel }: { onCancel?: () => void }) 
                             className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
                               isSelected
                                 ? 'bg-orange-500/15 text-orange-400 font-extrabold border border-orange-500/30'
-                                : 'text-foreground hover:bg-white/10'
+                                : 'text-foreground hover:bg-neutral-100 dark:hover:bg-white/10'
                             }`}
                           >
                             <span>{opt.label}</span>
@@ -219,7 +219,7 @@ export default function AdminLoginPage({ onCancel }: { onCancel?: () => void }) 
               </button>
             </form>
 
-            <div className="text-center text-xs font-medium text-muted-foreground pt-3 border-t border-[#1a1a1a]">
+            <div className="text-center text-xs font-medium text-muted-foreground pt-3 border-t border-border dark:border-[#1a1a1a]">
               Need a new admin account?{' '}
               <Link to="/admin-signup" className="text-primary hover:underline font-bold">
                 Admin Signup
