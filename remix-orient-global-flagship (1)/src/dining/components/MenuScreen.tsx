@@ -324,16 +324,16 @@ const MenuScreen: React.FC = () => {
         {/* Filter Buttons (Static) */}
         <div className="bg-background pt-2 pb-4 w-full">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-start flex-wrap gap-2 w-full">
+            <div className="flex flex-wrap xl:flex-nowrap items-center justify-start xl:justify-between gap-2.5 sm:gap-3 xl:gap-2 w-full">
               <button
                 onClick={() => setActiveCategory("All")}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1 shrink-0 ${activeCategory === "All"
+                className={`px-3.5 sm:px-4 xl:px-4.5 py-2 xl:py-2.5 rounded-full text-xs xl:text-[13px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 ${activeCategory === "All"
                   ? "bg-primary text-background shadow-md shadow-primary/25 ring-1 ring-primary/40"
                   : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm border border-border/40"
                   }`}
               >
                 <span>All Items</span>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+                <span className={`text-[10px] xl:text-[11px] px-2 py-0.5 rounded-full font-bold ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
                   {filteredProducts.length}
                 </span>
               </button>
@@ -342,13 +342,13 @@ const MenuScreen: React.FC = () => {
                 <button
                   key={cat.name}
                   onClick={() => setActiveCategory(cat.name)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1 shrink-0 ${activeCategory === cat.name
+                  className={`px-3.5 sm:px-4 xl:px-4.5 py-2 xl:py-2.5 rounded-full text-xs xl:text-[13px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 ${activeCategory === cat.name
                     ? "bg-primary text-background shadow-md shadow-primary/25 ring-1 ring-primary/40"
                     : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm border border-border/40"
                     }`}
                 >
                   <span>{cat.name}</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+                  <span className={`text-[10px] xl:text-[11px] px-2 py-0.5 rounded-full font-bold ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
                     {filteredProducts.filter(p => p.category === cat.name).length}
                   </span>
                 </button>
