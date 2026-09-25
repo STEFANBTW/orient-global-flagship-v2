@@ -358,7 +358,7 @@ const MenuScreen: React.FC = () => {
         </div>
 
         {/* Search Bar (Sticky - Floating Pill) */}
-        <div className="sticky top-[70px] z-40 w-full pointer-events-none mt-4">
+        <div className="sticky top-[50px] lg:top-[70px] z-40 w-full pointer-events-none mt-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end">
             <div className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-200/80 dark:bg-neutral-800/80 backdrop-blur-md shadow-md border border-neutral-300/80 dark:border-neutral-700/80 transition-colors duration-300 shrink-0 w-full md:w-auto">
               <span className="material-icons text-neutral-700 dark:text-neutral-300 text-sm shrink-0">search</span>
