@@ -384,7 +384,7 @@ const MenuScreen: React.FC = () => {
                 <div className="space-y-1">
                   <span className="text-xs uppercase font-extralight tracking-widest text-primary font-bold flex items-center gap-1.5">
                     <span className="material-icons text-sm">history</span>
-                    Order Again
+                    Recent Orders
                   </span>
                   <h3 className="text-2xl sm:text-3xl font-bold text-foreground font-sans">
                     Recent Orders

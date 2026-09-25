@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Utensils, 
@@ -37,6 +37,8 @@ import { useRoles } from '@/context/role-context';
 import { useToast } from '@/hooks/use-toast';
 import { orderService, CustomerOrder, getDisplayStatus, isDeliveryOrder } from '@/services/orderService';
 import { getActiveConsumerUser, AppUser } from '@/services/userService';
+import { INITIAL_PRODUCTS_CATALOG, ProductItem } from '@/data/productsCatalog';
+import { cmsApi } from '@/services/cmsApi';
 import { OrderTracker } from './OrderTracker';
 import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
 
@@ -167,6 +169,48 @@ export default function UserDashboard() {
     const s = getDisplayStatus(o.status);
     return s === 'Completed' || s === 'Cancelled';
   });
+
+  // Products catalog for image & detail matching
+  const [catalogProducts, setCatalogProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS_CATALOG);
+
+  useEffect(() => {
+    cmsApi.getProducts().then(res => {
+      if (res?.products && res.products.length > 0) {
+        setCatalogProducts(res.products);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Bento Grid: 5 Most Recent Orders (strictly limited to 5, unique to this user)
+  const recentBentoOrders = useMemo(() => {
+    return orders.slice(0, 5).map((order) => {
+      const primaryItem = order.items?.[0];
+      const matched = catalogProducts.find(p => 
+        (primaryItem?.id && p.id === primaryItem.id) ||
+        (primaryItem?.name && p.name.toLowerCase() === primaryItem.name.toLowerCase())
+      ) || INITIAL_PRODUCTS_CATALOG.find(p =>
+        (primaryItem?.id && p.id === primaryItem.id) ||
+        (primaryItem?.name && p.name.toLowerCase() === primaryItem.name.toLowerCase())
+      ) || {
+        id: primaryItem?.id || order.id,
+        name: primaryItem?.name || 'Chef Specialty Selection',
+        category: primaryItem?.category || 'Dining',
+        price: primaryItem?.price || 10,
+        image: primaryItem?.image || 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop&q=80',
+        description: `Order #${order.id}. ${order.items?.length || 1} items prepared fresh upon request.`,
+        prepTimeMinutes: order.prepDurationMinutes || 11,
+        stock: 5,
+        division: 'dining' as const
+      };
+
+      return {
+        order,
+        primaryItem,
+        product: matched,
+        extraCount: (order.items?.length || 1) - 1
+      };
+    });
+  }, [orders, catalogProducts]);
 
   // Filtered orders
   const displayedOrders = orders.filter(o => {
@@ -356,6 +400,117 @@ export default function UserDashboard() {
         </button>
 
       </div>
+
+      {/* ========================================================================= */}
+      {/* 2. RECENT ORDERS (BENTO GRID - MAX 5 ITEMS, WITHOUT REORDER BUTTON)       */}
+      {/* ========================================================================= */}
+      {recentBentoOrders.length > 0 && (
+        <section id="user-recent-orders" className="space-y-4">
+          <div className="flex items-center justify-between pb-1">
+            <div className="space-y-0.5">
+              <span className="text-xs uppercase font-extralight tracking-widest text-primary font-bold flex items-center gap-1.5">
+                <span className="material-icons text-sm">history</span>
+                Recent Orders
+              </span>
+              <h3 className="text-xl sm:text-2xl font-bold text-foreground font-sans">
+                Recent Orders
+              </h3>
+            </div>
+            <span className="text-xs sm:text-sm font-bold px-3 py-1 rounded-full bg-muted text-muted-foreground">
+              {recentBentoOrders.length} {recentBentoOrders.length === 1 ? 'order' : 'orders'}
+            </span>
+          </div>
+
+          {/* Bento Grid: Max 5 items */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {recentBentoOrders.map(({ order, primaryItem, product, extraCount }, idx) => {
+              const isLargeSpan = idx === 0 && recentBentoOrders.length >= 3;
+              const displayStatus = getDisplayStatus(order.status);
+              const orderDate = new Date(order.createdAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              });
+
+              return (
+                <div
+                  key={order.id}
+                  onClick={() => setSelectedOrder(order)}
+                  className={`group relative rounded-3xl overflow-hidden cursor-pointer bg-neutral-950 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 flex flex-col justify-end w-full min-h-[320px] sm:min-h-[380px] ${
+                    isLargeSpan ? "lg:col-span-2 lg:min-h-[400px]" : "col-span-1"
+                  }`}
+                >
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/20 group-hover:via-black/60 transition-all duration-300"></div>
+
+                  {/* Top Badges */}
+                  <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between pointer-events-none z-10">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-md">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      #{order.id.slice(-5)} • {orderDate}
+                    </span>
+                    <span className="text-sm sm:text-base font-black text-white bg-primary px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
+                      ₦{order.totalAmount || 10}
+                    </span>
+                  </div>
+
+                  {/* Hover Description Card at Bottom (Desktop) */}
+                  <div className="hidden sm:block absolute inset-x-3.5 bottom-[82px] z-20 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none">
+                    <div className="bg-black/25 backdrop-blur-2xl border-0 rounded-2xl p-3.5 shadow-2xl text-white">
+                      <div className="flex items-center justify-between text-[10px] uppercase font-bold text-primary mb-1">
+                        <span>Status: {displayStatus}</span>
+                        <span className="text-white/70">Click card to view receipt</span>
+                      </div>
+                      <p className="text-xs text-white/90 leading-relaxed line-clamp-2 font-normal">
+                        {product.description}
+                      </p>
+                      <p className="mt-1.5 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                        <span className="material-icons text-[12px]">receipt_long</span>
+                        {order.tableNumber || (order.orderType === 'dine-in' ? 'Dine-In' : 'Takeaway')} • {order.items?.length || 1} {(order.items?.length || 1) === 1 ? 'dish' : 'dishes'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bottom Vital Info */}
+                  <div className="relative z-10 p-4 sm:p-5 w-full flex items-end justify-between gap-3">
+                    <div className="space-y-1 sm:space-y-1.5 min-w-0">
+                      <h4 className="text-base sm:text-2xl font-bold text-white font-sans tracking-tight leading-tight sm:leading-snug drop-shadow-md truncate sm:whitespace-normal">
+                        {product.name}
+                        {extraCount > 0 && (
+                          <span className="text-xs sm:text-sm font-normal text-white/80 ml-2">
+                            +{extraCount} more
+                          </span>
+                        )}
+                      </h4>
+
+                      <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-black/25 backdrop-blur-md text-[10px] sm:text-xs shadow-sm border border-white/10 max-w-full">
+                        <span className="flex items-center gap-1 text-white/90 font-medium whitespace-nowrap">
+                          <span className="material-icons text-primary text-[10px] sm:text-xs">receipt_long</span>
+                          {order.orderType === 'dine-in' ? 'Dine-In' : 'Takeaway'}
+                        </span>
+                        {order.tableNumber && (
+                          <>
+                            <span className="w-1 h-1 rounded-full bg-white/40 shrink-0"></span>
+                            <span className="text-white font-semibold tracking-wide whitespace-nowrap">
+                              {order.tableNumber}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Reorder button removed as instructed */}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ========================================================================= */}
       {/* 3. ACTIVE KITCHEN ORDERS (IF ANY)                                         */}
