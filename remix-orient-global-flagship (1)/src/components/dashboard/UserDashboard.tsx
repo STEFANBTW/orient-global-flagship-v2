@@ -17,7 +17,9 @@ import {
   Timer, 
   Search, 
   X,
-  Bell
+  Bell,
+  Truck,
+  CheckCircle2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { useRoles } from '@/context/role-context';
 import { useToast } from '@/hooks/use-toast';
-import { orderService, CustomerOrder, getDisplayStatus } from '@/services/orderService';
+import { orderService, CustomerOrder, getDisplayStatus, isDeliveryOrder } from '@/services/orderService';
 import { getActiveConsumerUser, AppUser } from '@/services/userService';
 import { OrderTracker } from './OrderTracker';
 import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
@@ -78,7 +80,7 @@ export default function UserDashboard() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [reservations, setReservations] = useState<TableReservation[]>([]);
   const [activeTab, setActiveTab] = useState<'orders' | 'tracking' | 'reservations' | 'notifications'>('orders');
-  const [historyFilter, setHistoryFilter] = useState<'all' | 'pending' | 'cooking' | 'ready' | 'completed'>('all');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'pending' | 'cooking' | 'ready' | 'in_transit' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
 
@@ -174,6 +176,7 @@ export default function UserDashboard() {
       historyFilter === 'pending' ? status === 'Pending' :
       historyFilter === 'cooking' ? status === 'Cooking' :
       historyFilter === 'ready' ? status === 'Ready' :
+      historyFilter === 'in_transit' ? status === 'In Transit' :
       status === 'Completed';
 
     const matchesSearch = searchQuery === '' ||
@@ -375,10 +378,13 @@ export default function UserDashboard() {
 
           <CardContent className="p-4 sm:p-6 space-y-4">
             {activeOrders.map(order => {
-              const isAwaiting = order.status === 'awaiting_chef';
-              const isPreparing = order.status === 'preparing' || order.status === 'ten_min_warning';
+              const displayStatus = getDisplayStatus(order.status);
+              const isAwaiting = displayStatus === 'Pending';
+              const isCooking = displayStatus === 'Cooking';
+              const isReady = displayStatus === 'Ready';
+              const isInTransit = displayStatus === 'In Transit';
               const isWarning = order.status === 'ten_min_warning';
-              const isReady = order.status === 'ready';
+              const isDelivery = isDeliveryOrder(order);
 
               let remainingText = '';
               if (order.timerEndsAt) {
@@ -398,16 +404,28 @@ export default function UserDashboard() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-sm text-foreground">Order #{order.id}</span>
                         <span className="text-xs text-muted-foreground">({order.tableNumber})</span>
+                        {isDelivery && (
+                          <Badge variant="outline" className="text-[10px] font-bold border-blue-500/40 text-blue-600 dark:text-blue-400 bg-blue-500/10">
+                            Delivery
+                          </Badge>
+                        )}
                       </div>
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
                         Placed at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
-                    <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 border-none bg-muted">
-                      {isReady ? 'Ready for Pickup' :
+                    <Badge variant="outline" className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 border-none ${
+                      isInTransit ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                      isReady ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
+                      isWarning ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                      isCooking ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {isInTransit ? '🚚 In Transit' :
+                       isReady ? (isDelivery ? 'Meal Ready (Preparing Dispatch)' : 'Ready for Pickup') :
                        isWarning ? '10-Min Warning Alert' :
-                       isPreparing ? 'Preparing in Kitchen' :
+                       isCooking ? 'Preparing in Kitchen' :
                        'Awaiting Chef Confirmation'}
                     </Badge>
                   </div>
@@ -422,8 +440,22 @@ export default function UserDashboard() {
                     </div>
                   )}
 
+                  {/* In Transit Banner */}
+                  {isInTransit && (
+                    <div className="bg-blue-500/10 p-3 rounded-lg text-xs flex items-center justify-between border border-blue-500/20">
+                      <div className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                        <Truck className="w-4 h-4 shrink-0 text-blue-500 animate-pulse" />
+                        <span className="font-bold">
+                          {order.customerReceivedAt 
+                            ? 'Order Received! Awaiting final payment confirmation by chef.'
+                            : 'Your meal is on the way! Please tap "Received" when your food arrives.'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Prep Timer */}
-                  {isPreparing && (
+                  {isCooking && (
                     <div className="p-3 rounded-lg bg-background border-none flex items-center justify-between text-xs">
                       <span className="flex items-center gap-2 font-semibold text-foreground">
                         <Timer className="w-4 h-4 text-muted-foreground" />
@@ -450,7 +482,7 @@ export default function UserDashboard() {
                   </div>
 
                   {/* Actions for Active Order */}
-                  <div className="flex items-center justify-end gap-2 pt-1">
+                  <div className="flex items-center justify-end gap-2 pt-1 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -463,6 +495,39 @@ export default function UserDashboard() {
                       <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
                       Contact Kitchen
                     </Button>
+
+                    {/* Customer Received Confirmation Button */}
+                    {isInTransit && isDelivery && !order.customerReceivedAt && (
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await orderService.customerConfirmReceived(order.id);
+                            toast({
+                              title: "Receipt Confirmed! 👍",
+                              description: "You confirmed receipt of your order. The chef can now finish the order.",
+                            });
+                            loadOrders();
+                          } catch (e: any) {
+                            toast({
+                              title: "Error",
+                              description: e.message || "Could not confirm receipt.",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                        className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 shadow-sm"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Received
+                      </Button>
+                    )}
+
+                    {isInTransit && isDelivery && order.customerReceivedAt && (
+                      <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs py-1 px-2.5">
+                        <CheckCircle2 className="w-3 h-3 mr-1 inline" /> Received Confirmed
+                      </Badge>
+                    )}
 
                     {isAwaiting && (
                       <Button
@@ -567,14 +632,15 @@ export default function UserDashboard() {
 
                 {/* Filter Pills */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {(['all', 'pending', 'cooking', 'ready', 'completed'] as const).map((filterKey) => {
+                  {(['all', 'pending', 'cooking', 'ready', 'in_transit', 'completed'] as const).map((filterKey) => {
                     const label = filterKey === 'all' ? 'All' :
                                   filterKey === 'pending' ? 'Pending' :
                                   filterKey === 'cooking' ? 'Cooking' :
-                                  filterKey === 'ready' ? 'Ready' : 'Completed';
+                                  filterKey === 'ready' ? 'Ready' :
+                                  filterKey === 'in_transit' ? 'In Transit' : 'Completed';
                     const count = filterKey === 'all' 
                       ? orders.length 
-                      : orders.filter(o => getDisplayStatus(o.status).toLowerCase() === filterKey).length;
+                      : orders.filter(o => getDisplayStatus(o.status).toLowerCase().replace(/ /g, '_') === filterKey).length;
 
                     return (
                       <button
@@ -604,6 +670,7 @@ export default function UserDashboard() {
                   {displayedOrders.map((order) => {
                     const isCompleted = order.status === 'completed';
                     const isCancelled = order.status === 'cancelled';
+                    const isDelivery = isDeliveryOrder(order);
 
                     return (
                       <div
@@ -619,13 +686,19 @@ export default function UserDashboard() {
                               <span className="text-[11px] text-muted-foreground">
                                 {order.tableNumber || 'Dining'}
                               </span>
+                              {isDelivery && (
+                                <Badge variant="outline" className="text-[9px] font-bold border-blue-500/40 text-blue-600 dark:text-blue-400 bg-blue-500/10">
+                                  Delivery
+                                </Badge>
+                              )}
                             </div>
 
                             <Badge variant="outline" className={`text-[10px] font-bold border-none ${
                               getDisplayStatus(order.status) === 'Pending' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
                               getDisplayStatus(order.status) === 'Cooking' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
-                              getDisplayStatus(order.status) === 'Ready' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                              'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                              getDisplayStatus(order.status) === 'Ready' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
+                              getDisplayStatus(order.status) === 'In Transit' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                              'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                             }`}>
                               {getDisplayStatus(order.status)}
                             </Badge>

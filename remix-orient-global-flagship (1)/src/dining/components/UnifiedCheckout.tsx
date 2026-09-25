@@ -405,14 +405,19 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
 
     setIsSubmitting(true);
     try {
+      const isTakeaway = orderType === 'take-away';
+      const isDelivery = isTakeaway && takeawayMethod === 'delivery';
+
       await orderService.placeOrder({
         customerId: userToUse.id,
         customerName: userToUse.name,
         customerEmail: userToUse.email || 'guest@orient.app',
         customerPhone: userToUse.phone,
         division: 'dining',
-        tableNumber: orderType === 'dine-in' ? `${selectedTableId} (${selectedDate} @ ${selectedTime})` : undefined,
-        shippingAddress: orderType === 'take-away' && takeawayMethod === 'delivery' ? deliveryAddress : 'Pick-up / Dine-in',
+        orderType: isTakeaway ? 'takeaway' : 'dine-in',
+        deliveryMethod: isDelivery ? 'delivery' : 'pickup',
+        tableNumber: orderType === 'dine-in' ? `${selectedTableId} (${selectedDate} @ ${selectedTime})` : (isDelivery ? 'Home Delivery' : 'Pickup Takeaway'),
+        shippingAddress: isDelivery ? (deliveryAddress || userToUse.deliveryAddress || 'Standard Delivery Address') : (orderType === 'dine-in' ? 'Dine-In' : 'Pick-up at counter'),
         notes: preferences,
         items: items,
         totalAmount: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),

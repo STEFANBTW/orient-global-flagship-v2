@@ -25,17 +25,29 @@ export type OrderStatus =
   | 'ten_min_warning'
   | 'five_min_warning'
   | 'ready'
+  | 'in_transit'
   | 'completed'
   | 'cancelled';
 
-export function getDisplayStatus(status: OrderStatus | string): 'Pending' | 'Cooking' | 'Ready' | 'Completed' | 'Cancelled' {
-  const s = (status || '').toLowerCase();
+export function getDisplayStatus(status: OrderStatus | string): 'Pending' | 'Cooking' | 'Ready' | 'In Transit' | 'Completed' | 'Cancelled' {
+  const s = (status || '').toLowerCase().replace(/-/g, '_').replace(/ /g, '_');
   if (s === 'pending' || s === 'awaiting_chef') return 'Pending';
   if (s === 'cooking' || s === 'preparing' || s === 'confirmed' || s === 'ten_min_warning' || s === 'five_min_warning') return 'Cooking';
   if (s === 'ready') return 'Ready';
+  if (s === 'in_transit' || s === 'transit') return 'In Transit';
   if (s === 'completed') return 'Completed';
   if (s === 'cancelled') return 'Cancelled';
   return 'Pending';
+}
+
+export function isDeliveryOrder(order: CustomerOrder): boolean {
+  if (order.deliveryMethod === 'delivery') return true;
+  if (order.deliveryMethod === 'pickup') return false;
+  if (order.orderType === 'dine-in') return false;
+  const addr = (order.shippingAddress || '').toLowerCase();
+  const isSpecialPickup = addr.includes('pick-up') || addr.includes('in-store') || addr.includes('dine-in');
+  const isTable = (order.tableNumber || '').toLowerCase().includes('table');
+  return !isSpecialPickup && !isTable && addr.length > 5;
 }
 
 export interface CustomerOrder {
@@ -48,6 +60,9 @@ export interface CustomerOrder {
   tableNumber?: string;
   shippingAddress?: string;
   notes?: string;
+  orderType?: 'dine-in' | 'takeaway';
+  deliveryMethod?: 'delivery' | 'pickup';
+  customerReceivedAt?: string | null;
   items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
@@ -63,7 +78,7 @@ export interface CustomerOrder {
 export interface AppNotification {
   id: string;
   orderId?: string;
-  type: 'order_placed' | 'order_confirmed' | 'ten_min_warning' | 'five_min_warning' | 'order_ready' | 'order_cancelled' | 'info';
+  type: 'order_placed' | 'order_confirmed' | 'ten_min_warning' | 'five_min_warning' | 'order_ready' | 'order_in_transit' | 'order_received' | 'order_cancelled' | 'info';
   recipient: 'user' | 'cms' | 'all';
   title: string;
   message: string;
@@ -146,6 +161,8 @@ export const orderService = {
     shippingAddress?: string;
     notes?: string;
     division?: string;
+    orderType?: 'dine-in' | 'takeaway';
+    deliveryMethod?: 'delivery' | 'pickup';
     items: Array<{ id: string; name: string; quantity: number; division?: string; category?: string; image?: string; price?: number }>;
     prepDurationMinutes?: number;
     totalAmount?: number;
@@ -170,6 +187,13 @@ export const orderService = {
 
     const totalAmount = sanitizedItems.reduce((acc, item) => acc + (item.quantity * 10), 0);
 
+    const derivedOrderType = input.orderType || (input.tableNumber && input.tableNumber.toLowerCase().includes('table') ? 'dine-in' : 'takeaway');
+    const derivedDeliveryMethod = input.deliveryMethod || (
+      derivedOrderType === 'takeaway' && input.shippingAddress && !input.shippingAddress.toLowerCase().includes('pick-up') && !input.shippingAddress.toLowerCase().includes('in-store')
+        ? 'delivery'
+        : 'pickup'
+    );
+
     const newOrder: CustomerOrder = {
       id: orderId,
       division: targetDivision,
@@ -177,9 +201,12 @@ export const orderService = {
       customerName: input.customerName?.trim() || activeUser?.name || 'Guest User',
       customerEmail: input.customerEmail?.trim() || activeUser?.email || 'guest@orient.app',
       customerPhone: input.customerPhone?.trim() || activeUser?.phone || '+234 800 000 0000',
-      tableNumber: input.tableNumber?.trim() || 'Takeout / Pickup',
-      shippingAddress: input.shippingAddress?.trim() || activeUser?.deliveryAddress || 'Standard Delivery Address',
+      tableNumber: input.tableNumber?.trim() || (derivedOrderType === 'dine-in' ? 'Dine-In' : (derivedDeliveryMethod === 'delivery' ? 'Home Delivery' : 'Takeout / Pickup')),
+      shippingAddress: input.shippingAddress?.trim() || activeUser?.deliveryAddress || (derivedDeliveryMethod === 'delivery' ? 'Standard Delivery Address' : 'Pick-up at counter'),
       notes: input.notes?.trim() || '',
+      orderType: derivedOrderType,
+      deliveryMethod: derivedDeliveryMethod,
+      customerReceivedAt: null,
       items: sanitizedItems,
       totalAmount,
       status: input.status || 'pending',
@@ -580,9 +607,132 @@ export const orderService = {
   },
 
   /**
+   * 4b. Chef: Mark Order In Transit (Delivery Takeaway ONLY)
+   */
+  markOrderInTransit: async (orderId: string): Promise<CustomerOrder> => {
+    const order = await orderService.getOrderById(orderId);
+    if (!order) throw new Error(`Order ${orderId} not found`);
+
+    const nowIso = new Date().toISOString();
+    const updatedOrder: CustomerOrder = {
+      ...order,
+      status: 'in_transit',
+      updatedAt: nowIso
+    };
+
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        status: 'in_transit',
+        updatedAt: Timestamp.now()
+      });
+    } catch (e) {}
+
+    ordersCache = ordersCache.map(o => o.id === orderId ? updatedOrder : o);
+    try {
+      safeStorage.setItem('orient_orders_cache', JSON.stringify(ordersCache));
+      safeStorage.setItem('orient_last_user_order', JSON.stringify(updatedOrder));
+    } catch (e) {}
+
+    const userNotif: AppNotification = {
+      id: `NOTIF-U-${Date.now()}`,
+      orderId,
+      type: 'order_in_transit',
+      recipient: 'user',
+      title: '🚚 Order In Transit',
+      message: 'Your order is on the way! Please tap "Received" when your food arrives.',
+      read: false,
+      createdAt: nowIso
+    };
+    await orderService.sendNotification(userNotif);
+
+    const cmsNotif: AppNotification = {
+      id: `NOTIF-C-${Date.now()}`,
+      orderId,
+      type: 'order_in_transit',
+      recipient: 'cms',
+      title: '🚚 Order In Transit',
+      message: `Order #${orderId} is dispatched and in transit to customer.`,
+      read: false,
+      createdAt: nowIso
+    };
+    await orderService.sendNotification(cmsNotif);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orient_orders_changed'));
+    }
+    playAlertSound('warning');
+    return updatedOrder;
+  },
+
+  /**
+   * 4c. Customer: Confirm Received (Delivery Takeaway)
+   * Unlocks chef's ability to Finish and Confirm Payment
+   */
+  customerConfirmReceived: async (orderId: string): Promise<CustomerOrder> => {
+    const order = await orderService.getOrderById(orderId);
+    if (!order) throw new Error(`Order ${orderId} not found`);
+
+    const nowIso = new Date().toISOString();
+    const updatedOrder: CustomerOrder = {
+      ...order,
+      customerReceivedAt: nowIso,
+      updatedAt: nowIso
+    };
+
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        customerReceivedAt: nowIso,
+        updatedAt: Timestamp.now()
+      });
+    } catch (e) {}
+
+    ordersCache = ordersCache.map(o => o.id === orderId ? updatedOrder : o);
+    try {
+      safeStorage.setItem('orient_orders_cache', JSON.stringify(ordersCache));
+      safeStorage.setItem('orient_last_user_order', JSON.stringify(updatedOrder));
+    } catch (e) {}
+
+    const cmsNotif: AppNotification = {
+      id: `NOTIF-C-${Date.now()}`,
+      orderId,
+      type: 'order_received',
+      recipient: 'cms',
+      title: '📦 Order Received by Customer',
+      message: `Customer confirmed receipt of Order #${orderId}. You can now finish and confirm payment.`,
+      read: false,
+      createdAt: nowIso
+    };
+    await orderService.sendNotification(cmsNotif);
+
+    const userNotif: AppNotification = {
+      id: `NOTIF-U-${Date.now()}`,
+      orderId,
+      type: 'order_received',
+      recipient: 'user',
+      title: 'Receipt Confirmed 👍',
+      message: 'You marked Order #' + orderId + ' as received. Thank you!',
+      read: false,
+      createdAt: nowIso
+    };
+    await orderService.sendNotification(userNotif);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orient_orders_changed'));
+    }
+    playAlertSound('confirmed');
+    return updatedOrder;
+  },
+
+  /**
    * Chef: Finish and Payment Confirmed
    */
   finishAndConfirmPayment: async (orderId: string): Promise<CustomerOrder> => {
+    const order = await orderService.getOrderById(orderId);
+    if (order && isDeliveryOrder(order) && !order.customerReceivedAt) {
+      throw new Error(`Cannot finish order #${orderId}: Waiting for customer to click 'Received'.`);
+    }
     return orderService.updateOrderStatus(orderId, 'completed');
   },
 

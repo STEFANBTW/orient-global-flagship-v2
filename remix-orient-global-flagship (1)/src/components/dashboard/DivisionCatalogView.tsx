@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { cmsApi } from '@/services/cmsApi';
-import { orderService, CustomerOrder, playAlertSound, getDisplayStatus } from '@/services/orderService';
+import { orderService, CustomerOrder, playAlertSound, getDisplayStatus, isDeliveryOrder } from '@/services/orderService';
 import { ProductItem } from '@/data/productsCatalog';
 import { ProductEditorModal } from './ProductEditorModal';
 import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
@@ -36,7 +36,8 @@ import {
   Wine,
   Droplets,
   Layers,
-  ExternalLink
+  ExternalLink,
+  Truck
 } from 'lucide-react';
 
 const getCategoryIcon = (catName: string) => {
@@ -236,7 +237,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
   }, [products, selectedCategory, searchQuery]);
 
   // Chef order status filter
-  const [chefOrderFilter, setChefOrderFilter] = useState<'all' | 'pending' | 'cooking' | 'ready' | 'completed'>('all');
+  const [chefOrderFilter, setChefOrderFilter] = useState<'all' | 'pending' | 'cooking' | 'ready' | 'in_transit' | 'completed'>('all');
 
   // Division Orders for chef display - STRICT DIVISION ISOLATION
   const divisionOrders = useMemo(() => {
@@ -270,7 +271,10 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
   const displayedChefOrders = useMemo(() => {
     if (chefOrderFilter === 'all') return divisionOrders;
-    return divisionOrders.filter(o => getDisplayStatus(o.status).toLowerCase() === chefOrderFilter);
+    return divisionOrders.filter(o => {
+      const s = getDisplayStatus(o.status).toLowerCase().replace(/ /g, '_');
+      return s === chefOrderFilter;
+    });
   }, [divisionOrders, chefOrderFilter]);
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -485,6 +489,25 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
       toast({
         title: 'Error',
         description: 'Could not mark order ready.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Chef: Mark In Transit (For delivery takeaway orders)
+  const handleChefInTransit = async (orderId: string) => {
+    try {
+      await orderService.markOrderInTransit(orderId);
+      toast({
+        title: '🚚 Order Dispatched & In Transit!',
+        description: `Order #${orderId} has been marked In Transit. Customer will confirm receipt!`,
+      });
+      const freshOrders = await orderService.getOrders();
+      setOrders(freshOrders);
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Could not mark order in transit.',
         variant: 'destructive'
       });
     }
@@ -897,14 +920,15 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
           {/* Chef Status Filter Pills */}
           <div className="flex items-center gap-1.5 flex-wrap pb-1">
-            {(['all', 'pending', 'cooking', 'ready', 'completed'] as const).map((filterKey) => {
+            {(['all', 'pending', 'cooking', 'ready', 'in_transit', 'completed'] as const).map((filterKey) => {
               const label = filterKey === 'all' ? 'All' :
                             filterKey === 'pending' ? 'Pending' :
                             filterKey === 'cooking' ? 'Cooking' :
-                            filterKey === 'ready' ? 'Ready' : 'Completed';
+                            filterKey === 'ready' ? 'Ready' :
+                            filterKey === 'in_transit' ? 'In Transit' : 'Completed';
               const count = filterKey === 'all' 
                 ? divisionOrders.length 
-                : divisionOrders.filter(o => getDisplayStatus(o.status).toLowerCase() === filterKey).length;
+                : divisionOrders.filter(o => getDisplayStatus(o.status).toLowerCase().replace(/ /g, '_') === filterKey).length;
 
               return (
                 <button
@@ -925,7 +949,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
           {displayedChefOrders.length === 0 ? (
             <div className="text-center py-8 bg-[#f8fafc] dark:bg-slate-800/40 rounded-xl p-4">
               <ShoppingBag className="w-7 h-7 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-foreground">No orders in {chefOrderFilter === 'all' ? 'queue' : chefOrderFilter}</p>
+              <p className="text-xs font-semibold text-foreground">No orders in {chefOrderFilter === 'all' ? 'queue' : chefOrderFilter.replace(/_/g, ' ')}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">Orders appear here automatically when customer transactions occur.</p>
             </div>
           ) : (
@@ -935,7 +959,10 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                 const isPending = displayStatus === 'Pending';
                 const isCooking = displayStatus === 'Cooking';
                 const isReady = displayStatus === 'Ready';
+                const isInTransit = displayStatus === 'In Transit';
                 const isCompleted = displayStatus === 'Completed';
+                const isDelivery = isDeliveryOrder(order);
+                const isCustomerReceived = Boolean(order.customerReceivedAt);
 
                 let remainingText = '';
                 if (order.timerEndsAt) {
@@ -958,9 +985,16 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                       </div>
 
                       <div className="flex items-center gap-1.5">
+                        {isDelivery && (
+                          <Badge variant="outline" className="text-[9px] font-bold border-blue-500/40 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30">
+                            Delivery
+                          </Badge>
+                        )}
                         <Badge 
                           className={`text-[9px] font-bold uppercase border-none ${
-                            isReady ? 'bg-emerald-600 text-white' :
+                            isCompleted ? 'bg-emerald-600 text-white' :
+                            isInTransit ? 'bg-blue-600 text-white' :
+                            isReady ? 'bg-purple-600 text-white' :
                             isCooking ? 'bg-orange-600 text-white' :
                             isPending ? 'bg-amber-500 text-white' :
                             'bg-slate-600 text-white'
@@ -1007,6 +1041,18 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                         </div>
                         <span className="font-mono font-bold text-orange-900 dark:text-orange-100 text-xs">
                           {remainingText || `${order.prepDurationMinutes || 15}m`}
+                        </span>
+                      </div>
+                    )}
+
+                    {isInTransit && (
+                      <div className="bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 text-xs flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 font-semibold text-[11px]">
+                          <Truck className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+                          <span>Delivery Status:</span>
+                        </div>
+                        <span className="font-bold text-blue-900 dark:text-blue-100 text-xs">
+                          In Transit to Customer
                         </span>
                       </div>
                     )}
@@ -1060,7 +1106,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                         </div>
                       )}
 
-                      {(isReady || isCooking) && (
+                      {!isDelivery && isCooking && (
                         <Button
                           id={`btn-finish-payment-${order.id}`}
                           size="sm"
@@ -1077,6 +1123,93 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Finish and Payment Confirmed
                         </Button>
+                      )}
+
+                      {/* Ready State */}
+                      {isReady && (
+                        <div className="space-y-1.5">
+                          {isDelivery ? (
+                            /* Delivery orders must be marked In Transit */
+                            <Button
+                              id={`btn-chef-intransit-${order.id}`}
+                              size="sm"
+                              onClick={() => handleChefInTransit(order.id)}
+                              className="w-full text-xs font-bold h-8 bg-blue-600 hover:bg-blue-700 text-white border-none transition-colors duration-200 gap-1.5 shadow-sm"
+                            >
+                              <Truck className="w-3.5 h-3.5" />
+                              In Transit
+                            </Button>
+                          ) : (
+                            /* Non-delivery orders go straight to Finish & Confirm Payment */
+                            <Button
+                              id={`btn-finish-payment-${order.id}`}
+                              size="sm"
+                              onClick={async () => {
+                                await orderService.finishAndConfirmPayment(order.id);
+                                toast({
+                                  title: "Order Completed & Payment Confirmed",
+                                  description: `Order #${order.id} is finished and payment is confirmed.`
+                                });
+                                loadData();
+                              }}
+                              className="w-full text-xs font-bold h-8 bg-emerald-700 hover:bg-emerald-800 text-white border-none transition-colors duration-200 gap-1"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Finish and Payment Confirmed
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* In Transit State (Delivery Only) */}
+                      {isInTransit && (
+                        <div className="space-y-1.5">
+                          {isCustomerReceived ? (
+                            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Customer Confirmed "Received"</span>
+                              </div>
+                              <span className="text-[10px] text-emerald-600 font-mono font-bold">Unlocked</span>
+                            </div>
+                          ) : (
+                            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-semibold flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <span>Awaiting Customer to click "Received"</span>
+                            </div>
+                          )}
+
+                          <Button
+                            id={`btn-finish-payment-${order.id}`}
+                            size="sm"
+                            disabled={!isCustomerReceived}
+                            onClick={async () => {
+                              try {
+                                await orderService.finishAndConfirmPayment(order.id);
+                                toast({
+                                  title: "Order Completed & Payment Confirmed",
+                                  description: `Order #${order.id} is finished and payment is confirmed.`
+                                });
+                                loadData();
+                              } catch (e: any) {
+                                toast({
+                                  title: "Action Locked",
+                                  description: e.message || "Customer must mark Received first.",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className={`w-full text-xs font-bold h-8 transition-colors duration-200 gap-1 border-none ${
+                              isCustomerReceived 
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm' 
+                                : 'bg-muted text-muted-foreground opacity-60 cursor-not-allowed'
+                            }`}
+                            title={!isCustomerReceived ? "Locked until customer clicks 'Received' on customer dashboard" : "Finish order"}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {isCustomerReceived ? 'Finish and Payment Confirmed' : 'Finish Locked (Awaiting "Received")'}
+                          </Button>
+                        </div>
                       )}
 
                       {isCompleted && (
