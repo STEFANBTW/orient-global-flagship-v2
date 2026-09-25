@@ -2031,56 +2031,108 @@ const ChatBot: React.FC = () => {
     setAttachedImages([]);
     setIsTyping(true);
 
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      
-      const parts: any[] = [];
-      if (userMsg) parts.push({ text: userMsg });
-      
-      for (const imgBase64 of currentImages) {
-        parts.push({
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: imgBase64.split(',')[1]
-          }
-        });
+    const executeNav = (sectionId: string) => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        setMessages(prev => [...prev, { role: 'bot', text: `Certainly. I have navigated you to the ${sectionId} section.` }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'bot', text: `I attempted to take you to the ${sectionId}, but I am unable to locate it on the map.` }]);
       }
+    };
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: { parts },
-        config: {
-          systemInstruction: 'You are AURA, the Orient Luxury Concierge. Your primary goal is to help users navigate this website. If a user asks to see the bakery, market, restaurant, lounge, or standard sections, you MUST use the navigateToSection tool. If they ask general questions, answer them as a helpful luxury concierge. Be brief, elite, and polite. You can also analyze images if the user provides them.',
-          tools: [{ 
-            functionDeclarations: [navigateToSectionTool]
-          }],
-        }
+    let handled = false;
+
+    // 1. Primary: Send request to /api/chat (Vercel Serverless / Express dev route)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMsg,
+          images: currentImages,
+          history: messages.slice(-8).map(m => ({
+            role: m.role === 'bot' ? 'model' : 'user',
+            text: typeof m.text === 'string' ? m.text : ''
+          }))
+        })
       });
 
-      if (response.functionCalls && response.functionCalls.length > 0) {
-        for (const fc of response.functionCalls) {
-          if (fc.name === 'navigateToSection') {
-            const sectionId = (fc.args as any).sectionId;
-            const element = document.getElementById(sectionId);
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth' });
-              setMessages(prev => [...prev, { role: 'bot', text: `Certainly. I have navigated you to the ${sectionId} section.` }]);
-            } else {
-              setMessages(prev => [...prev, { role: 'bot', text: `I attempted to take you to the ${sectionId}, but I am unable to locate it on the map.` }]);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.functionCalls && data.functionCalls.length > 0) {
+          for (const fc of data.functionCalls) {
+            if (fc.name === 'navigateToSection') {
+              const sectionId = (fc.args as any)?.sectionId;
+              if (sectionId) executeNav(sectionId);
             }
           }
+        } else if (data.text) {
+          setMessages(prev => [...prev, { role: 'bot', text: data.text }]);
+        } else {
+          setMessages(prev => [...prev, { role: 'bot', text: 'I am here to serve. How may I assist you?' }]);
         }
-      } else if (response.text) {
-        setMessages(prev => [...prev, { role: 'bot', text: response.text }]);
+        handled = true;
       } else {
-        setMessages(prev => [...prev, { role: 'bot', text: 'I am here to serve. How may I assist you?' }]);
+        console.warn('/api/chat returned status:', res.status);
       }
-    } catch (e) {
-      console.error(e);
-      setMessages(prev => [...prev, { role: 'bot', text: 'I apologize, but I am currently updating my navigational systems. Please try again momentarily.' }]);
-    } finally {
-      setIsTyping(false);
+    } catch (apiErr) {
+      console.warn('API /api/chat error, attempting client-side fallback:', apiErr);
     }
+
+    // 2. Fallback: Client-side Google GenAI using import.meta.env.VITE_GEMINI_API_KEY
+    if (!handled) {
+      const clientApiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process.env as any).GEMINI_API_KEY;
+      if (clientApiKey) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: clientApiKey });
+          
+          const parts: any[] = [];
+          if (userMsg) parts.push({ text: userMsg });
+          
+          for (const imgBase64 of currentImages) {
+            parts.push({
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: imgBase64.includes(',') ? imgBase64.split(',')[1] : imgBase64
+              }
+            });
+          }
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts },
+            config: {
+              systemInstruction: 'You are AURA, the Orient Luxury Concierge for Orient Global Flagship in Jos, Plateau State, Nigeria. Your primary goal is to help visitors navigate the website and divisions: bakery, market, restaurant, dining, lounge, games, water, and location. If a user asks to see a division or section, you MUST invoke the navigateToSection tool. Be brief, elite, and polite. You can also analyze images if provided.',
+              tools: [{
+                functionDeclarations: [navigateToSectionTool]
+              }],
+            }
+          });
+
+          if (response.functionCalls && response.functionCalls.length > 0) {
+            for (const fc of response.functionCalls) {
+              if (fc.name === 'navigateToSection') {
+                const sectionId = (fc.args as any)?.sectionId;
+                if (sectionId) executeNav(sectionId);
+              }
+            }
+          } else if (response.text) {
+            setMessages(prev => [...prev, { role: 'bot', text: response.text }]);
+          } else {
+            setMessages(prev => [...prev, { role: 'bot', text: 'I am here to serve. How may I assist you?' }]);
+          }
+          handled = true;
+        } catch (clientErr) {
+          console.error('Client-side fallback error:', clientErr);
+        }
+      }
+    }
+
+    if (!handled) {
+      setMessages(prev => [...prev, { role: 'bot', text: 'I apologize, but I am currently updating my navigational systems. Please try again momentarily.' }]);
+    }
+    setIsTyping(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

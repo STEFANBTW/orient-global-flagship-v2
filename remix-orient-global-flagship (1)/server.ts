@@ -1,3 +1,5 @@
+import "dotenv/config";
+import chatHandler from "./api/chat";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
@@ -833,6 +835,10 @@ async function startServer() {
     res.status(201).json(newOrder);
   });
 
+  // Chat API route for local development
+  app.all("/api/chat", (req, res) => {
+    return chatHandler(req, res);
+  });
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
