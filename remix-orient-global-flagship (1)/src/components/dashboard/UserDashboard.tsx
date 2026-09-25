@@ -326,7 +326,7 @@ export default function UserDashboard() {
       {/* ========================================================================= */}
       {/* 1. RESTAURANT QUICK ACTIONS BAR                                           */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         
         {/* Action 1: Place Order (Orange BG, White Text, No Border) */}
         <button
@@ -379,26 +379,6 @@ export default function UserDashboard() {
           <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-all" />
         </button>
 
-        {/* Action 4: Reorder (Orange BG, White Text, No Border) */}
-        <button
-          onClick={() => {
-            if (pastOrders.length > 0) {
-              handleReorder(pastOrders[0]);
-            } else {
-              handleGoToRestaurantMenu();
-            }
-          }}
-          className="p-4 rounded-xl bg-orange-500 hover:bg-orange-600 transition-all text-left group cursor-pointer flex items-center justify-between h-20 text-white border-none shadow-xs"
-        >
-          <div className="flex items-center gap-3">
-            <RotateCcw className="w-5 h-5 text-white shrink-0" />
-            <span className="text-sm font-bold text-white block">
-              Reorder
-            </span>
-          </div>
-          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-all" />
-        </button>
-
       </div>
 
       {/* ========================================================================= */}
@@ -407,11 +387,7 @@ export default function UserDashboard() {
       {recentBentoOrders.length > 0 && (
         <section id="user-recent-orders" className="space-y-4">
           <div className="flex items-center justify-between pb-1">
-            <div className="space-y-0.5">
-              <span className="text-xs uppercase font-extralight tracking-widest text-primary font-bold flex items-center gap-1.5">
-                <span className="material-icons text-sm">history</span>
-                Recent Orders
-              </span>
+            <div>
               <h3 className="text-xl sm:text-2xl font-bold text-foreground font-sans">
                 Recent Orders
               </h3>
@@ -447,32 +423,11 @@ export default function UserDashboard() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/20 group-hover:via-black/60 transition-all duration-300"></div>
 
-                  {/* Top Badges */}
-                  <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between pointer-events-none z-10">
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-md">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                      #{order.id.slice(-5)} • {orderDate}
-                    </span>
+                  {/* Top Badge: Price */}
+                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center justify-end pointer-events-none z-10">
                     <span className="text-sm sm:text-base font-black text-white bg-primary px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
                       ₦{order.totalAmount || 10}
                     </span>
-                  </div>
-
-                  {/* Hover Description Card at Bottom (Desktop) */}
-                  <div className="hidden sm:block absolute inset-x-3.5 bottom-[82px] z-20 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none">
-                    <div className="bg-black/25 backdrop-blur-2xl border-0 rounded-2xl p-3.5 shadow-2xl text-white">
-                      <div className="flex items-center justify-between text-[10px] uppercase font-bold text-primary mb-1">
-                        <span>Status: {displayStatus}</span>
-                        <span className="text-white/70">Click card to view receipt</span>
-                      </div>
-                      <p className="text-xs text-white/90 leading-relaxed line-clamp-2 font-normal">
-                        {product.description}
-                      </p>
-                      <p className="mt-1.5 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                        <span className="material-icons text-[12px]">receipt_long</span>
-                        {order.tableNumber || (order.orderType === 'dine-in' ? 'Dine-In' : 'Takeaway')} • {order.items?.length || 1} {(order.items?.length || 1) === 1 ? 'dish' : 'dishes'}
-                      </p>
-                    </div>
                   </div>
 
                   {/* Bottom Vital Info */}

@@ -64,7 +64,8 @@ const MenuScreen: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const [orderTray, setOrderTray] = useState<OrderItem[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showTrayModal, setShowTrayModal] = useState(false);
+  const [showTrayReviewModal, setShowTrayReviewModal] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [sommelierFilter, setSommelierFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -231,6 +232,10 @@ const MenuScreen: React.FC = () => {
     });
   };
 
+  const handleRemoveFromTray = (productId: string) => {
+    setOrderTray(prev => prev.filter(item => item.product.id !== productId));
+  };
+
   const handleCheckoutTray = async () => {
     if (orderTray.length === 0) return;
     try {
@@ -256,7 +261,8 @@ const MenuScreen: React.FC = () => {
       showToast(`Order #${placed.id} placed! Waiting for chef confirmation. Status: Pending`);
       setTimeout(() => {
         setOrderTray([]);
-        setShowTrayModal(false);
+        setShowTrayReviewModal(false);
+        setShowCheckoutModal(false);
         setOrderPlaced(false);
       }, 2500);
     } catch (err) {
@@ -264,7 +270,8 @@ const MenuScreen: React.FC = () => {
       showToast('Order placed! Table kitchen notified.');
       setTimeout(() => {
         setOrderTray([]);
-        setShowTrayModal(false);
+        setShowTrayReviewModal(false);
+        setShowCheckoutModal(false);
         setOrderPlaced(false);
       }, 2500);
     }
@@ -381,11 +388,7 @@ const MenuScreen: React.FC = () => {
           <section id="recent-orders" className="pt-8 sm:pt-14 pb-8 bg-background relative border-b border-border/40 scroll-mt-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between mb-8 pb-3 border-b border-transparent">
-                <div className="space-y-1">
-                  <span className="text-xs uppercase font-extralight tracking-widest text-primary font-bold flex items-center gap-1.5">
-                    <span className="material-icons text-sm">history</span>
-                    Recent Orders
-                  </span>
+                <div>
                   <h3 className="text-2xl sm:text-3xl font-bold text-foreground font-sans">
                     Recent Orders
                   </h3>
@@ -421,32 +424,11 @@ const MenuScreen: React.FC = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/20 group-hover:via-black/60 transition-all duration-300"></div>
 
-                      {/* Top Badges */}
-                      <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between pointer-events-none z-10">
-                        <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                          #{order.id.slice(-5)} • {orderDate}
-                        </span>
+                      {/* Top Badge: Price */}
+                      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center justify-end pointer-events-none z-10">
                         <span className="text-sm sm:text-base font-black text-white bg-primary px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
                           ₦{order.totalAmount || 10}
                         </span>
-                      </div>
-
-                      {/* Hover Description Card at Bottom (Desktop) */}
-                      <div className="hidden sm:block absolute inset-x-3.5 bottom-[82px] z-20 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none">
-                        <div className="bg-black/25 backdrop-blur-2xl border-0 rounded-2xl p-3.5 shadow-2xl text-white">
-                          <div className="flex items-center justify-between text-[10px] uppercase font-bold text-primary mb-1">
-                            <span>Status: {displayStatus}</span>
-                            <span className="text-white/70">Tap card to inspect</span>
-                          </div>
-                          <p className="text-xs text-white/90 leading-relaxed line-clamp-2 font-normal">
-                            {product.description}
-                          </p>
-                          <p className="mt-1.5 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                            <span className="material-icons text-[12px]">receipt_long</span>
-                            {order.tableNumber || (order.orderType === 'dine-in' ? 'Dine-In' : 'Takeaway')} • {order.items?.length || 1} {(order.items?.length || 1) === 1 ? 'dish' : 'dishes'}
-                          </p>
-                        </div>
                       </div>
 
                       {/* Bottom Vital Info */}
@@ -1021,7 +1003,7 @@ const MenuScreen: React.FC = () => {
 
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => setShowTrayModal(true)}
+                onClick={() => setShowTrayReviewModal(true)}
                 className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full bg-primary hover:bg-primary/90 text-background font-bold text-xs uppercase tracking-wider transition-colors shadow-md whitespace-nowrap"
               >
                 Review Tray
@@ -1166,16 +1148,152 @@ const MenuScreen: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* 7. TRAY REVIEW & ORDER MODAL                              */}
+      {/* 6.5 TRAY ITEMS REVIEW MODAL (STEP 1 BEFORE CHECKOUT)     */}
       {/* ========================================================= */}
-      {showTrayModal && (
+      {showTrayReviewModal && (
+        <div
+          onClick={() => setShowTrayReviewModal(false)}
+          className="fixed inset-0 z-[99998] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card text-card-foreground border border-border/40 rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+          >
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-border/40 flex items-center justify-between shrink-0 bg-muted/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-icons text-lg">shopping_basket</span>
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold font-sans text-foreground">
+                    Review Your Tray
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {totalTrayCount} {totalTrayCount === 1 ? 'item' : 'items'} selected
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTrayReviewModal(false)}
+                className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                aria-label="Close tray review"
+              >
+                <span className="material-icons text-base">close</span>
+              </button>
+            </div>
+
+            {/* Scrollable Selected Items List */}
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3 divide-y divide-border/20">
+              {orderTray.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground space-y-2">
+                  <span className="material-icons text-4xl opacity-40">lunch_dining</span>
+                  <p className="text-sm font-medium text-foreground">Your tray is empty</p>
+                  <p className="text-xs">Add dishes or cellar drinks from the menu to get started.</p>
+                </div>
+              ) : (
+                orderTray.map(({ product, quantity }) => (
+                  <div key={product.id} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover shrink-0 bg-neutral-900 border border-border/40"
+                      />
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-foreground truncate" title={product.name}>
+                          {product.name}
+                        </h4>
+                        <p className="text-[11px] text-muted-foreground">
+                          ₦10 each
+                        </p>
+                        <p className="text-xs font-mono font-bold text-primary mt-0.5">
+                          ₦{(quantity * 10).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quantity controls */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1 bg-muted/60 dark:bg-muted/40 rounded-full p-1 border border-border/30">
+                        <button
+                          onClick={() => handleUpdateQuantity(product.id, -1)}
+                          className="w-7 h-7 rounded-full bg-background hover:bg-muted text-foreground flex items-center justify-center text-xs shadow-xs transition-colors"
+                          title="Decrease quantity"
+                        >
+                          <span className="material-icons text-xs">remove</span>
+                        </button>
+                        <span className="w-6 text-center text-xs font-bold text-foreground">
+                          {quantity}
+                        </span>
+                        <button
+                          onClick={() => handleUpdateQuantity(product.id, 1)}
+                          className="w-7 h-7 rounded-full bg-background hover:bg-muted text-foreground flex items-center justify-center text-xs shadow-xs transition-colors"
+                          title="Increase quantity"
+                        >
+                          <span className="material-icons text-xs">add</span>
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => handleRemoveFromTray(product.id)}
+                        className="w-7 h-7 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-colors"
+                        title="Remove item"
+                      >
+                        <span className="material-icons text-sm">delete_outline</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer Summary & Next Button */}
+            {orderTray.length > 0 && (
+              <div className="p-4 sm:p-5 border-t border-border/40 bg-muted/20 shrink-0 space-y-3">
+                <div className="flex items-center justify-between text-base font-bold">
+                  <span className="text-foreground">Total</span>
+                  <span className="text-xl font-black text-primary font-mono">
+                    ₦{totalTrayAmount.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    onClick={() => setShowTrayReviewModal(false)}
+                    className="flex-1 py-3 px-4 rounded-xl border border-border/60 hover:bg-muted text-foreground text-xs uppercase tracking-wider font-bold transition-colors"
+                  >
+                    Add More Items
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowTrayReviewModal(false);
+                      setShowCheckoutModal(true);
+                    }}
+                    className="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary/90 text-background text-xs uppercase tracking-wider font-bold transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 group"
+                  >
+                    <span>Next</span>
+                    <span className="material-icons text-sm group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 7. UNIFIED CHECKOUT MODAL (STEP 2 AFTER NEXT)             */}
+      {/* ========================================================= */}
+      {showCheckoutModal && (
         <UnifiedCheckout
-          isOpen={showTrayModal}
-          onClose={() => setShowTrayModal(false)}
+          isOpen={showCheckoutModal}
+          onClose={() => setShowCheckoutModal(false)}
           onSuccess={() => {
             setOrderTray([]);
             setOrderPlaced(true);
             setTimeout(() => setOrderPlaced(false), 2500);
+            setShowCheckoutModal(false);
           }}
           initialItems={orderTray.map(t => ({
             id: t.product.id,
