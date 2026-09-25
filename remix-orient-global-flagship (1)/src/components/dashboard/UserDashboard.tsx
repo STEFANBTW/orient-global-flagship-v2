@@ -701,7 +701,7 @@ export default function UserDashboard() {
           {/* TRACKING TAB */}
           {activeTab === 'tracking' && (
             <div className="space-y-4 pt-2">
-              <OrderTracker orders={activeOrders} />
+              <OrderTracker orders={orders} />
             </div>
           )}
 

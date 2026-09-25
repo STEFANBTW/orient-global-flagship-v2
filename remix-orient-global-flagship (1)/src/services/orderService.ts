@@ -128,6 +128,8 @@ export const orderService = {
     division?: string;
     items: Array<{ id: string; name: string; quantity: number; division?: string; category?: string; image?: string; price?: number }>;
     prepDurationMinutes?: number;
+    totalAmount?: number;
+    status?: OrderStatus;
   }): Promise<CustomerOrder> => {
     const activeUser = getActiveConsumerUser();
     const orderId = `ORD-${Date.now().toString().slice(-6)}`;

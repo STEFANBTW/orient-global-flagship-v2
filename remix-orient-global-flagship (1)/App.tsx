@@ -338,7 +338,7 @@ const Navbar: React.FC<{
  } else if (sectionId === 'dining-about') {
  setDiningView('about');
  } else if (sectionId === 'dining-dashboard') {
- setDiningView('dashboard');
+ setCurrentView('dashboard');
  } else if (sectionId === 'dining-drinks') {
  setDiningView('menu');
  setTimeout(() => {
@@ -2721,7 +2721,7 @@ const App: React.FC = () => {
      } else if (id === 'dining-about') {
        setDiningView('about');
      } else if (id === 'dining-dashboard') {
-       setDiningView('dashboard');
+ setCurrentView('dashboard');
      } else {
        setDiningView('menu');
      }
