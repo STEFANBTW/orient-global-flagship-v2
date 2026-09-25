@@ -360,19 +360,19 @@ const MenuScreen: React.FC = () => {
         {/* Search Bar (Sticky - Floating Pill) */}
         <div className="sticky top-[70px] z-40 w-full pointer-events-none mt-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-end">
-            <div className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur-md shadow-md border border-black/10 dark:border-white/10 transition-colors duration-300 shrink-0 w-full md:w-auto">
-              <span className="material-icons text-neutral-800 dark:text-white/80 text-sm shrink-0">search</span>
+            <div className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-200/80 dark:bg-neutral-800/80 backdrop-blur-md shadow-md border border-neutral-300/80 dark:border-neutral-700/80 transition-colors duration-300 shrink-0 w-full md:w-auto">
+              <span className="material-icons text-neutral-700 dark:text-neutral-300 text-sm shrink-0">search</span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search menu..."
-                className="bg-transparent border-0 border-none outline-none text-neutral-900 dark:text-white placeholder:text-neutral-600 dark:placeholder:text-white/60 text-xs font-medium w-full md:w-40 focus:md:w-56 transition-all duration-300 focus:ring-0 focus:outline-none"
+                className="bg-transparent border-0 border-none outline-none text-neutral-900 dark:text-white placeholder:text-neutral-500 dark:placeholder:text-neutral-400 text-xs font-medium w-full md:w-40 focus:md:w-56 transition-all duration-300 focus:ring-0 focus:outline-none"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white transition-colors shrink-0 p-0.5"
+                  className="text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white transition-colors shrink-0 p-0.5"
                   aria-label="Clear search"
                 >
                   <span className="material-icons text-xs">close</span>
@@ -858,16 +858,29 @@ const MenuScreen: React.FC = () => {
                 alt={selectedProduct.name}
                 className="w-full h-full object-cover"
               />
-              {/* Bottom Gradient: Fades entirely into transparency by ~20% of image height */}
-              <div className="absolute bottom-0 inset-x-0 h-[22%] bg-gradient-to-t from-white via-white/80 to-transparent dark:from-neutral-950 dark:via-neutral-950/80 dark:to-transparent z-10 pointer-events-none"></div>
-
               {/* Vital Information Overlay at the bottom of the 50% Image */}
               <div className="absolute bottom-4 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-5 flex items-end justify-between gap-3 z-20">
                 <div className="min-w-0 pr-2">
-                  <span className="text-xs sm:text-sm uppercase font-bold tracking-widest text-neutral-700 dark:text-neutral-300 mb-1 inline-block bg-transparent border-0 p-0 shadow-none">
+                  <span
+                    className="text-xs sm:text-sm uppercase font-bold tracking-widest text-white mb-1 inline-block bg-transparent border-0 p-0 shadow-none"
+                    style={{
+                      color: '#ffffff',
+                      WebkitTextStroke: '0.4px #000000',
+                      paintOrder: 'stroke fill',
+                      textShadow: '0 1px 2px rgba(0, 0, 0, 0.7)'
+                    }}
+                  >
                     {selectedProduct.category}
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-950 dark:text-white font-sans leading-tight line-clamp-2 sm:line-clamp-none drop-shadow-xs">
+                  <h3
+                    className="text-xl sm:text-2xl font-bold text-white font-sans leading-tight line-clamp-2 sm:line-clamp-none"
+                    style={{
+                      color: '#ffffff',
+                      WebkitTextStroke: '0.6px #000000',
+                      paintOrder: 'stroke fill',
+                      textShadow: '0 1px 3px rgba(0, 0, 0, 0.8)'
+                    }}
+                  >
                     {selectedProduct.name}
                   </h3>
                 </div>
