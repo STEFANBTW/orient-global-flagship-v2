@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { cmsApi } from '@/services/cmsApi';
 import { INITIAL_PRODUCTS_CATALOG, ProductItem } from '@/data/productsCatalog';
 import { getActiveConsumerUser } from '@/services/userService';
-import { orderService } from '@/services/orderService';
+import { orderService, CustomerOrder, getDisplayStatus } from '@/services/orderService';
 import { UnifiedCheckout } from './UnifiedCheckout';
 interface DiningCategoryMeta {
   name: string;
@@ -67,12 +68,84 @@ const MenuScreen: React.FC = () => {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [sommelierFilter, setSommelierFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [recentUserOrders, setRecentUserOrders] = useState<CustomerOrder[]>([]);
 
   const activeUser = getActiveConsumerUser();
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('orient:detail-modal', { detail: { open: Boolean(selectedProduct) } }));
   }, [selectedProduct]);
+
+  useEffect(() => {
+    const filterUserOrders = (orders: CustomerOrder[]) => {
+      const user = getActiveConsumerUser();
+      if (!user) {
+        try {
+          const raw = localStorage.getItem('orient_last_user_order');
+          if (raw) return [JSON.parse(raw)];
+        } catch (e) {}
+        return [];
+      }
+      const userPhoneDigits = (user.phone || '').replace(/\D/g, '');
+      return orders.filter(o => {
+        const orderPhoneDigits = (o.customerPhone || '').replace(/\D/g, '');
+        const matchesId = Boolean(o.customerId && o.customerId === user.id);
+        const matchesPhone = Boolean(userPhoneDigits && orderPhoneDigits && userPhoneDigits === orderPhoneDigits);
+        const matchesEmail = Boolean(user.email && o.customerEmail && user.email.toLowerCase() === o.customerEmail.toLowerCase());
+        const matchesName = Boolean(user.name && o.customerName && user.name.toLowerCase() === o.customerName.toLowerCase());
+        return matchesId || matchesPhone || matchesEmail || matchesName;
+      }).slice(0, 5);
+    };
+
+    orderService.getOrders().then(all => {
+      setRecentUserOrders(filterUserOrders(all));
+    });
+
+    const unsubscribe = orderService.subscribeToOrders((all) => {
+      setRecentUserOrders(filterUserOrders(all));
+    });
+
+    const handleOrdersOrUserChanged = () => {
+      orderService.getOrders().then(all => {
+        setRecentUserOrders(filterUserOrders(all));
+      });
+    };
+    window.addEventListener('orient_orders_changed', handleOrdersOrUserChanged);
+    window.addEventListener('orient_user_changed', handleOrdersOrUserChanged);
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      window.removeEventListener('orient_orders_changed', handleOrdersOrUserChanged);
+      window.removeEventListener('orient_user_changed', handleOrdersOrUserChanged);
+    };
+  }, []);
+
+  const recentBentoOrders = useMemo(() => {
+    return recentUserOrders.slice(0, 5).map((order) => {
+      const primaryItem = order.items?.[0];
+      const matched = diningProducts.find(p => 
+        (primaryItem?.id && p.id === primaryItem.id) ||
+        (primaryItem?.name && p.name.toLowerCase() === primaryItem.name.toLowerCase())
+      ) || {
+        id: primaryItem?.id || order.id,
+        name: primaryItem?.name || 'Chef Specialty Selection',
+        category: primaryItem?.category || 'Dining',
+        price: primaryItem?.price || 10,
+        image: primaryItem?.image || 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop&q=80',
+        description: `Order #${order.id}. ${order.items?.length || 1} items prepared fresh upon request.`,
+        prepTimeMinutes: order.prepDurationMinutes || 11,
+        stock: 5,
+        division: 'dining'
+      };
+
+      return {
+        order,
+        primaryItem,
+        product: matched,
+        extraCount: (order.items?.length || 1) - 1
+      };
+    });
+  }, [recentUserOrders, diningProducts]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -302,6 +375,131 @@ const MenuScreen: React.FC = () => {
       {/* Menu Catalog & Main Container with Sticky Search Bar */}
       <div className="relative">
         {/* ========================================================= */}
+        {/* 1.5 RECENT ORDERS (BENTO GRID - UNIQUE FOR EACH USER, MAX 5)*/}
+        {/* ========================================================= */}
+        {recentBentoOrders.length > 0 && (
+          <section id="recent-orders" className="pt-8 sm:pt-14 pb-8 bg-background relative border-b border-border/40 scroll-mt-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between mb-8 pb-3 border-b border-transparent">
+                <div className="space-y-1">
+                  <span className="text-xs uppercase font-extralight tracking-widest text-primary font-bold flex items-center gap-1.5">
+                    <span className="material-icons text-sm">history</span>
+                    Order Again
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-foreground font-sans">
+                    Recent Orders
+                  </h3>
+                </div>
+                <span className="text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-muted text-muted-foreground">
+                  {recentBentoOrders.length} {recentBentoOrders.length === 1 ? 'order' : 'orders'}
+                </span>
+              </div>
+
+              {/* Bento Grid: Max 5 items */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recentBentoOrders.map(({ order, primaryItem, product, extraCount }, idx) => {
+                  const isLargeSpan = idx === 0 && recentBentoOrders.length >= 3;
+                  const displayStatus = getDisplayStatus(order.status);
+                  const orderDate = new Date(order.createdAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric'
+                  });
+
+                  return (
+                    <div
+                      key={order.id}
+                      onClick={() => setSelectedProduct(product)}
+                      className={`group relative rounded-3xl overflow-hidden cursor-pointer bg-neutral-950 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 flex flex-col justify-end w-[80vw] h-[30vh] mx-auto sm:w-full sm:h-auto sm:min-h-[380px] ${
+                        isLargeSpan ? "lg:col-span-2 lg:min-h-[400px]" : "col-span-1"
+                      }`}
+                    >
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/20 group-hover:via-black/60 transition-all duration-300"></div>
+
+                      {/* Top Badges */}
+                      <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between pointer-events-none z-10">
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-md">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          #{order.id.slice(-5)} • {orderDate}
+                        </span>
+                        <span className="text-sm sm:text-base font-black text-white bg-primary px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
+                          ₦{order.totalAmount || 10}
+                        </span>
+                      </div>
+
+                      {/* Hover Description Card at Bottom (Desktop) */}
+                      <div className="hidden sm:block absolute inset-x-3.5 bottom-[82px] z-20 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none">
+                        <div className="bg-black/25 backdrop-blur-2xl border-0 rounded-2xl p-3.5 shadow-2xl text-white">
+                          <div className="flex items-center justify-between text-[10px] uppercase font-bold text-primary mb-1">
+                            <span>Status: {displayStatus}</span>
+                            <span className="text-white/70">Tap card to inspect</span>
+                          </div>
+                          <p className="text-xs text-white/90 leading-relaxed line-clamp-2 font-normal">
+                            {product.description}
+                          </p>
+                          <p className="mt-1.5 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                            <span className="material-icons text-[12px]">receipt_long</span>
+                            {order.tableNumber || (order.orderType === 'dine-in' ? 'Dine-In' : 'Takeaway')} • {order.items?.length || 1} {(order.items?.length || 1) === 1 ? 'dish' : 'dishes'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Bottom Vital Info */}
+                      <div className="relative z-10 p-3 sm:p-5 w-full flex items-end justify-between gap-2 sm:gap-3">
+                        <div className="space-y-1 sm:space-y-1.5 min-w-0">
+                          <h4 className="text-base sm:text-2xl font-bold text-white font-sans tracking-tight leading-tight sm:leading-snug drop-shadow-md truncate sm:whitespace-normal">
+                            {product.name}
+                            {extraCount > 0 && (
+                              <span className="text-xs sm:text-sm font-normal text-white/80 ml-2">
+                                +{extraCount} more
+                              </span>
+                            )}
+                          </h4>
+
+                          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-black/25 backdrop-blur-md text-[10px] sm:text-xs shadow-sm border border-white/10 max-w-full">
+                            <span className="flex items-center gap-1 text-white/90 font-medium whitespace-nowrap">
+                              <span className="material-icons text-primary text-[10px] sm:text-xs">replay</span>
+                              Reorder
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-white/40 shrink-0"></span>
+                            <span className="text-white font-semibold tracking-wide whitespace-nowrap">
+                              {order.orderType === 'dine-in' ? 'Dine-In' : 'Takeaway'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (order.items && order.items.length > 0) {
+                              order.items.forEach(it => {
+                                const matchedP = diningProducts.find(p => (it.id && p.id === it.id) || p.name.toLowerCase() === it.name.toLowerCase()) || product;
+                                handleAddToOrder(matchedP);
+                              });
+                            } else {
+                              handleAddToOrder(product);
+                            }
+                          }}
+                          title="Reorder this meal"
+                          className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary hover:bg-primary/90 text-background flex items-center justify-center shadow-lg transition-transform active:scale-95 group/btn"
+                        >
+                          <span className="material-icons text-base sm:text-lg group-hover/btn:scale-110 transition-transform">add</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ========================================================= */}
         {/* 2. SIMPLIFIED MENU CATALOG INTRO & CATEGORY BAR           */}
         {/* ========================================================= */}
         <section id="menu-catalog" className="pt-8 sm:pt-16 pb-4 sm:pb-8 bg-background relative border-b border-transparent scroll-mt-6">
@@ -324,16 +522,16 @@ const MenuScreen: React.FC = () => {
         {/* Filter Buttons (Static) */}
         <div className="bg-background pt-2 pb-4 w-full">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap xl:flex-nowrap items-center justify-start xl:justify-between gap-2.5 sm:gap-3 xl:gap-2 w-full">
+            <div className="flex flex-wrap items-center justify-start xl:justify-between gap-2 xl:gap-0 w-full">
               <button
                 onClick={() => setActiveCategory("All")}
-                className={`px-3.5 sm:px-4 xl:px-4.5 py-2 xl:py-2.5 rounded-full text-xs xl:text-[13px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 ${activeCategory === "All"
+                className={`px-3 sm:px-3.5 xl:px-4 py-1.5 sm:py-2 rounded-full text-xs xl:text-[13px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 shrink-0 ${activeCategory === "All"
                   ? "bg-primary text-background shadow-md shadow-primary/25 ring-1 ring-primary/40"
                   : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm border border-border/40"
                   }`}
               >
                 <span>All Items</span>
-                <span className={`text-[10px] xl:text-[11px] px-2 py-0.5 rounded-full font-bold ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+                <span className={`text-[10px] xl:text-[11px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold ${activeCategory === "All" ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
                   {filteredProducts.length}
                 </span>
               </button>
@@ -342,13 +540,13 @@ const MenuScreen: React.FC = () => {
                 <button
                   key={cat.name}
                   onClick={() => setActiveCategory(cat.name)}
-                  className={`px-3.5 sm:px-4 xl:px-4.5 py-2 xl:py-2.5 rounded-full text-xs xl:text-[13px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 sm:gap-2 shrink-0 ${activeCategory === cat.name
+                  className={`px-3 sm:px-3.5 xl:px-4 py-1.5 sm:py-2 rounded-full text-xs xl:text-[13px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 shrink-0 ${activeCategory === cat.name
                     ? "bg-primary text-background shadow-md shadow-primary/25 ring-1 ring-primary/40"
                     : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground shadow-sm border border-border/40"
                     }`}
                 >
                   <span>{cat.name}</span>
-                  <span className={`text-[10px] xl:text-[11px] px-2 py-0.5 rounded-full font-bold ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
+                  <span className={`text-[10px] xl:text-[11px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold ${activeCategory === cat.name ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"}`}>
                     {filteredProducts.filter(p => p.category === cat.name).length}
                   </span>
                 </button>
@@ -430,7 +628,7 @@ const MenuScreen: React.FC = () => {
                   </span>
                 </div>
 
-                {/* For Drinks & Cellar, render the Two-Tier Catalog (300x300 Sommelier items + 6-column 100x100 grid) */}
+                {/* For Drinks & Cellar, render the Two-Tier Catalog (300x300 Sommelier items + 200x200 grid) */}
                 {catMeta.name === "Drinks & Cellar" ? (
                   <div className="space-y-12">
                     {/* Top: 3 Sommelier Items in 300x300 Square Cards */}
@@ -506,7 +704,7 @@ const MenuScreen: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Below: 6-column 100x100 Pixel Grid for all other drinks */}
+                    {/* Below: 200x200 Pixel Grid for all other drinks */}
                     <div className="pt-8 border-t border-border">
                       <div className="mb-6">
                         <span className="text-xs uppercase font-[200] font-extralight tracking-widest text-muted-foreground">
@@ -517,19 +715,19 @@ const MenuScreen: React.FC = () => {
                         </h4>
                       </div>
 
-                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-y-7 gap-x-4 justify-items-center">
+                      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 sm:gap-8 justify-items-center">
                         {standardDrinks.map((drink) => (
                           <div
                             key={drink.id}
                             onClick={() => setSelectedProduct(drink)}
-                            className="flex flex-col items-center cursor-pointer group text-center w-[100px]"
+                            className="flex flex-col items-center cursor-pointer group text-center w-[200px]"
                           >
-                            {/* 100x100 Pixel Picture Box (no badges, no prep time) */}
-                            <div className="w-[100px] h-[100px] rounded-2xl overflow-hidden relative shadow-md bg-neutral-900 border border-neutral-200 dark:border-white/10 group-hover:border-primary/50 transition-all duration-300 shrink-0">
+                            {/* 200x200 Pixel Picture Box (no badges, no prep time) */}
+                            <div className="w-[200px] h-[200px] rounded-3xl overflow-hidden relative shadow-lg bg-neutral-900 border border-neutral-200 dark:border-white/10 group-hover:border-primary/50 group-hover:shadow-xl transition-all duration-300 shrink-0">
                               <img
                                 src={drink.image}
                                 alt={drink.name}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 loading="lazy"
                               />
 
@@ -540,23 +738,26 @@ const MenuScreen: React.FC = () => {
                                   handleAddToOrder(drink);
                                 }}
                                 title={`Add ${drink.name} to tray`}
-                                className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full bg-primary hover:bg-primary/90 text-background flex items-center justify-center shadow-md transition-transform active:scale-90 opacity-90 group-hover:opacity-100"
+                                className="absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-primary hover:bg-primary/90 text-background flex items-center justify-center shadow-lg transition-transform active:scale-90 opacity-90 group-hover:opacity-100 group/btn"
                               >
-                                <span className="material-icons text-xs">add</span>
+                                <span className="material-icons text-sm group-hover/btn:scale-110 transition-transform">add</span>
                               </button>
                             </div>
 
                             {/* Under the Picture Box: Name and available servings */}
-                            <div className="mt-2 w-full text-center space-y-0.5">
-                              <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors" title={drink.name}>
+                            <div className="mt-3 w-full text-center space-y-1">
+                              <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors" title={drink.name}>
                                 {drink.name}
                               </p>
-                              <p className="text-[11px] text-foreground dark:text-white font-medium">
-                                {drink.stock || 5} Servings Available
-                              </p>
-                              <p className="text-[11px] font-bold text-muted-foreground">
-                                ₦10
-                              </p>
+                              <div className="flex items-center justify-center gap-2 text-xs">
+                                <span className="text-muted-foreground font-medium">
+                                  {drink.stock || 5} Servings Available
+                                </span>
+                                <span className="w-1 h-1 rounded-full bg-muted-foreground/40"></span>
+                                <span className="font-bold text-primary">
+                                  ₦10
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ))}
