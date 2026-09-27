@@ -40,28 +40,159 @@ export function getDisplayStatus(status: OrderStatus | string): 'Pending' | 'Coo
   return 'Pending';
 }
 
-export function isDeliveryOrder(order: CustomerOrder): boolean {
+export function isDeliveryOrder(order: Partial<CustomerOrder>): boolean {
+  if (order.destination === 'dine-in' || order.orderType === 'dine-in') return false;
   if (order.deliveryMethod === 'delivery') return true;
   if (order.deliveryMethod === 'pickup') return false;
-  if (order.orderType === 'dine-in') return false;
-  const addr = (order.shippingAddress || '').toLowerCase();
+  const addr = (order.deliveryAddress || order.shippingAddress || '').toLowerCase();
   const isSpecialPickup = addr.includes('pick-up') || addr.includes('in-store') || addr.includes('dine-in');
-  const isTable = (order.tableNumber || '').toLowerCase().includes('table');
+  const isTable = (order.seatNumber || order.tableNumber || '').toLowerCase().includes('table');
   return !isSpecialPickup && !isTable && addr.length > 5;
+}
+
+export function normalizeOrder(order: any): CustomerOrder {
+  if (!order) return order;
+  const id = order.id || order.orderId || `ORD-${Date.now().toString().slice(-6)}`;
+  const orderId = order.orderId || id;
+  const customerId = order.customerId || order.userId || 'usr_guest';
+  const userId = order.userId || customerId;
+
+  const createdAt = order.createdAt?.toDate ? order.createdAt.toDate().toISOString() : (order.createdAt || new Date().toISOString());
+  const updatedAt = order.updatedAt?.toDate ? order.updatedAt.toDate().toISOString() : (order.updatedAt || createdAt);
+
+  // Format placedDate and placedTime
+  let placedDate = order.placedDate;
+  let placedTime = order.placedTime;
+  if (!placedDate || !placedTime) {
+    try {
+      const d = new Date(createdAt);
+      if (!isNaN(d.getTime())) {
+        if (!placedDate) placedDate = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+        if (!placedTime) placedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    } catch (e) {}
+  }
+  if (!placedDate) placedDate = new Date().toLocaleDateString('en-CA');
+  if (!placedTime) placedTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Parse reservedDate / reservedTime / seatNumber from tableNumber if present
+  let seatNumber = order.seatNumber || null;
+  let reservedDate = order.reservedDate || null;
+  let reservedTime = order.reservedTime || null;
+
+  if (order.tableNumber && typeof order.tableNumber === 'string') {
+    const tableStr = order.tableNumber.trim();
+    const reservationMatch = tableStr.match(/^(.+?)\s*\((.+?)\s*@\s*(.+?)\)$/);
+    if (reservationMatch) {
+      if (!seatNumber) seatNumber = reservationMatch[1].trim();
+      if (!reservedDate) reservedDate = reservationMatch[2].trim();
+      if (!reservedTime) reservedTime = reservationMatch[3].trim();
+    } else if (!seatNumber && (tableStr.toLowerCase().includes('table') || tableStr.toLowerCase().includes('seat'))) {
+      seatNumber = tableStr;
+    }
+  }
+
+  // Determine Destination: 'dine-in' | 'takeaway'
+  let destination: 'dine-in' | 'takeaway' = order.destination || order.orderType || 'takeaway';
+  if (destination !== 'dine-in' && destination !== 'takeaway') {
+    const tbl = (order.tableNumber || '').toLowerCase();
+    const isDineIn = tbl.includes('dine-in') || tbl.includes('table') || tbl.includes('seat') || Boolean(seatNumber);
+    destination = isDineIn ? 'dine-in' : 'takeaway';
+  }
+
+  // Delivery Method & Delivery Address: only active if destination === 'takeaway'
+  let deliveryMethod: 'delivery' | 'pickup' | null = null;
+  let deliveryAddress: string | null = null;
+
+  if (destination === 'takeaway') {
+    seatNumber = null; // Inactive for takeaway
+    if (order.deliveryMethod === 'delivery' || order.deliveryMethod === 'pickup') {
+      deliveryMethod = order.deliveryMethod;
+    } else {
+      const addr = (order.deliveryAddress || order.shippingAddress || '').toLowerCase();
+      const isPickup = addr.includes('pick-up') || addr.includes('in-store') || addr.includes('counter') || addr === 'takeaway' || addr === 'pickup';
+      deliveryMethod = isPickup ? 'pickup' : (addr.length > 5 ? 'delivery' : 'pickup');
+    }
+
+    if (deliveryMethod === 'delivery') {
+      deliveryAddress = order.deliveryAddress || (order.shippingAddress && !order.shippingAddress.toLowerCase().includes('counter') && !order.shippingAddress.toLowerCase().includes('pickup') ? order.shippingAddress : 'Standard Delivery Address');
+    } else {
+      deliveryAddress = null; // Inactive for pickup
+    }
+  } else {
+    // dine-in
+    deliveryMethod = null;
+    deliveryAddress = null;
+    if (!seatNumber) {
+      seatNumber = order.tableNumber || 'Table 1';
+    }
+  }
+
+  const items = Array.isArray(order.items) ? order.items : [];
+  const totalAmount = typeof order.totalAmount === 'number' ? order.totalAmount : items.reduce((sum: number, it: any) => sum + ((it.price || 10) * (it.quantity || 1)), 0);
+
+  return {
+    ...order,
+    id,
+    orderId,
+    customerId,
+    userId,
+    customerName: order.customerName || 'Guest User',
+    customerPhone: order.customerPhone || '',
+    customerEmail: order.customerEmail || '',
+    placedDate,
+    placedTime,
+    reservedDate,
+    reservedTime,
+    destination,
+    orderType: destination,
+    deliveryMethod,
+    deliveryAddress,
+    shippingAddress: deliveryAddress || (destination === 'dine-in' ? (seatNumber || 'Dine-In') : 'Pickup at Counter'),
+    seatNumber,
+    tableNumber: seatNumber || (deliveryMethod === 'delivery' ? 'Home Delivery' : 'Pickup Takeaway'),
+    items,
+    totalAmount,
+    status: order.status || 'pending',
+    prepDurationMinutes: order.prepDurationMinutes || 15,
+    timerEndsAt: order.timerEndsAt || null,
+    chefConfirmedAt: order.chefConfirmedAt || null,
+    customerReceivedAt: order.customerReceivedAt || null,
+    tenMinAlertSent: Boolean(order.tenMinAlertSent),
+    fiveMinAlertSent: Boolean(order.fiveMinAlertSent),
+    createdAt,
+    updatedAt
+  };
 }
 
 export interface CustomerOrder {
   id: string;
+  orderId?: string; // Explicit Order ID
+  userId?: string;  // Explicit User ID
   division?: string;
   customerId: string;
   customerName: string;
   customerEmail?: string;
   customerPhone: string;
-  tableNumber?: string;
-  shippingAddress?: string;
+
+  // Placement Timestamps
+  placedDate?: string; // e.g. "2026-09-27"
+  placedTime?: string; // e.g. "10:15 AM"
+
+  // Reservation Details
+  reservedDate?: string | null; // e.g. "2026-09-28"
+  reservedTime?: string | null; // e.g. "07:30 PM"
+
+  // Destination & Delivery Routing
+  destination: 'dine-in' | 'takeaway';
+  orderType?: 'dine-in' | 'takeaway'; // Aliased for backward compatibility
+  deliveryMethod?: 'delivery' | 'pickup' | null; // Only active if destination === 'takeaway'
+  deliveryAddress?: string | null; // Only active if destination === 'takeaway' AND deliveryMethod === 'delivery'
+  shippingAddress?: string; // Aliased for backward compatibility
+  seatNumber?: string | null; // Only active if destination === 'dine-in'
+  tableNumber?: string; // Aliased for backward compatibility
+
   notes?: string;
-  orderType?: 'dine-in' | 'takeaway';
-  deliveryMethod?: 'delivery' | 'pickup';
   customerReceivedAt?: string | null;
   items: OrderItem[];
   totalAmount: number;
@@ -154,15 +285,21 @@ export const orderService = {
    */
   placeOrder: async (input: {
     customerId?: string;
+    userId?: string;
     customerName?: string;
     customerPhone?: string;
     customerEmail?: string;
     tableNumber?: string;
+    seatNumber?: string;
     shippingAddress?: string;
+    deliveryAddress?: string;
     notes?: string;
     division?: string;
     orderType?: 'dine-in' | 'takeaway';
-    deliveryMethod?: 'delivery' | 'pickup';
+    destination?: 'dine-in' | 'takeaway';
+    deliveryMethod?: 'delivery' | 'pickup' | null;
+    reservedDate?: string | null;
+    reservedTime?: string | null;
     items: Array<{ id: string; name: string; quantity: number; division?: string; category?: string; image?: string; price?: number }>;
     prepDurationMinutes?: number;
     totalAmount?: number;
@@ -185,39 +322,33 @@ export const orderService = {
       image: item.image || ''
     }));
 
-    const totalAmount = sanitizedItems.reduce((acc, item) => acc + (item.quantity * 10), 0);
-
-    const derivedOrderType = input.orderType || (input.tableNumber && input.tableNumber.toLowerCase().includes('table') ? 'dine-in' : 'takeaway');
-    const derivedDeliveryMethod = input.deliveryMethod || (
-      derivedOrderType === 'takeaway' && input.shippingAddress && !input.shippingAddress.toLowerCase().includes('pick-up') && !input.shippingAddress.toLowerCase().includes('in-store')
-        ? 'delivery'
-        : 'pickup'
-    );
-
-    const newOrder: CustomerOrder = {
+    const rawOrder = {
       id: orderId,
-      division: targetDivision,
-      customerId: input.customerId?.trim() || activeUser?.id || 'usr_guest',
+      orderId,
+      customerId: input.customerId?.trim() || input.userId?.trim() || activeUser?.id || 'usr_guest',
+      userId: input.userId?.trim() || input.customerId?.trim() || activeUser?.id || 'usr_guest',
       customerName: input.customerName?.trim() || activeUser?.name || 'Guest User',
       customerEmail: input.customerEmail?.trim() || activeUser?.email || 'guest@orient.app',
       customerPhone: input.customerPhone?.trim() || activeUser?.phone || '+234 800 000 0000',
-      tableNumber: input.tableNumber?.trim() || (derivedOrderType === 'dine-in' ? 'Dine-In' : (derivedDeliveryMethod === 'delivery' ? 'Home Delivery' : 'Takeout / Pickup')),
-      shippingAddress: input.shippingAddress?.trim() || activeUser?.deliveryAddress || (derivedDeliveryMethod === 'delivery' ? 'Standard Delivery Address' : 'Pick-up at counter'),
+      division: targetDivision,
+      destination: input.destination || input.orderType,
+      orderType: input.orderType || input.destination,
+      deliveryMethod: input.deliveryMethod,
+      deliveryAddress: input.deliveryAddress || input.shippingAddress,
+      shippingAddress: input.shippingAddress || input.deliveryAddress,
+      seatNumber: input.seatNumber || input.tableNumber,
+      tableNumber: input.tableNumber || input.seatNumber,
+      reservedDate: input.reservedDate || null,
+      reservedTime: input.reservedTime || null,
       notes: input.notes?.trim() || '',
-      orderType: derivedOrderType,
-      deliveryMethod: derivedDeliveryMethod,
-      customerReceivedAt: null,
       items: sanitizedItems,
-      totalAmount,
       status: input.status || 'pending',
-      prepDurationMinutes: input.prepDurationMinutes || 11,
-      timerEndsAt: null,
-      chefConfirmedAt: null,
-      tenMinAlertSent: false,
-      fiveMinAlertSent: false,
+      prepDurationMinutes: input.prepDurationMinutes || 15,
       createdAt: nowIso,
       updatedAt: nowIso
     };
+
+    const newOrder: CustomerOrder = normalizeOrder(rawOrder);
 
     // Save to Firestore 'orders' collection
     try {
@@ -789,12 +920,12 @@ export const orderService = {
       if (!snapshot.empty) {
         const list = snapshot.docs.map(d => {
           const data = d.data();
-          return {
+          return normalizeOrder({
             ...data,
             id: d.id,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
             updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt || new Date().toISOString()
-          } as CustomerOrder;
+          });
         });
         ordersCache = list;
         try {
@@ -809,9 +940,12 @@ export const orderService = {
     // Fallback to cache
     try {
       const raw = safeStorage.getItem('orient_orders_cache');
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.map(normalizeOrder);
+      }
     } catch (e) {}
-    return ordersCache;
+    return ordersCache.map(normalizeOrder);
   },
 
   getOrderById: async (orderId: string): Promise<CustomerOrder | null> => {
@@ -820,23 +954,24 @@ export const orderService = {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data();
-        return {
+        return normalizeOrder({
           ...data,
           id: snap.id,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
           updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt
-        } as CustomerOrder;
+        });
       }
     } catch (e) {}
 
-    const found = ordersCache.find(o => o.id === orderId);
-    if (found) return found;
+    const found = ordersCache.find(o => o.id === orderId || o.orderId === orderId);
+    if (found) return normalizeOrder(found);
 
     try {
       const raw = safeStorage.getItem('orient_orders_cache');
       if (raw) {
         const list: CustomerOrder[] = JSON.parse(raw);
-        return list.find(o => o.id === orderId) || null;
+        const match = list.find(o => o.id === orderId || o.orderId === orderId);
+        return match ? normalizeOrder(match) : null;
       }
     } catch (e) {}
     return null;
@@ -851,12 +986,12 @@ export const orderService = {
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const list = snapshot.docs.map(d => {
           const data = d.data();
-          return {
+          return normalizeOrder({
             ...data,
             id: d.id,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
             updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt || new Date().toISOString()
-          } as CustomerOrder;
+          });
         });
         ordersCache = list;
         callback(list);

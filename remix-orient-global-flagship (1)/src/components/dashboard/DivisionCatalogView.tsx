@@ -3,6 +3,7 @@ import { cmsApi } from '@/services/cmsApi';
 import { orderService, CustomerOrder, playAlertSound, getDisplayStatus, isDeliveryOrder } from '@/services/orderService';
 import { ProductItem } from '@/data/productsCatalog';
 import { ProductEditorModal } from './ProductEditorModal';
+import OrderDetailsModal from './OrderDetailsModal';
 import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
 
 import { sheetsSync } from '@/services/sheetsSync';
@@ -38,7 +39,8 @@ import {
   Layers,
   ExternalLink,
   Truck,
-  MoreVertical
+  MoreVertical,
+  Info
 } from 'lucide-react';
 
 const getCategoryIcon = (catName: string) => {
@@ -245,6 +247,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
   // Chef order status filter (Default to 'current' as requested)
   const [chefOrderFilter, setChefOrderFilter] = useState<'current' | 'all' | 'pending' | 'cooking' | 'ready' | 'in_transit' | 'completed'>('current');
+  const [selectedDetailOrder, setSelectedDetailOrder] = useState<CustomerOrder | null>(null);
 
   // Division Orders for chef display - STRICT DIVISION ISOLATION
   const divisionOrders = useMemo(() => {
@@ -996,14 +999,27 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                     key={order.id} 
                     className={`p-3.5 rounded-xl border-none bg-[#f8fafc] dark:bg-slate-800/80 space-y-2.5 transition-colors duration-200`}
                   >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-xs font-mono font-bold text-foreground">#{order.id}</span>
-                        <p className="text-xs font-semibold text-foreground mt-0.5">{order.customerName}</p>
-                        <p className="text-[10px] text-muted-foreground">{order.customerPhone} • {order.shippingAddress || 'Store'}</p>
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0">
+                        <span className="text-xs font-mono font-bold text-foreground">#{order.orderId || order.id}</span>
+                        <p className="text-xs font-semibold text-foreground mt-0.5 truncate">{order.customerName}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {order.customerPhone} • {order.destination === 'dine-in' ? `Dine-In (${order.seatNumber || order.tableNumber || 'Table'})` : (order.deliveryMethod === 'delivery' ? `Delivery: ${order.deliveryAddress || order.shippingAddress || 'Address'}` : 'Pickup')}
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedDetailOrder(order)}
+                          className="h-7 px-2 text-[11px] font-semibold gap-1 rounded-lg border-border/50 hover:bg-muted/70 cursor-pointer shadow-2xs"
+                          title="View full order details"
+                        >
+                          <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>Details</span>
+                        </Button>
+
                         {isDelivery && (
                           <Badge variant="outline" className="text-[9px] font-bold border-blue-500/40 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30">
                             Delivery
@@ -1031,6 +1047,13 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40 bg-card border border-border/50 shadow-md rounded-xl p-1 z-50">
+                            <DropdownMenuItem
+                              onClick={() => setSelectedDetailOrder(order)}
+                              className="cursor-pointer text-xs font-semibold gap-2 py-1.5"
+                            >
+                              <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                              <span>View Details</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDeleteOrder(order.id)}
                               className="text-red-600 focus:text-red-600 focus:bg-red-500/10 cursor-pointer text-xs font-semibold gap-2 py-1.5"
@@ -1677,6 +1700,13 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
         defaultDivision={divisionId}
         onProductSaved={handleProductSaved}
         onProductDeleted={handleProductDeleted}
+      />
+
+      {/* Order Details Modal (Responsive: Desktop modal, Mobile full-screen box with close button at bottom) */}
+      <OrderDetailsModal
+        order={selectedDetailOrder}
+        isOpen={Boolean(selectedDetailOrder)}
+        onClose={() => setSelectedDetailOrder(null)}
       />
     </div>
   );

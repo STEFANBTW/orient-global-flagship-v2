@@ -1157,23 +1157,37 @@ export default function UserDashboard() {
             </DialogHeader>
 
             <div className="space-y-4 py-2 text-xs">
-              <div className="p-3 bg-muted/40 rounded-lg space-y-1">
+              <div className="p-3 bg-muted/40 rounded-lg space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Customer:</span>
-                  <span className="font-semibold text-foreground">{selectedOrder.customerName}</span>
+                  <span className="text-muted-foreground">Order ID:</span>
+                  <span className="font-mono font-bold text-foreground">#{selectedOrder.orderId || selectedOrder.id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Phone:</span>
-                  <span className="font-mono text-foreground">{selectedOrder.customerPhone}</span>
+                  <span className="text-muted-foreground">Destination:</span>
+                  <span className="font-semibold text-foreground capitalize">
+                    {selectedOrder.destination === 'dine-in' ? `🍽️ Dine-In (${selectedOrder.seatNumber || selectedOrder.tableNumber || 'Table'})` : (selectedOrder.deliveryMethod === 'delivery' ? '🚚 Delivery' : '🏪 Pickup')}
+                  </span>
                 </div>
+                {selectedOrder.destination === 'takeaway' && selectedOrder.deliveryMethod === 'delivery' && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Address:</span>
+                    <span className="font-medium text-foreground text-right truncate max-w-[200px]">
+                      {selectedOrder.deliveryAddress || selectedOrder.shippingAddress || 'Provided Address'}
+                    </span>
+                  </div>
+                )}
+                {selectedOrder.reservedDate && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Reservation:</span>
+                    <span className="font-medium text-primary">
+                      {selectedOrder.reservedDate} {selectedOrder.reservedTime ? `@ ${selectedOrder.reservedTime}` : ''}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Location / Table:</span>
-                  <span className="text-foreground">{selectedOrder.tableNumber || 'Takeout'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Date:</span>
+                  <span className="text-muted-foreground">Placed:</span>
                   <span className="font-mono text-foreground">
-                    {new Date(selectedOrder.createdAt).toLocaleString()}
+                    {selectedOrder.placedDate || new Date(selectedOrder.createdAt).toLocaleDateString()} {selectedOrder.placedTime ? `@ ${selectedOrder.placedTime}` : ''}
                   </span>
                 </div>
               </div>
