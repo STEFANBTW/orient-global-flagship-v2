@@ -53,9 +53,18 @@ export async function synthesizeSpeech(
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     audioStream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    audioStream.on('close', () => resolve(Buffer.concat(chunks)));
-    audioStream.on('end', () => resolve(Buffer.concat(chunks)));
-    audioStream.on('error', (err) => reject(err));
+    audioStream.on('close', () => {
+      if (chunks.length > 0) resolve(Buffer.concat(chunks));
+      else reject(new Error('Audio stream closed without data'));
+    });
+    audioStream.on('end', () => {
+      if (chunks.length > 0) resolve(Buffer.concat(chunks));
+      else reject(new Error('Audio stream ended without data'));
+    });
+    audioStream.on('error', (err) => {
+      if (chunks.length > 0) resolve(Buffer.concat(chunks));
+      else reject(err);
+    });
   });
 }
 
@@ -99,9 +108,22 @@ export default async function handler(req: any, res: any) {
     res.status(200).send(audioBuffer);
   } catch (error: any) {
     console.error('Edge-TTS synthesis error:', error);
-    res.status(500).json({
-      error: error?.message || 'Speech synthesis failed'
-    });
+    try {
+      if (res.status && typeof res.status === 'function') {
+        res.status(500);
+        if (res.json && typeof res.json === 'function') {
+          res.json({ error: error?.message || 'Speech synthesis failed' });
+        } else if (res.send && typeof res.send === 'function') {
+          res.send(JSON.stringify({ error: error?.message || 'Speech synthesis failed' }));
+        } else {
+          res.end(JSON.stringify({ error: error?.message || 'Speech synthesis failed' }));
+        }
+      } else {
+        res.end?.();
+      }
+    } catch (e) {
+      console.error('Failed to send error response:', e);
+    }
   }
 }
 
