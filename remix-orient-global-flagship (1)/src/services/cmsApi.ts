@@ -509,6 +509,45 @@ export const cmsApi = {
     return cmsApi.updateProduct(id, { stock: stockVal });
   },
 
+  decrementStock: async (items: Array<{ id: string; name?: string; quantity: number }>): Promise<void> => {
+    try {
+      const raw = safeStorage.getItem("orient_products_cache");
+      let list = raw ? JSON.parse(raw) : [...INITIAL_PRODUCTS_CATALOG];
+
+      for (const item of items) {
+        const prodIndex = list.findIndex((p: any) => 
+          p.id === item.id || 
+          (p.name && item.name && p.name.trim().toLowerCase() === item.name.trim().toLowerCase())
+        );
+        if (prodIndex !== -1) {
+          const currentStock = typeof list[prodIndex].stock === 'number' ? list[prodIndex].stock : 5;
+          const updatedStock = Math.max(0, currentStock - (Number(item.quantity) || 1));
+          list[prodIndex] = {
+            ...list[prodIndex],
+            stock: updatedStock,
+            updatedAt: new Date().toISOString()
+          };
+
+          try {
+            const docRef = doc(db, "products", list[prodIndex].id);
+            await setDoc(docRef, { stock: updatedStock, updatedAt: Timestamp.now() }, { merge: true });
+          } catch (e) {
+            console.warn("Could not update stock in Firestore:", e);
+          }
+        }
+      }
+
+      safeStorage.setItem("orient_products_cache", JSON.stringify(list));
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("orient_products_changed", { detail: list }));
+        window.dispatchEvent(new CustomEvent("orient_stock_updated", { detail: items }));
+      }
+    } catch (err) {
+      console.warn("Error in decrementStock:", err);
+    }
+  },
+
   deleteProduct: async (id: string) => {
     try {
       await deleteDoc(doc(db, "products", id));

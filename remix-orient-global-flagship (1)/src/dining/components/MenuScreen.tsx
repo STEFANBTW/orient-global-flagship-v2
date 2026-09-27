@@ -173,23 +173,40 @@ const MenuScreen: React.FC = () => {
           const normalized = diningItems.map((item: any) => ({
             ...item,
             price: 10,
-            stock: item.stock !== undefined ? item.stock : 5,
+            stock: typeof item.stock === 'number' ? item.stock : (item.stock !== undefined ? Number(item.stock) : 5),
             prepTimeMinutes: 11
           }));
           setDiningProducts(normalized);
         } else {
-          const initialDining = INITIAL_PRODUCTS_CATALOG.filter(p => p.division === 'dining');
+          const initialDining = INITIAL_PRODUCTS_CATALOG.filter(p => p.division === 'dining').map(item => ({
+            ...item,
+            stock: typeof item.stock === 'number' ? item.stock : 5
+          }));
           setDiningProducts(initialDining);
         }
       } catch (error) {
         console.error("Failed to fetch dining menu data", error);
-        const initialDining = INITIAL_PRODUCTS_CATALOG.filter(p => p.division === 'dining');
+        const initialDining = INITIAL_PRODUCTS_CATALOG.filter(p => p.division === 'dining').map(item => ({
+          ...item,
+          stock: typeof item.stock === 'number' ? item.stock : 5
+        }));
         setDiningProducts(initialDining);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
+
+    // Listen for live stock decrement / product updates from orders
+    const handleStockUpdate = () => {
+      fetchData();
+    };
+    window.addEventListener('orient_products_changed', handleStockUpdate);
+    window.addEventListener('orient_stock_updated', handleStockUpdate);
+    return () => {
+      window.removeEventListener('orient_products_changed', handleStockUpdate);
+      window.removeEventListener('orient_stock_updated', handleStockUpdate);
+    };
   }, []);
 
   const showToast = (msg: string) => {
@@ -200,9 +217,19 @@ const MenuScreen: React.FC = () => {
   };
 
   const handleAddToOrder = (product: ProductItem) => {
+    const currentStock = typeof product.stock === 'number' ? product.stock : 5;
+    if (currentStock <= 0) {
+      showToast(`${product.name} is currently out of stock`);
+      return;
+    }
+
     setOrderTray(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
+        if (existing.quantity >= currentStock) {
+          showToast(`Only ${currentStock} portion(s) available for ${product.name}`);
+          return prev;
+        }
         if (existing.quantity >= 5) {
           showToast(`Maximum portions (5) reached for ${product.name}`);
           return prev;
@@ -625,32 +652,39 @@ const MenuScreen: React.FC = () => {
                       </div>
 
                       <div className="flex flex-wrap items-center justify-center sm:justify-start gap-6">
-                        {sommelierDrinks.map((drink) => (
+                        {sommelierDrinks.map((drink) => {
+                          const isOutOfStock = (typeof drink.stock === 'number' ? drink.stock : 5) <= 0;
+                          return (
                           <div
                             key={drink.id}
-                            onClick={() => setSelectedProduct(drink)}
-                            className="group relative w-[300px] h-[300px] rounded-3xl overflow-hidden cursor-pointer bg-neutral-900 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col justify-end shrink-0"
+                            onClick={() => !isOutOfStock && setSelectedProduct(drink)}
+                            className={`group relative w-[300px] h-[300px] rounded-3xl overflow-hidden bg-neutral-900 border-0 shadow-xl transition-all duration-300 flex flex-col justify-end shrink-0 ${
+                              isOutOfStock
+                                ? "opacity-40 grayscale select-none filter contrast-75 cursor-not-allowed"
+                                : "cursor-pointer hover:shadow-2xl"
+                            }`}
                           >
                             <img
                               src={drink.image}
                               alt={drink.name}
-                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                              className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${!isOutOfStock && "group-hover:scale-105"}`}
                               loading="lazy"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/10"></div>
 
                             {/* Top Badges */}
                             <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none z-10">
-                              <span className="text-[10px] font-semibold text-white/90 bg-black/35 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                                Sommelier Select
+                              <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10 ${
+                                isOutOfStock ? "bg-red-600/90 text-white font-bold uppercase tracking-wider" : "text-white/90 bg-black/35 backdrop-blur-md"
+                              }`}>
+                                {isOutOfStock ? "Out of Stock" : "Sommelier Select"}
                               </span>
-                              <span className="text-base sm:text-lg font-black text-white bg-primary px-3.5 py-1 rounded-full shadow-lg">
+                              <span className={`text-base sm:text-lg font-black text-white px-3.5 py-1 rounded-full shadow-lg ${
+                                isOutOfStock ? "bg-neutral-700/80 line-through text-white/70" : "bg-primary"
+                              }`}>
                                 ₦10
                               </span>
                             </div>
-
-                            {/* Hover Notes (Desktop) */}
-
 
                             {/* Bottom info */}
                             <div className="relative z-10 p-4 w-full flex items-end justify-between gap-2">
@@ -664,25 +698,30 @@ const MenuScreen: React.FC = () => {
                                     11m Prep
                                   </span>
                                   <span className="w-1 h-1 rounded-full bg-white/70 shrink-0"></span>
-                                  <span className="text-white font-semibold whitespace-nowrap">
-                                    {drink.stock || 5} Servings Available
+                                  <span className={`font-semibold whitespace-nowrap ${isOutOfStock ? "text-red-300 font-bold" : "text-white"}`}>
+                                    {isOutOfStock ? "Sold Out (0)" : `${typeof drink.stock === 'number' ? drink.stock : 5} Servings Available`}
                                   </span>
                                 </div>
                               </div>
 
                               <button
+                                disabled={isOutOfStock}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAddToOrder(drink);
+                                  if (!isOutOfStock) handleAddToOrder(drink);
                                 }}
-                                title="Add drink to tray"
-                                className="shrink-0 w-8 h-8 rounded-full bg-primary hover:bg-primary/90 text-background flex items-center justify-center shadow-lg transition-transform active:scale-95 group/btn"
+                                title={isOutOfStock ? "Item out of stock" : "Add drink to tray"}
+                                className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                                  isOutOfStock
+                                    ? "bg-neutral-700/80 text-neutral-500 cursor-not-allowed opacity-60"
+                                    : "bg-primary hover:bg-primary/90 text-background active:scale-95 group/btn"
+                                }`}
                               >
-                                <span className="material-icons text-base group-hover/btn:scale-110 transition-transform">add</span>
+                                <span className="material-icons text-base">{isOutOfStock ? "block" : "add"}</span>
                               </button>
                             </div>
                           </div>
-                        ))}
+                        );})}
                       </div>
                     </div>
 
@@ -698,51 +737,70 @@ const MenuScreen: React.FC = () => {
                       </div>
 
                       <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 sm:gap-8 justify-items-center">
-                        {standardDrinks.map((drink) => (
+                        {standardDrinks.map((drink) => {
+                          const isOutOfStock = (typeof drink.stock === 'number' ? drink.stock : 5) <= 0;
+                          return (
                           <div
                             key={drink.id}
-                            onClick={() => setSelectedProduct(drink)}
-                            className="flex flex-col items-center cursor-pointer group text-center w-[200px]"
+                            onClick={() => !isOutOfStock && setSelectedProduct(drink)}
+                            className={`flex flex-col items-center text-center w-[200px] ${
+                              isOutOfStock
+                                ? "opacity-40 grayscale select-none filter contrast-75 cursor-not-allowed"
+                                : "cursor-pointer group"
+                            }`}
                           >
                             {/* 200x200 Pixel Picture Box (no badges, no prep time) */}
                             <div className="w-[200px] h-[200px] rounded-3xl overflow-hidden relative shadow-lg bg-neutral-900 border border-neutral-200 dark:border-white/10 group-hover:border-primary/50 group-hover:shadow-xl transition-all duration-300 shrink-0">
                               <img
                                 src={drink.image}
                                 alt={drink.name}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                className={`w-full h-full object-cover transition-transform duration-500 ${!isOutOfStock && "group-hover:scale-105"}`}
                                 loading="lazy"
                               />
 
+                              {isOutOfStock && (
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center pointer-events-none z-10">
+                                  <span className="bg-red-600/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow">
+                                    Sold Out
+                                  </span>
+                                </div>
+                              )}
+
                               {/* Subtle quick-add icon overlay */}
                               <button
+                                disabled={isOutOfStock}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAddToOrder(drink);
+                                  if (!isOutOfStock) handleAddToOrder(drink);
                                 }}
-                                title={`Add ${drink.name} to tray`}
-                                className="absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-primary hover:bg-primary/90 text-background flex items-center justify-center shadow-lg transition-transform active:scale-90 opacity-90 group-hover:opacity-100 group/btn"
+                                title={isOutOfStock ? "Item out of stock" : `Add ${drink.name} to tray`}
+                                className={`absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                                  isOutOfStock
+                                    ? "bg-neutral-700/80 text-neutral-500 cursor-not-allowed opacity-60"
+                                    : "bg-primary hover:bg-primary/90 text-background active:scale-90 opacity-90 group-hover:opacity-100 group/btn"
+                                }`}
                               >
-                                <span className="material-icons text-sm group-hover/btn:scale-110 transition-transform">add</span>
+                                <span className="material-icons text-sm">{isOutOfStock ? "block" : "add"}</span>
                               </button>
                             </div>
 
                             {/* Under the Picture Box: Name and available servings */}
                             <div className="mt-3 w-full text-center space-y-1">
-                              <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors" title={drink.name}>
+                              <p className={`text-sm font-bold truncate transition-colors ${isOutOfStock ? "text-neutral-500" : "text-foreground group-hover:text-primary"}`} title={drink.name}>
                                 {drink.name}
                               </p>
                               <div className="flex items-center justify-center gap-2 text-xs">
-                                <span className="text-muted-foreground font-medium">
-                                  {drink.stock || 5} Servings Available
+                                <span className={`font-medium ${isOutOfStock ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>
+                                  {isOutOfStock ? "Sold Out (0)" : `${typeof drink.stock === 'number' ? drink.stock : 5} Servings Available`}
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-muted-foreground/40"></span>
-                                <span className="font-bold text-primary">
+                                <span className={`font-bold ${isOutOfStock ? "text-neutral-500 line-through" : "text-primary"}`}>
                                   ₦10
                                 </span>
                               </div>
                             </div>
                           </div>
-                        ))}
+                        );})}
                       </div>
                     </div>
                   </div>
@@ -752,19 +810,25 @@ const MenuScreen: React.FC = () => {
                     {categoryItems.map((dish, idx) => {
                       // Subtle bento rhythm: first item in large categories spans 2 cols on wide screens
                       const isLargeSpan = idx === 0 && categoryItems.length >= 4 && activeCategory === "All";
+                      const isOutOfStock = (typeof dish.stock === 'number' ? dish.stock : 5) <= 0;
 
                       return (
                         <div
                           key={dish.id}
-                          onClick={() => setSelectedProduct(dish)}
-                          className={`group relative rounded-3xl overflow-hidden cursor-pointer bg-neutral-950 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 flex flex-col justify-end w-[80vw] h-[30vh] mx-auto sm:w-full sm:h-auto sm:min-h-[380px] ${isLargeSpan ? "lg:col-span-2 lg:min-h-[400px]" : "col-span-1"
-                            }`}
+                          onClick={() => !isOutOfStock && setSelectedProduct(dish)}
+                          className={`group relative rounded-3xl overflow-hidden bg-neutral-950 border-0 shadow-lg transition-all duration-500 flex flex-col justify-end w-[80vw] h-[30vh] mx-auto sm:w-full sm:h-auto sm:min-h-[380px] ${
+                            isLargeSpan ? "lg:col-span-2 lg:min-h-[400px]" : "col-span-1"
+                          } ${
+                            isOutOfStock
+                              ? "opacity-40 grayscale select-none filter contrast-75 cursor-not-allowed"
+                              : "cursor-pointer hover:shadow-2xl"
+                          }`}
                         >
                           {/* 100% Full-bleed background image */}
                           <img
                             src={dish.image}
                             alt={dish.name}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${!isOutOfStock && "group-hover:scale-105"}`}
                             loading="lazy"
                           />
 
@@ -773,31 +837,22 @@ const MenuScreen: React.FC = () => {
 
                           {/* Top Vital Badges: Price & Category */}
                           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between pointer-events-none z-10">
-                            <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border-0">
-                              {dish.category}
-                            </span>
-                            <span className="text-base sm:text-lg font-black text-white bg-primary px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border-0">
+                                {dish.category}
+                              </span>
+                              {isOutOfStock && (
+                                <span className="text-[10px] sm:text-[11px] font-bold text-white bg-red-600/90 px-2.5 sm:px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
+                                  Out of Stock
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-base sm:text-lg font-black text-white px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight ${
+                              isOutOfStock ? "bg-neutral-700/80 line-through text-white/70" : "bg-primary"
+                            }`}>
                               ₦10
                             </span>
                           </div>
-
-                          {/* Small Details Panel at the Bottom with Extremely Translucent Blur Background (Desktop) */}
-                          {/* <div className="hidden sm:block absolute inset-x-3.5 bottom-[82px] z-20 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none">
-                            <div className="bg-black/25 backdrop-blur-2xl border-0 rounded-2xl p-3.5 shadow-2xl text-white">
-                              <div className="flex items-center justify-between text-[10px] uppercase font-bold text-primary mb-1">
-                                <span>Chef's Craft Notes</span>
-                                <span className="text-white/70">Tap card for details</span>
-                              </div>
-                              <p className="text-xs text-white/90 leading-relaxed line-clamp-2 font-normal">
-                                {dish.description}
-                              </p>
-                              {dish.ingredients && (
-                                <p className="mt-1.5 text-[10px] text-white/70 line-clamp-1 italic border-t border-transparent pt-1">
-                                  Craft: {dish.ingredients}
-                                </p>
-                              )}
-                            </div>
-                          </div> */}
 
                           {/* Bottom Vital Information (Always Visible) */}
                           <div className="relative z-10 p-3 sm:p-5 w-full flex items-end justify-between gap-2 sm:gap-3">
@@ -813,22 +868,29 @@ const MenuScreen: React.FC = () => {
                                   11m Prep
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-white/70 shrink-0"></span>
-                                <span className="text-white font-semibold tracking-wide whitespace-nowrap">
-                                  {dish.stock || 5} Servings Available
+                                <span className={`font-semibold tracking-wide whitespace-nowrap ${isOutOfStock ? "text-red-300 font-bold" : "text-white"}`}>
+                                  {isOutOfStock ? "Sold Out (0 Servings)" : `${typeof dish.stock === 'number' ? dish.stock : 5} Servings Available`}
                                 </span>
                               </div>
                             </div>
 
                             {/* Quick Add Button */}
                             <button
+                              disabled={isOutOfStock}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAddToOrder(dish);
+                                if (!isOutOfStock) handleAddToOrder(dish);
                               }}
-                              title="Add to tray"
-                              className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary hover:bg-primary/90 text-background flex items-center justify-center shadow-lg transition-transform active:scale-95 group/btn"
+                              title={isOutOfStock ? "Item out of stock" : "Add to tray"}
+                              className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                                isOutOfStock
+                                  ? "bg-neutral-700/80 text-neutral-500 cursor-not-allowed opacity-60"
+                                  : "bg-primary hover:bg-primary/90 text-background active:scale-95 group/btn"
+                              }`}
                             >
-                              <span className="material-icons text-base sm:text-lg group-hover/btn:scale-110 transition-transform">add</span>
+                              <span className="material-icons text-base sm:text-lg group-hover/btn:scale-110 transition-transform">
+                                {isOutOfStock ? "block" : "add"}
+                              </span>
                             </button>
                           </div>
                         </div>
@@ -900,28 +962,43 @@ const MenuScreen: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {getFilteredSommelierDrinks().map((drink, idx) => {
               const isFeature = idx === 0 && sommelierFilter === "all";
+              const isOutOfStock = (typeof drink.stock === 'number' ? drink.stock : 5) <= 0;
 
               return (
                 <div
                   key={drink.id}
-                  onClick={() => setSelectedProduct(drink)}
-                  className={`group relative rounded-3xl overflow-hidden cursor-pointer bg-neutral-900 border-0 shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col justify-end w-[80vw] h-[30vh] mx-auto sm:w-full sm:h-auto sm:min-h-[380px] ${isFeature ? "sm:col-span-2 sm:min-h-[420px]" : "col-span-1"
-                    }`}
+                  onClick={() => !isOutOfStock && setSelectedProduct(drink)}
+                  className={`group relative rounded-3xl overflow-hidden bg-neutral-900 border-0 shadow-xl transition-all duration-500 flex flex-col justify-end w-[80vw] h-[30vh] mx-auto sm:w-full sm:h-auto sm:min-h-[380px] ${
+                    isFeature ? "sm:col-span-2 sm:min-h-[420px]" : "col-span-1"
+                  } ${
+                    isOutOfStock
+                      ? "opacity-40 grayscale select-none filter contrast-75 cursor-not-allowed"
+                      : "cursor-pointer hover:shadow-2xl"
+                  }`}
                 >
                   <img
                     src={drink.image}
                     alt={drink.name}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${!isOutOfStock && "group-hover:scale-105"}`}
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/20 group-hover:via-black/60 transition-all duration-300"></div>
 
                   {/* Top Badges */}
                   <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-center justify-between pointer-events-none z-10">
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border-0">
-                      {drink.unit || "drink"}
-                    </span>
-                    <span className="text-sm sm:text-base font-black text-white bg-primary px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-white/90 bg-black/60 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border-0">
+                        {drink.unit || "drink"}
+                      </span>
+                      {isOutOfStock && (
+                        <span className="text-[10px] sm:text-[11px] font-bold text-white bg-red-600/90 px-2.5 sm:px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
+                          Out of Stock
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-sm sm:text-base font-black text-white px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full shadow-xl tracking-tight ${
+                      isOutOfStock ? "bg-neutral-700/80 line-through text-white/70" : "bg-primary"
+                    }`}>
                       ₦10
                     </span>
                   </div>
@@ -957,21 +1034,28 @@ const MenuScreen: React.FC = () => {
                           11m Prep
                         </span>
                         <span className="w-1 h-1 rounded-full bg-white/40 shrink-0"></span>
-                        <span className="text-white font-semibold tracking-wide whitespace-nowrap">
-                          {drink.stock || 5} Servings Available
+                        <span className={`font-semibold tracking-wide whitespace-nowrap ${isOutOfStock ? "text-red-300 font-bold" : "text-white"}`}>
+                          {isOutOfStock ? "Sold Out (0 Servings)" : `${typeof drink.stock === 'number' ? drink.stock : 5} Servings Available`}
                         </span>
                       </div>
                     </div>
 
                     <button
+                      disabled={isOutOfStock}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleAddToOrder(drink);
+                        if (!isOutOfStock) handleAddToOrder(drink);
                       }}
-                      title="Add drink to tray"
-                      className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary hover:bg-primary/90 text-background flex items-center justify-center shadow-lg transition-transform active:scale-95 group/btn"
+                      title={isOutOfStock ? "Item out of stock" : "Add drink to tray"}
+                      className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                        isOutOfStock
+                          ? "bg-neutral-700/80 text-neutral-500 cursor-not-allowed opacity-60"
+                          : "bg-primary hover:bg-primary/90 text-background active:scale-95 group/btn"
+                      }`}
                     >
-                      <span className="material-icons text-base sm:text-lg group-hover/btn:scale-110 transition-transform">add</span>
+                      <span className="material-icons text-base sm:text-lg group-hover/btn:scale-110 transition-transform">
+                        {isOutOfStock ? "block" : "add"}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -1084,8 +1168,10 @@ const MenuScreen: React.FC = () => {
                     11m Prep Time
                   </span>
                   <span className="w-1 h-1 rounded-full bg-neutral-950/40 dark:bg-white/40 shrink-0"></span>
-                  <span className="text-neutral-950 dark:text-white font-medium whitespace-nowrap">
-                    5 Servings Available
+                  <span className={`font-semibold whitespace-nowrap ${(typeof selectedProduct.stock === 'number' ? selectedProduct.stock : 5) <= 0 ? "text-red-500 font-bold" : "text-neutral-950 dark:text-white"}`}>
+                    {(typeof selectedProduct.stock === 'number' ? selectedProduct.stock : 5) <= 0
+                      ? "Out of Stock (0 Servings)"
+                      : `${typeof selectedProduct.stock === 'number' ? selectedProduct.stock : 5} Servings Available`}
                   </span>
                 </div>
               </div>
@@ -1132,16 +1218,32 @@ const MenuScreen: React.FC = () => {
 
             {/* Sticky Add to Order CTA Button (Outside Scrollable Viewport, Pinned at Bottom) */}
             <div className="shrink-0 p-3.5 sm:p-4 bg-white/95 dark:bg-neutral-950/95 border-t border-neutral-200/80 dark:border-neutral-800 backdrop-blur-md z-40">
-              <button
-                onClick={() => {
-                  handleAddToOrder(selectedProduct);
-                  setSelectedProduct(null);
-                }}
-                className="w-full py-3 sm:py-3.5 px-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs sm:text-sm uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                <span className="material-icons text-base">add</span>
-                <span>Add to Order • ₦10</span>
-              </button>
+              {(() => {
+                const isSelectedOutOfStock = (typeof selectedProduct.stock === 'number' ? selectedProduct.stock : 5) <= 0;
+                return (
+                  <button
+                    disabled={isSelectedOutOfStock}
+                    onClick={() => {
+                      if (!isSelectedOutOfStock) {
+                        handleAddToOrder(selectedProduct);
+                        setSelectedProduct(null);
+                      }
+                    }}
+                    className={`w-full py-3 sm:py-3.5 px-4 rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 ${
+                      isSelectedOutOfStock
+                        ? "bg-neutral-600 text-neutral-300 cursor-not-allowed opacity-75"
+                        : "bg-primary hover:bg-primary/90 text-white active:scale-[0.98]"
+                    }`}
+                  >
+                    <span className="material-icons text-base">
+                      {isSelectedOutOfStock ? "block" : "add"}
+                    </span>
+                    <span>
+                      {isSelectedOutOfStock ? "Out of Stock • Cannot Order" : "Add to Order • ₦10"}
+                    </span>
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>

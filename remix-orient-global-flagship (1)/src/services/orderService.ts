@@ -4,6 +4,7 @@ import {
   onSnapshot, query, orderBy, Timestamp, writeBatch, increment 
 } from 'firebase/firestore';
 import { cmsApi } from './cmsApi';
+import { sheetsSync } from './sheetsSync';
 import { getActiveConsumerUser } from './userService';
 
 export interface OrderItem {
@@ -349,6 +350,20 @@ export const orderService = {
     };
 
     const newOrder: CustomerOrder = normalizeOrder(rawOrder);
+
+    // 1. Automatically decrement stock for each ordered item immediately
+    try {
+      await cmsApi.decrementStock(sanitizedItems);
+    } catch (e) {
+      console.warn("Could not automatically decrement product stock:", e);
+    }
+
+    // 2. Automatically record entry in Google Sheet with all allocated information
+    try {
+      await sheetsSync.appendOrderToSheet(newOrder);
+    } catch (e) {
+      console.warn("Could not automatically append order to Google Sheet:", e);
+    }
 
     // Save to Firestore 'orders' collection
     try {

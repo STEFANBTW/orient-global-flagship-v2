@@ -1,3 +1,6 @@
+import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
 import { GoogleGenAI, Type } from '@google/genai';
 
 // Navigation Tool Declaration for Orient Global
@@ -191,7 +194,28 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  let apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+  // Dynamic disk check for local development: if process started before .env was written
+  if (!apiKey) {
+    try {
+      const candidates = ['.env', '.env.local'];
+      for (const file of candidates) {
+        const filePath = path.resolve(process.cwd(), file);
+        if (fs.existsSync(filePath)) {
+          const content = fs.readFileSync(filePath, 'utf8');
+          const m = content.match(/GEMINI_API_KEY=([^\r\n]+)/) || content.match(/VITE_GEMINI_API_KEY=([^\r\n]+)/);
+          if (m && m[1].trim()) {
+            apiKey = m[1].trim().replace(/^['"]|['"]$/g, '');
+            process.env.GEMINI_API_KEY = apiKey;
+            break;
+          }
+        }
+      }
+    } catch (diskErr) {
+      console.warn('Could not read local .env dynamically:', diskErr);
+    }
+  }
 
   if (!apiKey) {
     res.status(500).json({

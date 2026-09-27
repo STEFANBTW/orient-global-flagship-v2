@@ -403,6 +403,19 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
       }
     }
 
+    // Check if any ordered items are out of stock
+    try {
+      const raw = localStorage.getItem('orient_products_cache');
+      const cached = raw ? JSON.parse(raw) : [];
+      for (const it of items) {
+        const p = cached.find((prod: any) => prod.id === it.id || prod.name === it.name);
+        if (p && typeof p.stock === 'number' && p.stock <= 0) {
+          alert(`Sorry, "${it.name}" is out of stock and cannot be ordered.`);
+          return;
+        }
+      }
+    } catch (e) {}
+
     setIsSubmitting(true);
     try {
       const isTakeaway = orderType === 'take-away';

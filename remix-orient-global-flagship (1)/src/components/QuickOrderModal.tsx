@@ -46,11 +46,17 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
 
   // Fetch current products (ensures latest stock and prices)
   useEffect(() => {
-    cmsApi.getProducts().then(res => {
-      if (res?.products?.length) {
-        setProducts(res.products);
-      }
-    });
+    const refreshCatalog = () => {
+      cmsApi.getProducts().then(res => {
+        if (res?.products?.length) {
+          setProducts(res.products);
+        }
+      });
+    };
+    refreshCatalog();
+
+    window.addEventListener('orient_products_changed', refreshCatalog);
+    window.addEventListener('orient_stock_updated', refreshCatalog);
 
     // Check last user order from storage
     try {
@@ -60,6 +66,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
         setActiveOrder(parsed);
       }
     } catch (e) {}
+
+    return () => {
+      window.removeEventListener('orient_products_changed', refreshCatalog);
+      window.removeEventListener('orient_stock_updated', refreshCatalog);
+    };
   }, [isOpen]);
 
   // Prepopulate with preselected item if opened from a specific product card
@@ -104,9 +115,12 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
   }, [activeOrder?.timerEndsAt, activeOrder?.status]);
 
   const addToCart = (product: ProductItem) => {
+    const stock = typeof product.stock === 'number' ? product.stock : 5;
+    if (stock <= 0) return;
     setCart(prev => {
       const existing = prev.find(i => i.product.id === product.id);
       if (existing) {
+        if (existing.quantity >= stock) return prev;
         return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
       return [...prev, { product, quantity: 1 }];
@@ -286,10 +300,16 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
 
                 {/* Products Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[360px] overflow-y-auto pr-1">
-                  {filteredCatalog.slice(0, 30).map(product => (
+                  {filteredCatalog.slice(0, 30).map(product => {
+                    const isOutOfStock = (typeof product.stock === 'number' ? product.stock : 5) <= 0;
+                    return (
                     <div 
                       key={product.id}
-                      className="group flex items-center justify-between p-2.5 rounded-xl border border-border/50 bg-background/50 hover:border-primary/50 transition-all hover:shadow-sm"
+                      className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                        isOutOfStock 
+                          ? "border-border/30 bg-muted/10 opacity-40 grayscale select-none cursor-not-allowed" 
+                          : "border-border/50 bg-background/50 hover:border-primary/50 hover:shadow-sm"
+                      }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <img 
@@ -299,12 +319,16 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
                           className="w-11 h-11 rounded-lg object-cover bg-muted flex-shrink-0"
                         />
                         <div className="min-w-0">
-                          <p className="text-xs font-bold truncate text-foreground group-hover:text-primary transition-colors">
+                          <p className={`text-xs font-bold truncate transition-colors ${
+                            isOutOfStock ? "text-muted-foreground" : "text-foreground group-hover:text-primary"
+                          }`}>
                             {product.name}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs font-extrabold text-primary">₦10</span>
-                            <span className="text-[10px] text-muted-foreground uppercase">Stock: {product.stock}</span>
+                            <span className={`text-xs font-extrabold ${isOutOfStock ? "text-muted-foreground line-through" : "text-primary"}`}>₦10</span>
+                            <span className={`text-[10px] uppercase font-bold ${isOutOfStock ? "text-red-500" : "text-muted-foreground"}`}>
+                              {isOutOfStock ? "Out of Stock" : `Stock: ${product.stock}`}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -312,13 +336,18 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => addToCart(product)}
-                        className="h-7 px-2.5 rounded-lg text-xs font-bold hover:bg-primary hover:text-primary-foreground"
+                        disabled={isOutOfStock}
+                        onClick={() => !isOutOfStock && addToCart(product)}
+                        className={`h-7 px-2.5 rounded-lg text-xs font-bold ${
+                          isOutOfStock
+                            ? "opacity-50 cursor-not-allowed bg-muted text-muted-foreground"
+                            : "hover:bg-primary hover:text-primary-foreground"
+                        }`}
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </Button>
                     </div>
-                  ))}
+                  );})}
                 </div>
               </div>
 

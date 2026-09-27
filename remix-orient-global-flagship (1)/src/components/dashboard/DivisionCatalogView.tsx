@@ -4,6 +4,7 @@ import { orderService, CustomerOrder, playAlertSound, getDisplayStatus, isDelive
 import { ProductItem } from '@/data/productsCatalog';
 import { ProductEditorModal } from './ProductEditorModal';
 import OrderDetailsModal from './OrderDetailsModal';
+import GoogleSheetModal from './GoogleSheetModal';
 import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
 
 import { sheetsSync } from '@/services/sheetsSync';
@@ -248,6 +249,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
   // Chef order status filter (Default to 'current' as requested)
   const [chefOrderFilter, setChefOrderFilter] = useState<'current' | 'all' | 'pending' | 'cooking' | 'ready' | 'in_transit' | 'completed'>('current');
   const [selectedDetailOrder, setSelectedDetailOrder] = useState<CustomerOrder | null>(null);
+  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
 
   // Division Orders for chef display - STRICT DIVISION ISOLATION
   const divisionOrders = useMemo(() => {
@@ -846,13 +848,13 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
             />
           </label>
 
-          {/* Action 4: Google Sheets Link (Completely Transparent Background, Green Text) */}
+          {/* Action 4: Google Sheets Link & Sync Manager */}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => sheetsSync.openGoogleSheet()}
-            title="Open connected Google Sheet"
-            className="w-full h-8 text-xs font-semibold bg-transparent hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors duration-200 gap-1.5 border-none shadow-none"
+            onClick={() => setIsSheetsModalOpen(true)}
+            title="Google Sheets Auto-Sync & Records Manager"
+            className="w-full h-8 text-xs font-semibold bg-transparent hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors duration-200 gap-1.5 border-none shadow-none cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Google Sheet</span>
@@ -1707,6 +1709,12 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
         order={selectedDetailOrder}
         isOpen={Boolean(selectedDetailOrder)}
         onClose={() => setSelectedDetailOrder(null)}
+      />
+
+      {/* Google Sheets Real-Time Sync & Config Modal */}
+      <GoogleSheetModal
+        isOpen={isSheetsModalOpen}
+        onClose={() => setIsSheetsModalOpen(false)}
       />
     </div>
   );
