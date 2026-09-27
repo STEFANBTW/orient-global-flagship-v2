@@ -2408,16 +2408,8 @@ Use navigateToSection when user wants to see sections.`,
             >
               {/* Header */}
               <div className='ai-chat-header'>
-                <div className='flex items-center gap-2.5'>
-                  <div className='w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center text-primary border border-primary/30'>
-                    <Sparkles size={14} />
-                  </div>
-                  <div>
-                    <h4 className='ai-chat-header-title flex items-center gap-1.5'>
-                      ORA
-                      <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' />
-                    </h4>
-                  </div>
+                <div className='flex items-center'>
+                  <h4 className='ai-chat-header-title'>ORA</h4>
                 </div>
                 
                 <div className='flex items-center gap-1'>
@@ -2446,28 +2438,8 @@ Use navigateToSection when user wants to see sections.`,
                 {messages.length === 0 && (
                   <div className='ai-chat-welcome-banner'>
                     <p>
-                      "Welcome to Orient Global Flagship. I am ORA, your luxury concierge. Ask me anything about our restaurant menu, speak directly to place an order, or explore our divisions."
+                      "hi, I'm Ora your luxury concierge. Ask me anything about orient or ask me to do something for you"
                     </p>
-                    <div className='mt-2.5 flex flex-wrap gap-1.5'>
-                      <button 
-                        onClick={() => handleSend("What is on the restaurant menu today?")}
-                        className='text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-primary hover:text-white transition-all px-2.5 py-1 rounded-full border border-border shadow-xs'
-                      >
-                        🍽️ View Menu
-                      </button>
-                      <button 
-                        onClick={() => handleSend("Do you have steak or pizza?")}
-                        className='text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-primary hover:text-white transition-all px-2.5 py-1 rounded-full border border-border shadow-xs'
-                      >
-                        🔍 Alternatives
-                      </button>
-                      <button 
-                        onClick={() => handleSend("Order 2 plates of Smoky Jollof Rice")}
-                        className='text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-primary hover:text-white transition-all px-2.5 py-1 rounded-full border border-border shadow-xs'
-                      >
-                        ⚡ Order Food
-                      </button>
-                    </div>
                   </div>
                 )}
 
