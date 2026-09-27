@@ -294,9 +294,9 @@ html {
 
   /* Launcher Icon (Translucent Blur BG with ORA) */
   --ai-chat-icon-bg: rgba(255, 255, 255, 0.65);
-  --ai-chat-icon-border: rgba(242, 158, 13, 0.35);
+  --ai-chat-icon-border: rgba(0, 0, 0, 0.1);
   --ai-chat-icon-fg: #f29e0d;
-  --ai-chat-icon-shadow: 0 15px 45px rgba(242, 158, 13, 0.3);
+  --ai-chat-icon-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .dark {
@@ -361,13 +361,13 @@ html {
    3. Floating Chat Icon (Launcher Button)
    -------------------------------------------------------------------------- */
 .ai-chat-icon-button {
-  width: 2.75rem;   /* ~44px mobile */
-  height: 2.75rem;
+  width: 3rem;   /* 48px mobile */
+  height: 3rem;
   background-color: var(--ai-chat-icon-bg) !important;
   color: var(--ai-chat-icon-fg) !important;
   border: 1px solid var(--ai-chat-icon-border) !important;
   border-width: 1px !important;
-  border-radius: 0.85rem; /* 14px */
+  border-radius: 9999px !important; /* Circle shape */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -384,7 +384,7 @@ html {
   .ai-chat-icon-button {
     width: 3.5rem;   /* 56px desktop */
     height: 3.5rem;
-    border-radius: 1.15rem; /* ~18px */
+    border-radius: 9999px !important; /* Circle shape */
   }
 }
 
@@ -402,7 +402,7 @@ html {
   letter-spacing: 0.14em;
   font-size: 0.85rem;
   color: var(--ai-chat-primary);
-  text-shadow: 0 0 12px rgba(242, 158, 13, 0.35);
+  text-shadow: none;
 }
 
 @media (min-width: 640px) {

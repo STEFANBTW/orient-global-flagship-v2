@@ -2624,7 +2624,7 @@ Use navigateToSection when user wants to see sections.`,
             whileHover={{ scale: 1.05 }} 
             whileTap={{ scale: 0.95 }} 
             onClick={() => setIsOpen(true)} 
-            className='ai-chat-icon-button'
+            className='ai-chat-icon-button rounded-full'
             aria-label="Open ORA AI Concierge"
           >
             <span className='ai-chat-icon-text select-none'>ORA</span>
