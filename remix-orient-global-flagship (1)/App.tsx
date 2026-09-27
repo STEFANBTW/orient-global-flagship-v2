@@ -2337,7 +2337,7 @@ const ChatBot: React.FC = () => {
           }
 
           const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-flash-latest',
             contents: { parts },
             config: {
               systemInstruction: `You are ORA, Orient Luxury AI Concierge for Orient Global Flagship in Jos.

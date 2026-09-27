@@ -241,7 +241,7 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const modelName = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
     const response = await ai.models.generateContent({
       model: modelName,
