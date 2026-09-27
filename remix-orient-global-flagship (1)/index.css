@@ -361,35 +361,38 @@ html {
    3. Floating Chat Icon (Launcher Button)
    -------------------------------------------------------------------------- */
 .ai-chat-icon-button {
-  width: 3rem;   /* 48px mobile */
-  height: 3rem;
-  background-color: var(--ai-chat-icon-bg) !important;
-  color: var(--ai-chat-icon-fg) !important;
-  border: 1px solid var(--ai-chat-icon-border) !important;
-  border-width: 1px !important;
-  border-radius: 9999px !important; /* Circle shape */
+  width: auto !important;
+  height: auto !important;
+  padding: 0.35rem 0.6rem !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--ai-chat-primary) !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-radius: 0 !important;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible !important;
   position: relative;
-  box-shadow: var(--ai-chat-icon-shadow);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
 @media (min-width: 640px) {
   .ai-chat-icon-button {
-    width: 3.5rem;   /* 56px desktop */
-    height: 3.5rem;
-    border-radius: 9999px !important; /* Circle shape */
+    width: auto !important;
+    height: auto !important;
+    padding: 0.4rem 0.75rem !important;
+    border-radius: 0 !important;
   }
 }
 
 .ai-chat-icon-button:hover {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .ai-chat-icon-button:active {
@@ -400,14 +403,14 @@ html {
   font-family: 'Montserrat', sans-serif;
   font-weight: 900;
   letter-spacing: 0.14em;
-  font-size: 0.85rem;
+  font-size: 1.15rem;
   color: var(--ai-chat-primary);
   text-shadow: none;
 }
 
 @media (min-width: 640px) {
   .ai-chat-icon-text {
-    font-size: 1.05rem;
+    font-size: 1.35rem;
   }
 }
 
@@ -684,9 +687,14 @@ html {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
   position: relative;
   transition: border-color 0.2s ease;
+  outline: none !important;
 }
 
-.ai-chat-input-bar:focus-within {
+.ai-chat-input-bar:focus-within,
+.ai-chat-input-bar:focus,
+.ai-chat-input-bar:active {
+  outline: none !important;
+  box-shadow: none !important;
   border-color: rgba(242, 158, 13, 0.5) !important;
 }
 
@@ -701,6 +709,7 @@ html {
   align-items: center;
   justify-content: center;
   transition: color 0.2s ease, background-color 0.2s ease;
+  outline: none !important;
 }
 
 .ai-chat-tool-btn:hover {
@@ -714,14 +723,34 @@ html {
 }
 
 .ai-chat-text-input {
-  background: transparent;
-  border: none;
-  outline: none;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: var(--ai-chat-fg);
   font-size: 0.75rem; /* 12px */
   font-weight: 500;
   flex: 1 1 0%;
   padding: 0.25rem 0;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.ai-chat-text-input:focus,
+.ai-chat-text-input:focus-visible,
+.ai-chat-text-input:active {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .ai-chat-text-input::placeholder {

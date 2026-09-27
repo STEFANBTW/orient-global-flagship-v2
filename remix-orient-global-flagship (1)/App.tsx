@@ -2599,7 +2599,11 @@ Use navigateToSection when user wants to see sections.`,
                     onChange={(e) => setInput(e.target.value)} 
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
                     placeholder={isRecording ? 'Listening...' : 'Ask ORA or speak to order...'} 
-                    className='ai-chat-text-input' 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    className='ai-chat-text-input focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ring-0 outline-none border-none shadow-none' 
                   />
                   <button 
                     onClick={() => handleSend()} 
@@ -2621,10 +2625,10 @@ Use navigateToSection when user wants to see sections.`,
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.05 }} 
+            whileHover={{ scale: 1.08 }} 
             whileTap={{ scale: 0.95 }} 
             onClick={() => setIsOpen(true)} 
-            className='ai-chat-icon-button rounded-full'
+            className='ai-chat-icon-button bg-transparent border-0 shadow-none'
             aria-label="Open ORA AI Concierge"
           >
             <span className='ai-chat-icon-text select-none'>ORA</span>
