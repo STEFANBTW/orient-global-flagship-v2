@@ -1,5 +1,6 @@
 import "dotenv/config";
 import chatHandler from "./api/chat";
+import ttsHandler from "./api/tts";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
@@ -838,6 +839,11 @@ async function startServer() {
   // Chat API route for local development
   app.all("/api/chat", (req, res) => {
     return chatHandler(req, res);
+  });
+
+  // Edge-TTS Neural Voice synthesis route
+  app.all("/api/tts", (req, res) => {
+    return ttsHandler(req, res);
   });
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

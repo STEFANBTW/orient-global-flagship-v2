@@ -2035,16 +2035,35 @@ const ChatBot: React.FC = () => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isTyping]);
 
-  // Refined Text-to-Speech (Speaks ORA's replies)
-  const speakText = (text: string) => {
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const audioAbortControllerRef = useRef<AbortController | null>(null);
+
+  const stopSpeaking = () => {
+    if (audioAbortControllerRef.current) {
+      audioAbortControllerRef.current.abort();
+      audioAbortControllerRef.current = null;
+    }
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current.src = '';
+      audioElementRef.current = null;
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+    };
+  }, []);
+
+  const fallbackSpeechSynthesis = (cleanText: string) => {
     if (!isVoiceOutputEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
-      const clean = text
-        .replace(/[*_#`~]/g, '')
-        .replace(/https?:\/\/\S+/g, '')
-        .replace(/₦/g, 'Naira ');
-      const utterance = new SpeechSynthesisUtterance(clean);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
       const voices = window.speechSynthesis.getVoices();
@@ -2054,6 +2073,65 @@ const ChatBot: React.FC = () => {
     } catch (e) {
       console.warn('Speech synthesis error:', e);
     }
+  };
+
+  // High-Definition Neural Speech using Edge-TTS (Microsoft Azure Neural en-US-ChristopherNeural)
+  const speakText = async (text: string) => {
+    if (!isVoiceOutputEnabled) return;
+
+    // Immediately stop any existing speech playback
+    stopSpeaking();
+
+    const clean = text
+      .replace(/[*_#`~>]/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/₦/g, ' Naira ')
+      .trim();
+
+    if (!clean) return;
+
+    // 1. Try Microsoft Edge-TTS Neural Voice via serverless endpoint
+    try {
+      const controller = new AbortController();
+      audioAbortControllerRef.current = controller;
+
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: clean,
+          voice: 'en-US-ChristopherNeural'
+        }),
+        signal: controller.signal
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audioElementRef.current = audio;
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          if (audioElementRef.current === audio) audioElementRef.current = null;
+        };
+
+        audio.onerror = () => {
+          URL.revokeObjectURL(audioUrl);
+          fallbackSpeechSynthesis(clean);
+        };
+
+        await audio.play();
+        return;
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') return; // Deliberate user cancellation/interruption
+      console.warn('Edge-TTS playback error, trying client fallback:', err);
+    }
+
+    // 2. Client browser fallback if network or endpoint unavailable
+    fallbackSpeechSynthesis(clean);
   };
 
   // Autonomous Navigation Helper
@@ -2416,10 +2494,11 @@ Use navigateToSection when user wants to see sections.`,
                   {/* Voice Output Toggle (Mute/Unmute) */}
                   <button 
                     onClick={() => {
-                      setIsVoiceOutputEnabled(prev => !prev);
-                      if (isVoiceOutputEnabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                        window.speechSynthesis.cancel();
-                      }
+                      setIsVoiceOutputEnabled(prev => {
+                        const next = !prev;
+                        if (!next) stopSpeaking();
+                        return next;
+                      });
                     }} 
                     className='ai-chat-tool-btn'
                     title={isVoiceOutputEnabled ? 'Voice response enabled (Click to mute)' : 'Voice response muted (Click to enable)'}
@@ -2427,7 +2506,14 @@ Use navigateToSection when user wants to see sections.`,
                     {isVoiceOutputEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
                   </button>
 
-                  <button onClick={() => setIsOpen(false)} className='ai-chat-close-button' title='Close'>
+                  <button 
+                    onClick={() => {
+                      stopSpeaking();
+                      setIsOpen(false);
+                    }} 
+                    className='ai-chat-close-button' 
+                    title='Close'
+                  >
                     <X size={18} />
                   </button>
                 </div>
