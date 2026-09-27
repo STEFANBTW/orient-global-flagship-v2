@@ -2035,7 +2035,7 @@ const ChatBot: React.FC = () => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isTyping]);
 
-  // Refined Text-to-Speech (Speaks AURA's replies)
+  // Refined Text-to-Speech (Speaks ORA's replies)
   const speakText = (text: string) => {
     if (!isVoiceOutputEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
@@ -2109,7 +2109,7 @@ const ChatBot: React.FC = () => {
         customerPhone: activeUser?.phone || '+234 800 000 0000',
         tableNumber: orderData.tableNumber || 'VIP Table 4',
         shippingAddress: orderData.deliveryAddress || 'Amada Plaza, Rayfield, Jos',
-        notes: orderData.notes || 'Placed via AURA AI Concierge',
+        notes: orderData.notes || 'Placed via ORA AI Concierge',
         division: 'dining',
         items: orderData.items.map(it => ({
           id: it.id || `PRD-D-${Math.floor(Math.random() * 20 + 1).toString().padStart(3, '0')}`,
@@ -2262,7 +2262,7 @@ const ChatBot: React.FC = () => {
             model: 'gemini-2.5-flash',
             contents: { parts },
             config: {
-              systemInstruction: `You are AURA, Orient Luxury AI Concierge for Orient Global Flagship in Jos.
+              systemInstruction: `You are ORA, Orient Luxury AI Concierge for Orient Global Flagship in Jos.
 Full Menu:
 Proteins: Peppered & Grilled Beef (₦10), Spiced Chicken (₦10), Peppered Pork Chops (₦10), Goat Meat & Catfish Platter (₦10).
 Rice: Smoky Jollof (₦10), Fried Rice (₦10), White Rice Ayamase (₦10), Coconut Rice (₦10).
@@ -2387,15 +2387,8 @@ Use navigateToSection when user wants to see sections.`,
     }
   };
 
-  const chatbotVars = {
-    '--cb-fg': 'var(--color-foreground)',
-    '--cb-muted': 'var(--color-muted-foreground)',
-    '--cb-primary': 'var(--color-primary)',
-    '--cb-border': 'var(--color-border)',
-  } as React.CSSProperties;
-
   return (
-    <div className='fixed bottom-[4.5rem] right-4 sm:bottom-4 sm:right-12 z-[2000]' style={chatbotVars}>
+    <div className='ai-chat-container'>
       <AnimatePresence>
         {isOpen && (
           <>
@@ -2411,20 +2404,19 @@ Use navigateToSection when user wants to see sections.`,
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className='absolute bottom-0 right-0 w-[90vw] sm:w-[380px] max-h-[85vh] h-[85vh] rounded-[1.75rem] shadow-[0_30px_90px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden bg-card/95 backdrop-blur-[50px] border border-border'
+              className='ai-chat-window'
             >
               {/* Header */}
-              <div className='px-5 py-3.5 flex items-center justify-between bg-surface/80 border-b border-border'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary border border-primary/30 shadow-inner'>
-                    <Sparkles size={18} />
+              <div className='ai-chat-header'>
+                <div className='flex items-center gap-2.5'>
+                  <div className='w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center text-primary border border-primary/30'>
+                    <Sparkles size={14} />
                   </div>
                   <div>
-                    <h4 className='text-foreground font-black uppercase tracking-tight text-xs sm:text-sm leading-none flex items-center gap-1.5'>
-                      AURA Concierge
-                      <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse' />
+                    <h4 className='ai-chat-header-title flex items-center gap-1.5'>
+                      ORA
+                      <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' />
                     </h4>
-                    <p className='text-muted-foreground text-[10px] font-medium tracking-wide mt-0.5'>Orient Global Flagship</p>
                   </div>
                 </div>
                 
@@ -2437,26 +2429,26 @@ Use navigateToSection when user wants to see sections.`,
                         window.speechSynthesis.cancel();
                       }
                     }} 
-                    className={`p-1.5 rounded-lg transition-colors hover:bg-muted ${isVoiceOutputEnabled ? 'text-primary' : 'text-muted-foreground'}`}
+                    className='ai-chat-tool-btn'
                     title={isVoiceOutputEnabled ? 'Voice response enabled (Click to mute)' : 'Voice response muted (Click to enable)'}
                   >
                     {isVoiceOutputEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
                   </button>
 
-                  <button onClick={() => setIsOpen(false)} className='text-muted-foreground hover:text-foreground transition-colors p-1.5 hover:bg-muted rounded-lg'>
+                  <button onClick={() => setIsOpen(false)} className='ai-chat-close-button' title='Close'>
                     <X size={18} />
                   </button>
                 </div>
               </div>
 
               {/* Chat Area */}
-              <div ref={scrollRef} className='flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-hide'>
+              <div ref={scrollRef} className='ai-chat-body'>
                 {messages.length === 0 && (
-                  <div className='bg-primary/10 border border-primary/20 p-4 rounded-2xl rounded-tl-none self-start max-w-[95%] shadow-sm'>
-                    <p className='text-foreground text-xs leading-relaxed font-medium'>
-                      "Welcome to Orient Global Flagship. I am AURA, your luxury concierge. Ask me anything about our restaurant menu, speak directly to place an order, or explore our divisions."
+                  <div className='ai-chat-welcome-banner'>
+                    <p>
+                      "Welcome to Orient Global Flagship. I am ORA, your luxury concierge. Ask me anything about our restaurant menu, speak directly to place an order, or explore our divisions."
                     </p>
-                    <div className='mt-3 flex flex-wrap gap-1.5'>
+                    <div className='mt-2.5 flex flex-wrap gap-1.5'>
                       <button 
                         onClick={() => handleSend("What is on the restaurant menu today?")}
                         className='text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-primary hover:text-white transition-all px-2.5 py-1 rounded-full border border-border shadow-xs'
@@ -2480,94 +2472,90 @@ Use navigateToSection when user wants to see sections.`,
                 )}
 
                 {messages.map((m, i) => (
-                  <div key={m.id || i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className='max-w-[92%] space-y-2'>
-                      <div className={`p-3.5 rounded-2xl text-[12.5px] leading-relaxed font-medium shadow-xs border ${m.role === 'user' 
-                        ? 'bg-primary text-primary-foreground rounded-br-none border-primary' 
-                        : 'bg-muted/70 border-border text-foreground rounded-bl-none'}`}>
-                        <div className='whitespace-pre-wrap'>{m.text}</div>
-                        
-                        {m.images && m.images.length > 0 && (
-                          <div className='grid grid-cols-2 gap-1.5 mt-2'>
-                            {m.images.map((img, idx) => (
-                              <img key={idx} src={img} className='rounded-lg w-full h-20 object-cover shadow-sm' alt='Attached' referrerPolicy='no-referrer' />
+                  <div key={m.id || i} className={'ai-chat-msg-row ' + (m.role === 'user' ? 'user' : 'bot')}>
+                    <div className='ai-chat-bubble'>
+                      <div className='whitespace-pre-wrap'>{m.text}</div>
+                      
+                      {m.images && m.images.length > 0 && (
+                        <div className='ai-chat-msg-images'>
+                          {m.images.map((img, idx) => (
+                            <img key={idx} src={img} alt='Attached' referrerPolicy='no-referrer' />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Interactive Order Confirmation Card */}
+                      {m.orderDraft && !m.orderDraft.confirmed && (
+                        <div className='mt-2.5 p-3 rounded-xl bg-card border border-primary/30 shadow-md text-foreground'>
+                          <div className='flex items-center justify-between pb-2 border-b border-border mb-2'>
+                            <div className='flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary'>
+                              <ChefHat size={14} />
+                              <span>Order Summary</span>
+                            </div>
+                            <span className='text-[10px] bg-primary/20 text-primary font-bold px-2 py-0.5 rounded-full'>
+                              Confirm Stage
+                            </span>
+                          </div>
+
+                          <div className='space-y-1 text-xs mb-2.5'>
+                            {m.orderDraft.items.map((item, itemIdx) => (
+                              <div key={itemIdx} className='flex items-center justify-between text-muted-foreground'>
+                                <span>{item.quantity}× <span className='text-foreground font-semibold'>{item.name}</span></span>
+                                <span className='font-mono font-bold text-foreground'>₦{(item.price || 10) * item.quantity}</span>
+                              </div>
                             ))}
-                          </div>
-                        )}
-
-                        {/* Interactive Order Confirmation Card */}
-                        {m.orderDraft && !m.orderDraft.confirmed && (
-                          <div className='mt-3 p-3 rounded-xl bg-card border border-primary/30 shadow-md text-foreground'>
-                            <div className='flex items-center justify-between pb-2 border-b border-border mb-2.5'>
-                              <div className='flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-primary'>
-                                <ChefHat size={14} />
-                                <span>Order Summary</span>
-                              </div>
-                              <span className='text-[10px] bg-primary/20 text-primary font-bold px-2 py-0.5 rounded-full'>
-                                Confirm Stage
-                              </span>
-                            </div>
-
-                            <div className='space-y-1.5 text-xs mb-3'>
-                              {m.orderDraft.items.map((item, itemIdx) => (
-                                <div key={itemIdx} className='flex items-center justify-between text-muted-foreground'>
-                                  <span>{item.quantity}× <span className='text-foreground font-semibold'>{item.name}</span></span>
-                                  <span className='font-mono font-bold text-foreground'>₦{(item.price || 10) * item.quantity}</span>
-                                </div>
-                              ))}
-                              <div className='pt-2 border-t border-border flex items-center justify-between font-bold text-foreground text-sm'>
-                                <span>Total Amount:</span>
-                                <span className='font-mono text-primary'>₦{m.orderDraft.totalAmount}</span>
-                              </div>
-                            </div>
-
-                            <div className='flex items-center gap-2 pt-1'>
-                              <button
-                                onClick={() => executeOrderPlacement(m.orderDraft!, i)}
-                                className='flex-1 py-2 px-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5'
-                              >
-                                <CheckCircle2 size={14} />
-                                <span>Confirm & Place Order</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setPendingOrder(null);
-                                  setMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, orderDraft: undefined } : msg));
-                                }}
-                                className='py-2 px-3 rounded-xl border border-border hover:bg-muted text-xs text-muted-foreground font-bold transition-all'
-                              >
-                                Cancel
-                              </button>
+                            <div className='pt-1.5 border-t border-border flex items-center justify-between font-bold text-foreground text-xs sm:text-sm'>
+                              <span>Total Amount:</span>
+                              <span className='font-mono text-primary'>₦{m.orderDraft.totalAmount}</span>
                             </div>
                           </div>
-                        )}
 
-                        {/* Order Confirmed Badge */}
-                        {m.orderDraft && m.orderDraft.confirmed && (
-                          <div className='mt-2.5 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2'>
-                            <div className='flex items-center gap-2 text-emerald-500'>
-                              <CheckCircle2 size={16} />
-                              <span className='text-xs font-bold'>Order #{m.orderDraft.orderId || 'CONFIRMED'} Dispatched</span>
-                            </div>
+                          <div className='flex items-center gap-2 pt-1'>
                             <button
-                              onClick={() => window.dispatchEvent(new CustomEvent('orient:open-order'))}
-                              className='text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2 py-1 rounded-lg hover:bg-emerald-600 transition-all'
+                              onClick={() => executeOrderPlacement(m.orderDraft!, i)}
+                              className='flex-1 py-1.5 px-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5'
                             >
-                              Track
+                              <CheckCircle2 size={13} />
+                              <span>Confirm & Place Order</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPendingOrder(null);
+                                setMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, orderDraft: undefined } : msg));
+                              }}
+                              className='py-1.5 px-2.5 rounded-lg border border-border hover:bg-muted text-xs text-muted-foreground font-bold transition-all'
+                            >
+                              Cancel
                             </button>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
+
+                      {/* Order Confirmed Badge */}
+                      {m.orderDraft && m.orderDraft.confirmed && (
+                        <div className='mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2'>
+                          <div className='flex items-center gap-1.5 text-emerald-500'>
+                            <CheckCircle2 size={15} />
+                            <span className='text-[11px] sm:text-xs font-bold'>Order #{m.orderDraft.orderId || 'CONFIRMED'} Dispatched</span>
+                          </div>
+                          <button
+                            onClick={() => window.dispatchEvent(new CustomEvent('orient:open-order'))}
+                            className='text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2 py-0.5 rounded-md hover:bg-emerald-600 transition-all'
+                          >
+                            Track
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
 
                 {isTyping && (
-                  <div className='flex justify-start'>
-                    <div className='bg-muted/70 border border-border p-3 rounded-2xl rounded-bl-none flex items-center gap-1.5 shadow-xs'>
-                      <span className='w-1.5 h-1.5 bg-primary rounded-full animate-bounce' />
-                      <span className='w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]' />
-                      <span className='w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]' />
+                  <div className='ai-chat-typing'>
+                    <div className='ai-chat-typing-box'>
+                      <span className='ai-chat-typing-dot' />
+                      <span className='ai-chat-typing-dot' />
+                      <span className='ai-chat-typing-dot' />
                     </div>
                   </div>
                 )}
@@ -2575,10 +2563,10 @@ Use navigateToSection when user wants to see sections.`,
 
               {/* Voice Listening Banner */}
               {isRecording && (
-                <div className='px-4 py-2 bg-red-500/15 border-t border-red-500/20 flex items-center justify-between'>
+                <div className='px-4 py-1.5 bg-red-500/15 border-t border-red-500/20 flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <span className='w-2 h-2 rounded-full bg-red-500 animate-ping' />
-                    <span className='text-xs font-bold text-red-500 tracking-wide'>Listening to your voice... Speak now</span>
+                    <span className='text-[11px] font-bold text-red-500 tracking-wide'>Listening to your voice... Speak now</span>
                   </div>
                   <button 
                     onClick={() => {
@@ -2594,13 +2582,13 @@ Use navigateToSection when user wants to see sections.`,
 
               {/* Attached Images Preview */}
               {attachedImages.length > 0 && (
-                <div className='px-4 py-2 flex gap-1.5 overflow-x-auto bg-muted/30 border-t border-border scrollbar-hide'>
+                <div className='ai-chat-attachments-tray'>
                   {attachedImages.map((img, idx) => (
-                    <div key={idx} className='relative flex-shrink-0 group'>
-                      <img src={img} className='w-10 h-10 rounded-lg object-cover border border-border' alt='Preview' referrerPolicy='no-referrer' />
+                    <div key={idx} className='ai-chat-attachment-thumb'>
+                      <img src={img} alt='Preview' referrerPolicy='no-referrer' />
                       <button 
                         onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
-                        className='absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-sm scale-75'
+                        className='ai-chat-attachment-delete'
                       >
                         <X size={10} />
                       </button>
@@ -2610,8 +2598,8 @@ Use navigateToSection when user wants to see sections.`,
               )}
 
               {/* Input Area */}
-              <div className='p-3.5 pt-1.5 bg-surface/50 border-t border-border'>
-                <div className='flex items-center gap-1.5 bg-muted/60 rounded-xl border border-border px-3 py-2 focus-within:border-primary/50 transition-all relative'>
+              <div className='ai-chat-input-container'>
+                <div className='ai-chat-input-bar'>
                   <input 
                     type='file' 
                     ref={fileInputRef} 
@@ -2622,15 +2610,15 @@ Use navigateToSection when user wants to see sections.`,
                   />
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className='p-1.5 text-muted-foreground hover:text-primary transition-colors hover:bg-background/50 rounded-lg'
+                    className='ai-chat-tool-btn'
                     title='Attach image'
                   >
                     <Paperclip size={16} />
                   </button>
                   <button 
                     onClick={startVoiceInput}
-                    className={`p-1.5 transition-all rounded-lg ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-muted-foreground hover:text-primary hover:bg-background/50'}`}
-                    title='Talk to AURA (Voice input)'
+                    className={'ai-chat-tool-btn ' + (isRecording ? 'recording' : '')}
+                    title='Talk to ORA (Voice input)'
                   >
                     <Mic size={16} />
                   </button>
@@ -2638,13 +2626,14 @@ Use navigateToSection when user wants to see sections.`,
                     value={input} 
                     onChange={(e) => setInput(e.target.value)} 
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
-                    placeholder={isRecording ? 'Listening...' : 'Type or speak to order...'} 
-                    className='bg-transparent border-none focus:ring-0 text-foreground text-xs flex-1 placeholder:text-muted-foreground font-medium py-1 focus:outline-none' 
+                    placeholder={isRecording ? 'Listening...' : 'Ask ORA or speak to order...'} 
+                    className='ai-chat-text-input' 
                   />
                   <button 
                     onClick={() => handleSend()} 
                     disabled={!input.trim() && attachedImages.length === 0}
-                    className='w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-all disabled:opacity-40 disabled:hover:bg-primary shadow-xs'
+                    className='ai-chat-send-btn'
+                    title='Send'
                   >
                     <ArrowRight size={15} strokeWidth={2.5} />
                   </button>
@@ -2663,11 +2652,10 @@ Use navigateToSection when user wants to see sections.`,
             whileHover={{ scale: 1.05 }} 
             whileTap={{ scale: 0.95 }} 
             onClick={() => setIsOpen(true)} 
-            className='w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-500 overflow-hidden relative shadow-[0_15px_45px_rgba(242,158,13,0.35)] text-stone-900 bg-primary group'
+            className='ai-chat-icon-button'
+            aria-label="Open ORA AI Concierge"
           >
-            <motion.div key='bot' initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} className='flex flex-col items-center text-primary-foreground'>
-              <Sparkles size={24} className='group-hover:rotate-12 transition-transform duration-300' />
-            </motion.div>
+            <span className='ai-chat-icon-text select-none'>ORA</span>
           </motion.button>
         )}
       </AnimatePresence>

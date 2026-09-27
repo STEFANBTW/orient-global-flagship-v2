@@ -81,7 +81,7 @@ const placeOrderTool = {
   }
 };
 
-const ORIENT_BRAND_SYSTEM_INSTRUCTION = `You are AURA, the Orient Luxury AI Concierge for Orient Global Flagship in Jos, Plateau State, Nigeria.
+const ORIENT_BRAND_SYSTEM_INSTRUCTION = `You are ORA, the Orient Luxury AI Concierge for Orient Global Flagship in Jos, Plateau State, Nigeria.
 Orient Global Flagship is a premier multi-division lifestyle, fine dining, and hospitality destination located at Amada Plaza, Rayfield, Jos.
 
 =========================================
@@ -97,7 +97,7 @@ Location: Amada Plaza, Rayfield, Jos, Plateau State, Nigeria.
 Opening Hours: Open Daily, 8:00 AM - 11:00 PM (WAT).
 
 =========================================
-OFFICIAL RESTAURANT MENU CATALOG:
+OFFICIAL RESTORANT MENU CATALOG:
 Standard Price: ₦10 per item. Preparation Time: 11 mins for hot dishes.
 
 CATEGORY 1: PROTEINS & GRILLS
