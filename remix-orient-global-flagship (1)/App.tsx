@@ -2002,7 +2002,13 @@ const VoicesSection: React.FC = () => {
 };
 
 
-const ChatBot: React.FC = () => {
+interface ChatBotProps {
+  currentView?: string;
+  setCurrentView?: (view: any) => void;
+  setDiningView?: (view: any) => void;
+}
+
+const ChatBot: React.FC<ChatBotProps> = ({ currentView, setCurrentView, setDiningView }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Array<{
     id?: string;
@@ -2053,9 +2059,25 @@ const ChatBot: React.FC = () => {
     }
   };
 
+  const stopVoiceInput = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+    setIsRecording(false);
+  };
+
+  const handleCloseModal = () => {
+    stopSpeaking();
+    stopVoiceInput();
+    setIsOpen(false);
+  };
+
   useEffect(() => {
     return () => {
       stopSpeaking();
+      stopVoiceInput();
     };
   }, []);
 
@@ -2075,7 +2097,7 @@ const ChatBot: React.FC = () => {
     }
   };
 
-  // High-Definition Neural Speech using Edge-TTS (Microsoft Azure Neural en-US-ChristopherNeural)
+  // High-Definition Neural Speech using Edge-TTS (Microsoft Azure Neural en-US-AriaNeural)
   const speakText = async (text: string) => {
     if (!isVoiceOutputEnabled) return;
 
@@ -2101,7 +2123,7 @@ const ChatBot: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: clean,
-          voice: 'en-US-ChristopherNeural'
+          voice: 'en-US-AriaNeural'
         }),
         signal: controller.signal
       });
@@ -2138,9 +2160,13 @@ const ChatBot: React.FC = () => {
   const executeNav = (sectionId: string) => {
     const s = (sectionId || '').toLowerCase();
     if (s.includes('dining') || s.includes('restaurant') || s.includes('menu')) {
+      if (setCurrentView) setCurrentView('dining');
+      if (setDiningView) setDiningView('menu');
       window.dispatchEvent(new CustomEvent('orient:navigate-dining', { detail: { sectionId: 'menu' } }));
-      const el = document.getElementById('dining') || document.getElementById('restaurant') || document.getElementById('menu');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+        const el = document.getElementById('menu-catalog') || document.getElementById('dining') || document.getElementById('restaurant');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
       const navMsg = 'Certainly. Navigating you to the Orient Dining Menu.';
       setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
       speakText(navMsg);
@@ -2150,23 +2176,59 @@ const ChatBot: React.FC = () => {
       setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
       speakText(navMsg);
     } else if (s.includes('bakery')) {
-      const el = document.getElementById('bakery');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      if (setCurrentView) setCurrentView('bakery');
+      setTimeout(() => {
+        const el = document.getElementById('bakery') || document.getElementById('bakery-deep');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
       const navMsg = 'Navigating you to Orient Artisanal Bakery.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('supermarket') || s.includes('market')) {
+      if (setCurrentView) setCurrentView('supermarket');
+      setTimeout(() => {
+        const el = document.getElementById('market-deep') || document.getElementById('supermarket');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+      const navMsg = 'Navigating you to Orient Supermarket & Fresh Grocery.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('game') || s.includes('esport')) {
+      if (setCurrentView) setCurrentView('games');
+      const navMsg = 'Navigating you to the Orient Gaming Arena.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('water')) {
+      if (setCurrentView) setCurrentView('water');
+      const navMsg = 'Navigating you to Orient Atmospheric Water & Wellness.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('lounge') || s.includes('cellar')) {
+      if (setCurrentView) setCurrentView('lounge');
+      const navMsg = 'Navigating you to Orient Luxury Lounge & VIP Cellar.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('about')) {
+      if (setCurrentView) setCurrentView('about');
+      const navMsg = 'Navigating you to About Orient Global Flagship.';
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
+    } else if (s.includes('home') || s.includes('hero')) {
+      if (setCurrentView) setCurrentView('home');
+      setTimeout(() => {
+        document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 200);
+      const navMsg = 'Navigating you to the Orient Global homepage.';
       setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
       speakText(navMsg);
     } else {
       const el = document.getElementById(sectionId);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
-        const navMsg = `Navigating you to the ${sectionId} section.`;
-        setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
-        speakText(navMsg);
-      } else {
-        const navMsg = `Navigating you to ${sectionId}.`;
-        setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
-        speakText(navMsg);
       }
+      const navMsg = `Navigating you to the ${sectionId} section.`;
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'bot', text: navMsg }]);
+      speakText(navMsg);
     }
   };
 
@@ -2430,12 +2492,12 @@ Use navigateToSection when user wants to see sections.`,
     }
 
     if (isRecording) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsRecording(false);
+      stopVoiceInput();
       return;
     }
+
+    // Stop speaking immediately when user activates mic
+    stopSpeaking();
 
     try {
       const recognition = new SpeechRecognition();
@@ -2476,7 +2538,7 @@ Use navigateToSection when user wants to see sections.`,
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
                className="fixed inset-0 z-[-1]"
-               onClick={() => setIsOpen(false)}
+               onClick={handleCloseModal}
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
@@ -2507,10 +2569,7 @@ Use navigateToSection when user wants to see sections.`,
                   </button>
 
                   <button 
-                    onClick={() => {
-                      stopSpeaking();
-                      setIsOpen(false);
-                    }} 
+                    onClick={handleCloseModal} 
                     className='ai-chat-close-button' 
                     title='Close'
                   >
@@ -2619,25 +2678,6 @@ Use navigateToSection when user wants to see sections.`,
                 )}
               </div>
 
-              {/* Voice Listening Banner */}
-              {isRecording && (
-                <div className='px-4 py-1.5 bg-red-500/15 border-t border-red-500/20 flex items-center justify-between'>
-                  <div className='flex items-center gap-2'>
-                    <span className='w-2 h-2 rounded-full bg-red-500 animate-ping' />
-                    <span className='text-[11px] font-bold text-red-500 tracking-wide'>Listening to your voice... Speak now</span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      if (recognitionRef.current) recognitionRef.current.stop();
-                      setIsRecording(false);
-                    }}
-                    className='text-[10px] uppercase font-bold text-muted-foreground hover:text-foreground'
-                  >
-                    Done
-                  </button>
-                </div>
-              )}
-
               {/* Attached Images Preview */}
               {attachedImages.length > 0 && (
                 <div className='ai-chat-attachments-tray'>
@@ -2657,49 +2697,76 @@ Use navigateToSection when user wants to see sections.`,
 
               {/* Input Area */}
               <div className='ai-chat-input-container'>
-                <div className='ai-chat-input-bar'>
-                  <input 
-                    type='file' 
-                    ref={fileInputRef} 
-                    className='hidden' 
-                    accept='image/*' 
-                    multiple 
-                    onChange={handleImageUpload} 
-                  />
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className='ai-chat-tool-btn'
-                    title='Attach image'
-                  >
-                    <Paperclip size={16} />
-                  </button>
-                  <button 
-                    onClick={startVoiceInput}
-                    className={'ai-chat-tool-btn ' + (isRecording ? 'recording' : '')}
-                    title='Talk to ORA (Voice input)'
-                  >
-                    <Mic size={16} />
-                  </button>
-                  <input 
-                    value={input} 
-                    onChange={(e) => setInput(e.target.value)} 
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
-                    placeholder={isRecording ? 'Listening...' : 'Ask ORA or speak to order...'} 
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                    className='ai-chat-text-input focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ring-0 outline-none border-none shadow-none' 
-                  />
-                  <button 
-                    onClick={() => handleSend()} 
-                    disabled={!input.trim() && attachedImages.length === 0}
-                    className='ai-chat-send-btn'
-                    title='Send'
-                  >
-                    <ArrowRight size={15} strokeWidth={2.5} />
-                  </button>
-                </div>
+                {isRecording ? (
+                  <div className='ai-chat-listening-container'>
+                    <div className='ai-chat-mic-pulse-wrapper'>
+                      <div className='ai-chat-mic-wave' />
+                      <div className='ai-chat-mic-wave' />
+                      <div className='ai-chat-mic-wave' />
+                      <button 
+                        onClick={stopVoiceInput}
+                        className='ai-chat-mic-center-btn'
+                        title='Listening to your voice... Tap to switch back to keyboard'
+                      >
+                        <Mic size={26} />
+                      </button>
+                    </div>
+                    <div className='ai-chat-listening-status'>
+                      <span className='w-2 h-2 rounded-full bg-primary animate-ping' />
+                      <span className='ai-chat-listening-label'>Listening to your voice...</span>
+                    </div>
+                    <button 
+                      onClick={stopVoiceInput}
+                      className='ai-chat-switch-text-btn'
+                    >
+                      Tap microphone or click here to switch to keyboard
+                    </button>
+                  </div>
+                ) : (
+                  <div className='ai-chat-input-bar'>
+                    <input 
+                      type='file' 
+                      ref={fileInputRef} 
+                      className='hidden' 
+                      accept='image/*' 
+                      multiple 
+                      onChange={handleImageUpload} 
+                    />
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className='ai-chat-tool-btn'
+                      title='Attach image'
+                    >
+                      <Paperclip size={16} />
+                    </button>
+                    <button 
+                      onClick={startVoiceInput}
+                      className='ai-chat-tool-btn'
+                      title='Talk to ORA (Voice input)'
+                    >
+                      <Mic size={16} />
+                    </button>
+                    <input 
+                      value={input} 
+                      onChange={(e) => setInput(e.target.value)} 
+                      onKeyDown={(e) => e.key === 'Enter' && handleSend()} 
+                      placeholder='Ask ORA or speak to order...' 
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      className='ai-chat-text-input focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ring-0 outline-none border-none shadow-none' 
+                    />
+                    <button 
+                      onClick={() => handleSend()} 
+                      disabled={!input.trim() && attachedImages.length === 0}
+                      className='ai-chat-send-btn'
+                      title='Send'
+                    >
+                      <ArrowRight size={15} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
@@ -3338,7 +3405,7 @@ const App: React.FC = () => {
  </div>
  )}
  </ScrollContext.Provider>
- <ChatBot />
+ <ChatBot currentView={currentView} setCurrentView={setCurrentView} setDiningView={setDiningView} />
  <QuickOrderModal isOpen={isGlobalOrderOpen} onClose={() => setIsGlobalOrderOpen(false)} />
  </div>
  </div>

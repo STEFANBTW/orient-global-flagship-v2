@@ -9,7 +9,7 @@ export const AVAILABLE_VOICES = {
   'ryan': 'en-GB-RyanNeural'                // Polite British male concierge
 };
 
-export const DEFAULT_VOICE = 'en-US-ChristopherNeural';
+export const DEFAULT_VOICE = 'en-US-AriaNeural';
 
 /**
  * Clean text for natural speech synthesis
@@ -40,32 +40,54 @@ export async function synthesizeSpeech(
     throw new Error('No readable text provided for speech synthesis');
   }
 
-  const tts = new MsEdgeTTS();
   const selectedVoice = (AVAILABLE_VOICES as any)[voice.toLowerCase()] || voice || DEFAULT_VOICE;
 
-  await tts.setMetadata(selectedVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-  
-  const { audioStream } = await tts.toStream(cleanText, {
-    rate: options.rate ? (typeof options.rate === 'number' ? `${options.rate > 0 ? '+' : ''}${Math.round(options.rate * 100)}%` : options.rate) : undefined,
-    pitch: options.pitch
-  });
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const tts = new MsEdgeTTS();
+      await tts.setMetadata(selectedVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+      
+      const { audioStream } = await tts.toStream(cleanText, {
+        rate: options.rate ? (typeof options.rate === 'number' ? `${options.rate > 0 ? '+' : ''}${Math.round(options.rate * 100)}%` : options.rate) : undefined,
+        pitch: options.pitch
+      });
 
-  return new Promise<Buffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    audioStream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    audioStream.on('close', () => {
-      if (chunks.length > 0) resolve(Buffer.concat(chunks));
-      else reject(new Error('Audio stream closed without data'));
-    });
-    audioStream.on('end', () => {
-      if (chunks.length > 0) resolve(Buffer.concat(chunks));
-      else reject(new Error('Audio stream ended without data'));
-    });
-    audioStream.on('error', (err) => {
-      if (chunks.length > 0) resolve(Buffer.concat(chunks));
-      else reject(err);
-    });
-  });
+      return await new Promise<Buffer>((resolve, reject) => {
+        let finished = false;
+        const chunks: Buffer[] = [];
+        audioStream.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+        const complete = () => {
+          if (finished) return;
+          finished = true;
+          if (chunks.length > 0) {
+            resolve(Buffer.concat(chunks));
+          } else {
+            reject(new Error('Audio stream closed without data'));
+          }
+        };
+
+        audioStream.on('end', complete);
+        audioStream.on('close', complete);
+        audioStream.on('error', (err) => {
+          if (finished) return;
+          if (chunks.length > 0) {
+            finished = true;
+            resolve(Buffer.concat(chunks));
+          } else {
+            finished = true;
+            reject(err);
+          }
+        });
+      });
+    } catch (e: any) {
+      lastError = e;
+      await new Promise(r => setTimeout(r, 250));
+    }
+  }
+
+  throw lastError || new Error('Speech synthesis failed after retries');
 }
 
 /**
