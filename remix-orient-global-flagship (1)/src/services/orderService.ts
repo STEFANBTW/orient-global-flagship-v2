@@ -498,6 +498,13 @@ export const orderService = {
       safeStorage.setItem('orient_last_user_order', JSON.stringify(updatedOrder));
     } catch (e) {}
 
+    // Automatically update status to 'Cooking' in Google Sheet (Zero typing needed)
+    try {
+      sheetsSync.updateOrderStatusInSheet(orderId, 'Cooking', { confirmedTime: nowIso });
+    } catch (e) {
+      console.warn("Could not sync Cooking status to Google Sheet:", e);
+    }
+
     // Dispatch Notifications
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
@@ -666,6 +673,13 @@ export const orderService = {
       safeStorage.setItem('orient_last_user_order', JSON.stringify(updatedOrder));
     } catch (e) {}
 
+    // Automatically update status to 'Ready' in Google Sheet
+    try {
+      sheetsSync.updateOrderStatusInSheet(orderId, 'Ready', { readyTime: nowIso });
+    } catch (e) {
+      console.warn("Could not sync Ready status to Google Sheet:", e);
+    }
+
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
@@ -721,6 +735,16 @@ export const orderService = {
       safeStorage.setItem('orient_orders_cache', JSON.stringify(ordersCache));
       safeStorage.setItem('orient_last_user_order', JSON.stringify(updatedOrder));
     } catch (e) {}
+
+    // Automatically sync status to Google Sheet
+    try {
+      const timeObj = status === 'completed'
+        ? { completedTime: nowIso }
+        : (status === 'cooking' ? { confirmedTime: nowIso } : (status === 'ready' ? { readyTime: nowIso } : undefined));
+      sheetsSync.updateOrderStatusInSheet(orderId, status, timeObj);
+    } catch (e) {
+      console.warn("Could not sync status to Google Sheet:", e);
+    }
 
     if (status === 'completed') {
       const userNotif: AppNotification = {
@@ -779,6 +803,13 @@ export const orderService = {
       safeStorage.setItem('orient_orders_cache', JSON.stringify(ordersCache));
       safeStorage.setItem('orient_last_user_order', JSON.stringify(updatedOrder));
     } catch (e) {}
+
+    // Automatically update status to 'In Transit' in Google Sheet
+    try {
+      sheetsSync.updateOrderStatusInSheet(orderId, 'In Transit');
+    } catch (e) {
+      console.warn("Could not sync In Transit status to Google Sheet:", e);
+    }
 
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
