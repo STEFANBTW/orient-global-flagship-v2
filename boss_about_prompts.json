@@ -1,0 +1,55 @@
+{
+  "project_identity": {
+    "name": "Orient Global Boss Command Center (About Page)",
+    "version": "1.0.0",
+    "aesthetic_profile": "Prestige / Minimalist / Glassmorphism / Dark Mode",
+    "target_platform": "Full-Stack React + Node.js (Express) + Secure Boss Authentication"
+  },
+  "user_roles": {
+    "boss": {
+      "permissions": [
+        "Full control over 'About' page content",
+        "Direct publishing (No approval required)",
+        "Edit Company Vision & Mission",
+        "Manage Core Pillars (Excellence, Innovation, Community)",
+        "Update Corporate History & Contact Details",
+        "Modify Hero Typography & Visuals"
+      ],
+      "constraints": "Strictly restricted to the Boss account. No Staff or HOD access."
+    }
+  },
+  "data_models_to_control": {
+    "about_page_content": {
+      "hero_section": {
+        "main_heading": "String (e.g., 'BEYOND EXPECTATIONS')",
+        "sub_heading": "String",
+        "description_text": "Text",
+        "cta_button_text": "String"
+      },
+      "vision_mission": {
+        "vision_title": "String",
+        "vision_description": "Text",
+        "vision_image_url": "URL"
+      },
+      "core_pillars": [
+        {
+          "id": "UUID",
+          "title": "String (Excellence, Innovation, etc.)",
+          "description": "Text",
+          "icon": "Material Icon Name"
+        }
+      ],
+      "corporate_details": {
+        "address": "String",
+        "opening_hours": "String",
+        "contact_email": "String",
+        "contact_phone": "String"
+      },
+      "visual_assets": {
+        "background_patterns": "Array of URLs",
+        "gallery_images": "Array of URLs"
+      }
+    }
+  },
+  "ai_builder_master_prompt": "Build a 'Prestige' level administrative dashboard exclusively for the 'Boss' of Orient Global. This dashboard controls the 'About' page, which is the heart of the company's identity. The UI must be ultra-minimalist, using a 'Glassmorphism' aesthetic with a focus on high-end typography and spacious layouts.\n\n### MODULE 1: THE VISION EDITOR\n- A direct-edit interface for the 'About' page Hero section.\n- Real-time text editing for the 'BEYOND EXPECTATIONS' reveal typography.\n- A high-res image uploader for the 'Vision' showcase.\n\n### MODULE 2: CORE PILLARS MANAGER\n- A specialized tool to manage the company's core values (Excellence, Innovation, Community).\n- Allow the Boss to rewrite descriptions and swap icons for each pillar.\n\n### MODULE 3: CORPORATE FOOTPRINT\n- Manage the 'Ready to Experience It?' section at the bottom of the page.\n- Update the physical address, hours of operation, and contact information.\n\n### MODULE 4: BRAND ASSETS\n- A gallery manager to update the background patterns and textures used across the About page.\n\n### SECURITY & TECHNICAL REQUIREMENTS:\n- This dashboard must be linked directly to a secure 'Boss' login.\n- No approval workflow is required; all changes go LIVE immediately upon clicking 'Publish'.\n- Implement a 'History Log' so the Boss can revert to previous versions of the About page if needed.\n- React frontend with Tailwind CSS and Framer Motion for elegant entrance animations.\n- The 'Live Preview' must be persistent, showing the About page in a side-by-side view while editing."
+}

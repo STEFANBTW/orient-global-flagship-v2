@@ -1,0 +1,154 @@
+{
+  "document_title": "Orient Global - Comprehensive UI/UX Restructuring & CMS Architecture Master Plan",
+  "author": "Elite Web Solutions Expert (Lead UI/UX, Fullstack, Systems Architect)",
+  "date": "2026-03-04",
+  "executive_summary": "This document outlines a complete overhaul of the Orient Global web platform. It bridges a highly tailored, division-specific frontend aesthetic with a robust, centralized Fullstack CMS architecture. The goal is to transform the platform into a living, breathing digital ecosystem where each division (Bakery, Market, Dining, Games, Water, Lounge) possesses a unique layout density and design language, all powered by a seamless, weekly-updatable backend infrastructure.",
+  "objective_1_ui_ux_restructuring": {
+    "core_philosophy": {
+      "vision": "Intentional Pairings over Defaults. The UI will shift from a monolithic template to a multi-archetype system.",
+      "white_space_strategy": "Macro white space (between sections) will remain consistent to unify the brand, while micro white space (between elements) will scale dynamically based on the division's archetype.",
+      "typography_system": "A shared sans-serif (Inter) for utility, paired with division-specific display fonts (e.g., Playfair Display for Dining, JetBrains Mono for Games)."
+    },
+    "page_archetypes": [
+      {
+        "division": "Games",
+        "archetype": "Brutalist / Technical Dashboard",
+        "density": "High Density - Tightly packed, interactive, data-rich.",
+        "layout_strategy": [
+          "Grid-heavy layouts with visible borders (1px solid neon/accent colors).",
+          "Monospace typography for leaderboards, hardware specs, and live tournament brackets.",
+          "Hover-invert interactions and marquee animations for live updates.",
+          "Minimal padding (e.g., 0.5rem to 1rem) to maximize screen real estate for game catalogs and active player counts."
+        ],
+        "color_palette": "Deep blacks, cyber-cyan, neon-purple accents."
+      },
+      {
+        "division": "Water",
+        "archetype": "Atmospheric / Ultra-Minimalist",
+        "density": "Low Density - Highly breathable, airy, expansive.",
+        "layout_strategy": [
+          "Massive use of negative space. Elements should feel like they are floating.",
+          "Large, light-weight typography (e.g., 300 weight) to convey purity and clarity.",
+          "Soft, layered radial gradients and glassmorphism (backdrop-filter blur) to simulate water and transparency.",
+          "Generous padding (e.g., 4rem to 8rem) between sections to force a slow, calming scroll experience."
+        ],
+        "color_palette": "Pure whites, aero-whites, soft sky-blues, transparent overlays."
+      },
+      {
+        "division": "Dining",
+        "archetype": "Dark Luxury / Editorial",
+        "density": "Medium-Low Density - Focused, elegant, image-centric.",
+        "layout_strategy": [
+          "Split 50/50 layouts contrasting deep blacks with high-resolution, rich food photography.",
+          "Oversized, elegant serif typography (e.g., Cormorant Garamond) for menu categories and chef quotes.",
+          "Thin horizontal divider lines (1px rgba(255,255,255,0.2)) to separate menu items without visual clutter.",
+          "Subtle parallax effects on imagery to create depth."
+        ],
+        "color_palette": "Noir black, warm gold/primary accents, muted secondary text."
+      },
+      {
+        "division": "Bakery",
+        "archetype": "Warm Organic / Cultural",
+        "density": "Medium Density - Approachable, tactile, structured.",
+        "layout_strategy": [
+          "Pill-shaped imagery and large rounded corners (32px) to evoke softness and dough.",
+          "Warm off-white backgrounds to reduce eye strain and feel organic.",
+          "Card-based layouts with soft drop shadows for product displays.",
+          "Classic serif fonts mixed with clean sans-serif for product descriptions."
+        ],
+        "color_palette": "Warm off-whites, crust-browns, soft primary orange."
+      },
+      {
+        "division": "Market",
+        "archetype": "Clean Utility / Data Grid",
+        "density": "Medium-High Density - Scannable, functional, organized.",
+        "layout_strategy": [
+          "Strict bento-box or masonry grid layouts for product categories and daily deals.",
+          "System fonts for maximum legibility.",
+          "Clear visual hierarchy using font weights (bold prices, muted descriptions).",
+          "Sticky filtering sidebars and dense product cards to allow quick scanning of inventory."
+        ],
+        "color_palette": "Crisp whites, light grays, high-contrast black text."
+      },
+      {
+        "division": "Lounge",
+        "archetype": "Prestige / Immersive Media",
+        "density": "Medium Density - Exclusive, moody, experiential.",
+        "layout_strategy": [
+          "Full-bleed background videos or deeply blurred imagery.",
+          "Grid navigation with thin borders, feeling systematic yet high-end.",
+          "Vertical text elements (writing-mode: vertical-rl) for graphic sophistication.",
+          "Oval-masked images for VIP sections and signature cocktails."
+        ],
+        "color_palette": "Deep amber, velvet reds, pitch black."
+      }
+    ]
+  },
+  "objective_2_cms_architecture": {
+    "system_overview": "A decoupled architecture where the React/Vite frontend consumes a RESTful/GraphQL API served by a Node.js/Express backend. The Admin Dashboard acts as the central nervous system, pushing state to a managed database (e.g., PostgreSQL for structured data, MongoDB for flexible content blocks).",
+    "database_architecture": {
+      "core_concept": "Entity-Attribute-Value (EAV) mixed with JSONB columns to allow flexible, division-specific schemas without database migrations every week.",
+      "collections_tables": [
+        {
+          "name": "Divisions",
+          "fields": ["id", "name", "slug", "theme_config (JSON)", "active_status"]
+        },
+        {
+          "name": "ContentBlocks",
+          "fields": ["id", "division_id", "block_type (hero, gallery, menu, text)", "content_payload (JSONB)", "order_index", "published_at"]
+        },
+        {
+          "name": "MediaAssets",
+          "fields": ["id", "url", "alt_text", "division_id", "uploaded_by", "created_at"]
+        },
+        {
+          "name": "WeeklyUpdates",
+          "fields": ["id", "division_id", "title", "status (draft, pending_review, published)", "scheduled_for", "changeset (JSONB)"]
+        }
+      ]
+    },
+    "data_flow_and_crud": {
+      "create": "Admin uploads new menu items or hero images via the Dashboard. Media is piped directly to an S3 bucket/Cloudinary. The returned URL is saved in the `ContentBlocks` payload.",
+      "read": "Frontend components use React Query (or SWR) to fetch `ContentBlocks` by `division_id`. A Redis caching layer ensures high-speed delivery of the live site, invalidating only when a new weekly update is published.",
+      "update": "Admins edit JSON payloads via a visual block editor in the CMS. Changes are saved as a 'Draft' in `WeeklyUpdates`.",
+      "delete": "Soft-delete implementation. Records are marked `is_deleted: true` to maintain historical analytics and allow rollbacks."
+    },
+    "api_routing_structure": {
+      "public_api": [
+        "GET /api/v1/content/:division_slug - Fetches all active content blocks for a division.",
+        "GET /api/v1/menu/:division_slug - Fetches structured menu/product data.",
+        "GET /api/v1/announcements - Fetches global cross-division announcements."
+      ],
+      "admin_api_protected": [
+        "POST /api/admin/content - Create new content block.",
+        "PUT /api/admin/content/:id - Update existing block.",
+        "POST /api/admin/media/upload - Multipart form upload to CDN.",
+        "POST /api/admin/publish - Triggers cache invalidation and moves drafts to live."
+      ]
+    },
+    "weekly_update_workflow": {
+      "step_1_drafting": "Division managers log into the CMS and modify their specific sections (e.g., Bakery manager updates the 'Pastry of the Week').",
+      "step_2_preview": "The CMS generates a live, sandboxed preview URL using the exact frontend components, injecting the draft JSON payload.",
+      "step_3_approval": "The 'admin_boss' reviews the aggregated weekly changes in the 'Authorizations' inbox.",
+      "step_4_deployment": "Upon approval, the `status` flips to `published`. The Node server flushes the Redis cache for affected routes, and the frontend instantly reflects the new data via WebSockets or the next client-side fetch."
+    }
+  },
+  "implementation_phases": [
+    {
+      "phase": "Phase 1: Foundation & Schema",
+      "focus": "Set up PostgreSQL/MongoDB schemas, configure S3 for media, and build the core Express API routes."
+    },
+    {
+      "phase": "Phase 2: CMS Dashboard Expansion",
+      "focus": "Upgrade the current dashboard to include a visual JSON block editor, media library, and the Draft/Publish workflow."
+    },
+    {
+      "phase": "Phase 3: Frontend Layout Overhaul",
+      "focus": "Refactor the existing frontend. Implement the 6 distinct page archetypes using Tailwind CSS, ensuring strict adherence to the density and white-space rules."
+    },
+    {
+      "phase": "Phase 4: Integration & Caching",
+      "focus": "Connect the new frontend to the live API. Implement React Query for state management and Redis for sub-10ms response times."
+    }
+  ]
+}

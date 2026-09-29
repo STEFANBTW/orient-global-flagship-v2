@@ -1,0 +1,446 @@
+420- </div>
+421- <div className="flex flex-col">
+422: <span className={`font-heading font-black text-xs sm:text-sm tracking-tighter leading-none uppercase text-primary`}>Orient</span>
+423- <span className={`text-[8px] sm:text-[9px] font-bold tracking-[0.3em] uppercase leading-none mt-0.5 ${textClass}`}>Global</span>
+424- </div>
+--
+442- document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
+443- }}
+444: className={`relative z-10 px-2 sm:px-3 h-full flex items-center justify-center transition-all duration-300 text-[clamp(0.75rem,1.1vw,0.9rem)] font-bold uppercase tracking-widest hover:text-primary dark:hover:text-background ${textClass}`}
+445- >
+446- <div className="flex flex-col items-center group">
+--
+473- <button 
+474- onClick={() => setCurrentView('login')}
+475: className={`p-1.5 sm:p-2 rounded-full transition-all duration-300 ${isTransparent ? 'bg-black/5 text-foreground hover:bg-black/10 dark:hover:bg-card hover:' : 'bg-primary/10 text-primary hover:bg-primary hover:text-background'}`}
+476- title="User Portal"
+477- >
+--
+480- <button 
+481- onClick={() => setCurrentView('admin')}
+482: className={`p-1.5 sm:p-2 rounded-full transition-all duration-300 ${isTransparent ? 'bg-black/5 text-foreground hover:bg-black/10 dark:hover:bg-card hover:' : 'bg-primary/10 text-primary hover:bg-primary hover:text-background'}`}
+483- title="Admin Portal"
+484- >
+--
+488- <button 
+489- onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+490: className="p-1.5 sm:p-2 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-background transition-all duration-300 ml-1"
+491- >
+492- <span className="material-icons text-sm sm:text-base">{mobileMenuOpen ? 'close' : 'menu'}</span>
+--
+520- <motion.h4 
+521- initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+522: className={`font-black text-xs uppercase tracking-[0.4em] border-b border-primary/20 pb-3 text-primary`}
+523- >
+524- Strategic Navigation
+--
+532- <button 
+533- onClick={() => handleNavigation(activeLink.view, item.id)} 
+534: className={`text-xl sm:text-2xl font-black transition-all hover:translate-x-3 flex items-center gap-4 group uppercase tracking-tight text-foreground hover:text-primary`}
+535- >
+536- <span className="w-3 h-3 rounded-full bg-primary/20 group-hover:bg-primary transition-all duration-500 scale-75 group-hover:scale-100" />
+--
+546- <motion.h4 
+547- initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+548: className={`font-black text-xs uppercase tracking-[0.4em] border-b border-primary/20 pb-3 text-primary`}
+549- >
+550- Division Insights
+--
+558- >
+559- <h5 
+560: className={`text-sm font-black uppercase tracking-widest mb-1 transition-colors text-foreground group-hover:text-primary`}
+561- >
+562- {highlight.title}
+--
+604- </div>
+605- <div className="flex flex-col">
+606: <span className="font-heading font-black text-sm tracking-tighter text-primary leading-none uppercase">Orient</span>
+607- <span className="text-[9px] font-bold tracking-[0.3em] text-foreground uppercase leading-none mt-0.5">Global</span>
+608- </div>
+--
+628- className="flex items-center gap-4 text-lg font-black uppercase tracking-widest text-foreground"
+629- >
+630: <span className="material-icons text-primary">{link.icon}</span>
+631- {link.name}
+632- </button>
+--
+648- <div className="py-4 space-y-6">
+649- <div className="space-y-4">
+650: <h4 className="text-primary font-black text-[10px] uppercase tracking-[0.2em] border-b border-primary/10 pb-2">Navigation</h4>
+651- {link.menu.navigation.map((item, i) => (
+652- <button 
+--
+664- </div>
+665- <div className="space-y-4">
+666: <h4 className="text-primary font-black text-[10px] uppercase tracking-[0.2em] border-b border-primary/10 pb-2">Insights</h4>
+667- {link.menu.highlights.map((highlight, i) => (
+668- <div key={i} className="space-y-1">
+--
+720- >
+721- <span className="text-foreground font-black tracking-[0.4em] uppercase text-sm block drop-shadow-[0_0_12px_rgba(0,0,0,0.5)]">
+722: Welcome to <span className="text-primary">Orient</span> Global
+723- </span>
+724- </motion.div>
+--
+790- <RevealItem index={0} totalItems={5}>
+791- <div className="flex flex-col items-center mb-4 md:mb-8 lg:mb-4 group">
+792: <span className="text-primary font-black uppercase tracking-[0.6em] text-[12px] relative">
+793- The New Standard of Excellence
+794- </span>
+--
+798- <RevealItem index={1} totalItems={5}>
+799- <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground mb-2 md:mb-4 lg:mb-2 leading-[0.8] uppercase tracking-tighter">
+800: <span className="text-primary">ORIENT</span><br />
+801- Global
+802- </h2>
+--
+829- className="group flex flex-col items-center gap-2 transition-all duration-300"
+830- >
+831: <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground group-hover:text-primary transition-colors">
+832- {link.name}
+833- </span>
+--
+850- <div className="md:w-1/2">
+851- <Reveal>
+852: <span className="text-primary font-bold tracking-[0.5em] uppercase text-[10px] mb-4 block">The Bakery</span>
+853- <h2 className="text-4xl md:text-6xl font-black text-foreground mb-6 font-heading leading-[0.85] uppercase tracking-tighter">
+854: GOLDEN<br/><span className="text-primary">Crust</span>
+855- </h2>
+856- <p className=" text-muted-foreground text-base leading-relaxed mb-8 font-medium max-w-lg">Morning excellence starts here. From artisanal sourdoughs to delicate pastries, our bakery combines European techniques with local flavors like Coconut and Plantain.</p>
+857: <button onClick={() => { setCurrentView('bakery'); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="group flex items-center gap-2 text-foreground border-b-2 border-primary pb-1 hover:text-primary transition-all uppercase text-xs font-black tracking-[0.3em] font-heading">
+858- <span>View Menu</span>
+859- <span className="material-icons text-lg group-hover:translate-x-2 transition-transform">arrow_forward</span>
+--
+878- <div className="lg:hidden order-1 text-center w-full shrink-0 mb-1">
+879- <RevealItem index={0} totalItems={7}>
+880: <span className="text-primary font-black tracking-[0.5em] uppercase text-[10px] md:text-xs mb-1 block">Artisanal Process</span>
+881- </RevealItem>
+882- <RevealItem index={1} totalItems={7}>
+883: <h2 className="text-2xl md:text-3xl font-black text-foreground uppercase tracking-tighter leading-tight">THE SCIENCE OF <br/><span className="text-primary">Fermentation</span></h2>
+884- </RevealItem>
+885- </div>
+--
+892- <div className="hidden lg:block mb-6 lg:mb-2">
+893- <RevealItem index={0} totalItems={7}>
+894: <span className="text-primary font-black tracking-[0.5em] uppercase text-sm mb-4 block">Artisanal Process</span>
+895- </RevealItem>
+896- <RevealItem index={1} totalItems={7}>
+897: <h2 className="text-4xl sm:text-5xl font-black text-foreground uppercase tracking-tighter mb-2 leading-tight">THE SCIENCE OF <br/><span className="text-primary">Fermentation</span></h2>
+898- </RevealItem>
+899- </div>
+--
+905- <RevealItem key={item} index={4 + i} totalItems={7} className={`w-full ${i === 0 ? 'col-span-2' : ''}`}>
+906- <div className="flex items-center justify-start py-1.5 px-3 lg:py-3 lg:px-4 rounded-xl lg:rounded-2xl bg-card border border-transparent shadow-soft gap-3 w-full h-full">
+907: <span className="material-icons text-primary text-lg lg:text-xl shrink-0">science</span>
+908- <span className=" text-foreground font-bold uppercase tracking-widest text-[9px] lg:text-[10px] truncate">{item}</span>
+909- </div>
+--
+924- <div className="md:w-1/2">
+925- <Reveal>
+926: <span className="text-primary font-bold tracking-[0.5em] uppercase text-[10px] mb-4 block">The Market</span>
+927- <h2 className="text-4xl md:text-6xl font-black text-foreground mb-6 font-heading leading-[0.85] uppercase tracking-tighter">
+928: GLOBAL<br/><span className="text-primary">Standards</span>
+929- </h2>
+930- <p className=" text-muted-foreground text-base leading-relaxed mb-8 font-medium max-w-lg">We've redefined the shopping experience. Wide aisles, perfect lighting, and a curated selection of international and local products. Quality you can trust, right here in Rayfield, Jos.</p>
+931: <button onClick={() => { setCurrentView('supermarket'); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="group flex items-center gap-2 text-foreground border-b-2 border-primary pb-1 hover:text-primary transition-all uppercase text-xs font-black tracking-[0.3em] font-heading">
+932- <span>Shop Online</span>
+933- <span className="material-icons text-lg group-hover:translate-x-2 transition-transform">arrow_forward</span>
+--
+958- <div className="lg:hidden order-1 text-center w-full shrink-0 mb-1">
+959- <RevealItem index={0} totalItems={5}>
+960: <span className="text-primary font-black tracking-[0.3em] uppercase text-[10px] md:text-xs mb-1 block">Supply Chain</span>
+961- </RevealItem>
+962- <RevealItem index={1} totalItems={5}>
+963: <h2 className="text-2xl md:text-3xl font-black text-foreground uppercase tracking-tighter leading-tight">INSTITUTIONAL <br/><span className="text-primary">Quality</span></h2>
+964- </RevealItem>
+965- </div>
+--
+972- <div className="hidden lg:block mb-6 lg:mb-2">
+973- <RevealItem index={0} totalItems={5}>
+974: <span className="text-primary font-black tracking-[0.3em] uppercase text-sm mb-4 block">Supply Chain</span>
+975- </RevealItem>
+976- <RevealItem index={1} totalItems={5}>
+977: <h2 className="text-4xl sm:text-5xl font-black text-foreground uppercase tracking-tighter mb-2 leading-tight">INSTITUTIONAL <br/><span className="text-primary">Quality</span></h2>
+978- </RevealItem>
+979- </div>
+--
+1012- <div className="md:w-1/2">
+1013- <Reveal delay="delay-100">
+1014: <span className="text-primary font-bold tracking-[0.3em] uppercase text-sm mb-4 block">The Restaurant</span>
+1015- </Reveal>
+1016- <Reveal delay="delay-200">
+1017- <h2 className="text-4xl md:text-6xl font-black text-foreground mb-6 font-heading leading-[0.85] uppercase tracking-tighter">
+1018: CULINARY<br/><span className="text-primary">Artistry</span>
+1019- </h2>
+1020- </Reveal>
+--
+1023- </Reveal>
+1024- <Reveal delay="delay-400">
+1025: <button onClick={() => { setCurrentView('dining'); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="group flex items-center gap-2 text-foreground border-b-2 border-primary pb-1 hover:text-primary transition-all uppercase text-xs font-black tracking-[0.3em] font-heading">
+1026- <span>View Menu</span>
+1027- <span className="material-icons text-lg group-hover:translate-x-2 transition-transform">arrow_forward</span>
+--
+1046- <div className="lg:hidden order-1 text-center w-full shrink-0 mb-1">
+1047- <RevealItem index={0} totalItems={7}>
+1048: <span className="text-primary font-black tracking-[0.3em] uppercase text-[10px] md:text-xs mb-1 block">Chef's Philosophy</span>
+1049- </RevealItem>
+1050- <RevealItem index={1} totalItems={7}>
+1051: <h2 className="text-2xl md:text-3xl font-black text-foreground uppercase tracking-tighter leading-tight">FUSION OF <br/><span className="text-primary">Heritage</span></h2>
+1052- </RevealItem>
+1053- </div>
+--
+1060- <div className="hidden lg:block mb-6 lg:mb-2">
+1061- <RevealItem index={0} totalItems={7}>
+1062: <span className="text-primary font-black tracking-[0.3em] uppercase text-sm mb-4 block">Chef's Philosophy</span>
+1063- </RevealItem>
+1064- <RevealItem index={1} totalItems={7}>
+1065: <h2 className="text-4xl sm:text-5xl font-black text-foreground uppercase tracking-tighter mb-2 leading-tight">FUSION OF <br/><span className="text-primary">Heritage</span></h2>
+1066- </RevealItem>
+1067- </div>
+--
+1073- <RevealItem key={item} index={4 + i} totalItems={7} className={`w-full ${i === 0 ? 'col-span-2' : ''}`}>
+1074- <div className="flex items-center justify-start py-1.5 px-3 lg:py-3 lg:px-4 rounded-xl lg:rounded-2xl bg-card border border-transparent shadow-soft gap-3 w-full h-full">
+1075: <span className="material-icons text-primary text-lg lg:text-xl shrink-0">restaurant_menu</span>
+1076- <span className=" text-foreground font-bold uppercase tracking-widest text-[9px] lg:text-[10px] truncate">{item}</span>
+1077- </div>
+--
+1092- <div className="md:w-1/2">
+1093- <Reveal>
+1094: <span className="text-primary font-bold tracking-[0.3em] uppercase text-sm mb-4 block">Orient Water</span>
+1095- <h2 className="text-5xl md:text-6xl font-black text-foreground mb-6 font-heading leading-[0.85] uppercase tracking-tighter">
+1096: PURE<br/><span className="text-primary">Hydration</span>
+1097- </h2>
+1098- <p className=" text-muted-foreground text-base leading-relaxed mb-8 font-medium max-w-xl">The gold standard of purity. Our 7-step filtration process ensures every drop is as crisp and clean as nature intended. NAFDAC Certified quality for your peace of mind.</p>
+1099: <button onClick={() => { setCurrentView('water'); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="group flex items-center gap-4 text-foreground border-b-2 border-primary pb-2 hover:text-primary transition-all uppercase text-xs font-black tracking-[0.3em] font-heading">
+1100- <span>Explore Purity</span>
+1101- <span className="material-icons text-lg group-hover:translate-x-2 transition-transform">arrow_forward</span>
+--
+1120- <div className="lg:hidden order-1 text-center w-full shrink-0 mb-1">
+1121- <RevealItem index={0} totalItems={5}>
+1122: <span className="text-primary font-black tracking-[0.3em] uppercase text-[10px] md:text-xs mb-1 block">Technical Purity</span>
+1123- </RevealItem>
+1124- <RevealItem index={1} totalItems={5}>
+1125: <h2 className="text-2xl md:text-3xl font-black text-foreground uppercase tracking-tighter leading-tight">7-STEP <br/><span className="text-primary">Filtration</span></h2>
+1126- </RevealItem>
+1127- </div>
+--
+1134- <div className="hidden lg:block mb-6 lg:mb-2">
+1135- <RevealItem index={0} totalItems={5}>
+1136: <span className="text-primary font-black tracking-[0.3em] uppercase text-sm mb-4 block">Technical Purity</span>
+1137- </RevealItem>
+1138- <RevealItem index={1} totalItems={5}>
+1139: <h2 className="text-4xl sm:text-5xl font-black text-foreground uppercase tracking-tighter mb-2 leading-tight">7-STEP <br/><span className="text-primary">Filtration</span></h2>
+1140- </RevealItem>
+1141- </div>
+--
+1166- <div className="mb-16 text-center">
+1167- <Reveal>
+1168: <h2 className="text-primary text-sm font-black uppercase tracking-[0.3em] mb-4">Our Worlds</h2>
+1169- <h3 className="text-5xl md:text-6xl font-serif text-foreground italic font-light tracking-tight leading-none">Curated <br/><span className="not-italic font-display font-black text-muted-foreground uppercase tracking-tighter">Experiences</span></h3>
+1170- </Reveal>
+--
+1179- <Reveal animation="slide-from-right">
+1180- <div className="w-12 h-1 bg-primary mb-8 rounded-full"></div>
+1181: <h4 className="text-4xl font-black text-foreground mb-6 uppercase tracking-tighter leading-none">The <br/><span className="text-primary">Nightscape</span> Lounge</h4>
+1182- <p className=" text-muted-foreground text-base leading-relaxed mb-8 lg:mb-12 font-medium">Where mixology meets mystery. Our lounge offers a secluded environment perfect for high-stakes meetings or unwinding after a long week. Featuring Zobo-infused cocktails and a curated cigar selection.</p>
+1183- <div className="flex flex-col gap-3 lg:gap-4 mb-8 w-full">
+--
+1189- ))}
+1190- </div>
+1191: <button onClick={() => { setCurrentView('lounge'); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="group flex items-center gap-4 text-foreground border-b-2 border-primary pb-2 hover:text-primary transition-all uppercase text-xs font-black tracking-[0.3em] font-heading">
+1192- <span>Explore Menu</span>
+1193- <span className="material-icons text-lg group-hover:translate-x-2 transition-transform">arrow_forward</span>
+--
+1208- <div className="lg:hidden order-1 text-center w-full shrink-0 mb-1">
+1209- <RevealItem index={0} totalItems={7}>
+1210: <span className="text-primary font-black tracking-[0.3em] uppercase text-[10px] md:text-xs mb-1 block">Atmosphere</span>
+1211- </RevealItem>
+1212- <RevealItem index={1} totalItems={7}>
+1213: <h2 className="text-2xl md:text-3xl font-black text-foreground uppercase tracking-tighter leading-tight">SONIC <br/><span className="text-primary">Architecture</span></h2>
+1214- </RevealItem>
+1215- </div>
+--
+1222- <div className="hidden lg:block mb-6 lg:mb-2">
+1223- <RevealItem index={0} totalItems={7}>
+1224: <span className="text-primary font-black tracking-[0.3em] uppercase text-sm mb-4 block">Atmosphere</span>
+1225- </RevealItem>
+1226- <RevealItem index={1} totalItems={7}>
+1227: <h2 className="text-4xl sm:text-5xl font-black text-foreground uppercase tracking-tighter mb-2 leading-tight">SONIC <br/><span className="text-primary">Architecture</span></h2>
+1228- </RevealItem>
+1229- </div>
+--
+1235- <RevealItem key={item} index={3 + i} totalItems={7} className={`w-full ${i === 0 ? 'col-span-2' : ''}`}>
+1236- <div className="flex items-center justify-start p-3 lg:p-1 rounded-xl lg:rounded-2xl bg-card border border-transparent shadow-soft gap-3 w-full h-full">
+1237: <span className="material-icons text-primary text-lg lg:text-xl shrink-0">graphic_eq</span>
+1238- <span className=" text-foreground font-bold uppercase tracking-widest text-[9px] lg:text-[10px] truncate">{item}</span>
+1239- </div>
+--
+1254- <div className="md:w-1/2">
+1255- <Reveal>
+1256: <span className="text-primary font-bold tracking-[0.3em] uppercase text-sm mb-4 block">The Arena</span>
+1257- <h2 className="text-5xl md:text-6xl font-black text-foreground mb-6 font-heading leading-[0.85] uppercase tracking-tighter">
+1258: HIGH<br/><span className="text-primary">Performance</span>
+1259- </h2>
+1260- <p className=" text-muted-foreground text-base leading-relaxed mb-8 font-medium max-w-xl">Step into the future of competitive gaming. From high-refresh rate PC arenas to immersive VR pods, we provide the infrastructure for champions.</p>
+1261: <button onClick={() => { setCurrentView('games'); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="group flex items-center gap-4 text-foreground border-b-2 border-primary pb-2 hover:text-primary transition-all uppercase text-xs font-black tracking-[0.3em] font-heading">
+1262- <span>Enter Arena</span>
+1263- <span className="material-icons text-lg group-hover:translate-x-2 transition-transform">arrow_forward</span>
+--
+1341- <div className="lg:hidden order-1 text-center w-full shrink-0 mb-1">
+1342- <RevealItem index={0} totalItems={7}>
+1343: <span className="text-primary font-black tracking-[0.3em] uppercase text-[10px] md:text-xs mb-1 block">Games Ecosystem</span>
+1344- </RevealItem>
+1345- <RevealItem index={1} totalItems={7}>
+1346: <h2 className="text-2xl md:text-3xl font-black text-foreground uppercase tracking-tighter leading-tight">ZERO LAG <br/><span className="text-primary">Infrastructure</span></h2>
+1347- </RevealItem>
+1348- </div>
+--
+1350- <div className="hidden lg:block mb-6 lg:mb-2">
+1351- <RevealItem index={0} totalItems={7}>
+1352: <span className="text-primary font-black tracking-[0.3em] uppercase text-sm mb-4 block">Games Ecosystem</span>
+1353- </RevealItem>
+1354- <RevealItem index={1} totalItems={7}>
+1355: <h2 className="text-4xl sm:text-5xl font-black text-foreground uppercase tracking-tighter mb-1 leading-tight">ZERO LAG <br/><span className="text-primary">Infrastructure</span></h2>
+1356- </RevealItem>
+1357- </div>
+--
+1363- <RevealItem key={spec} index={3 + i} totalItems={7} className={`w-full ${i === 0 ? 'col-span-2' : ''}`}>
+1364- <div className="flex items-center justify-start py-1.5 px-3 lg:py-3 lg:px-4 rounded-xl lg:rounded-2xl bg-card border border-transparent shadow-soft gap-3 w-full h-full">
+1365: <span className="material-icons text-primary text-lg lg:text-xl shrink-0">bolt</span>
+1366- <span className=" text-foreground font-bold uppercase tracking-widest text-[9px] lg:text-[10px] truncate">{spec}</span>
+1367- </div>
+--
+1438- <RevealItem index={0} totalItems={4} className="shrink-0">
+1439- <div className="text-center mb-2 md:mb-4 lg:mb-2">
+1440: <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-foreground mb-1 md:mb-2 uppercase tracking-tighter leading-none">VOICES OF <br className="md:hidden"/><span className="text-primary">Jos</span></h2>
+1441- <p className=" text-muted-foreground font-bold text-[10px] sm:text-sm uppercase tracking-[0.2em] sm:tracking-[0.3em]">Real stories from our community.</p>
+1442- </div>
+--
+1474- </div>
+1475- 
+1476: <span className="material-icons absolute top-2 right-2 text-primary/10 text-xl">format_quote</span>
+1477- </div>
+1478- )}
+--
+1507- </div>
+1508- 
+1509: <span className="material-icons absolute top-4 right-4 text-primary/10 text-3xl">format_quote</span>
+1510- </div>
+1511- ))}
+--
+1565- <motion.div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: useTransform([spotlightX, spotlightY], ([x, y]) => `radial-gradient(600px circle at ${x} ${y}, rgba(242,158,13,0.08), transparent 40%)`) }} />
+1566- <div className="absolute inset-0 p-4 sm:p-6 lg:p-10 flex flex-col justify-end items-start z-10">
+1567: <span className="material-icons text-primary text-2xl lg:text-4xl mb-1 sm:mb-2 lg:mb-4 group-hover:scale-125 transition-transform duration-500">{icon}</span>
+1568- <h3 className={`${titleSize} font-black text-foreground font-heading uppercase tracking-tight leading-none group-hover:translate-x-2 transition-transform duration-500`}>{title}</h3>
+1569- {subtitle && (
+--
+1587- <ScrollReveal isActive={isActive} className="w-full h-full flex flex-col items-center justify-center">
+1588- <RevealItem className="text-center w-full shrink-0" index={0}>
+1589: <span className="text-primary font-black tracking-[0.3em] uppercase text-[10px] md:text-sm mb-1 sm:mb-4 block mt-4 lg:mt-0">
+1590- Bespoke Services
+1591- </span>
+--
+1689- <div className="text-center mb-2 lg:mb-6 shrink-0">
+1690- <RevealItem index={0} totalItems={6}>
+1691: <span className="text-primary font-black tracking-[0.3em] uppercase text-[10px] md:text-sm mb-1 lg:mb-2 block">
+1692- The Standard of Trust
+1693- </span>
+--
+1695- <RevealItem index={1} totalItems={6}>
+1696- <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-foreground uppercase tracking-tighter leading-tight mb-1 lg:mb-3">
+1697: UNCOMPROMISING <br/><span className="text-primary">Quality</span>
+1698- </h2>
+1699- </RevealItem>
+--
+1710- <div className="absolute -bottom-12 -left-12 w-24 h-24 bg-primary/5 blur-[40px] rounded-full" />
+1711- <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mb-2 shrink-0 relative z-10">
+1712: <span className="material-icons text-primary text-lg">{cert.icon}</span>
+1713- </div>
+1714- <h3 className="text-xs font-black text-foreground uppercase mb-1 tracking-tight leading-none relative z-10">{cert.name}</h3>
+--
+1726- 
+1727- <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-500 relative z-10">
+1728: <span className="material-icons text-primary text-3xl">{cert.icon}</span>
+1729- </div>
+1730- <h3 className="text-2xl font-black text-foreground uppercase mb-1 md:mb-3 tracking-tight relative z-10">{cert.name}</h3>
+--
+1753- <div className="text-center w-full shrink-0">
+1754- <RevealItem index={0} totalItems={6}>
+1755: <span className="text-primary font-black tracking-[0.3em] uppercase text-[8px] md:text-[11px] mb-1 block">
+1756- Our Presence
+1757- </span>
+--
+1759- <RevealItem index={1} totalItems={6}>
+1760- <h2 className="text-xl sm:text-3xl lg:text-4xl font-black text-foreground uppercase tracking-tighter leading-tight">
+1761: RAYFIELD, <span className="text-primary">Jos</span>
+1762- </h2>
+1763- </RevealItem>
+--
+1768- <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3 lg:p-6">
+1769- <div className="flex items-center gap-2 lg:gap-3 text-background">
+1770: <span className="material-icons text-primary text-[11px] lg:text-sm">explore</span>
+1771- <span className="font-black uppercase tracking-widest text-[7px] lg:text-[10px]">Discover Plateau State</span>
+1772- </div>
+--
+1784- <div className="flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl lg:rounded-2xl bg-card border border-transparent shadow-soft group hover:border-primary/30 transition-all duration-500">
+1785- <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shrink-0">
+1786: <span className="material-icons text-primary text-base lg:text-2xl">location_on</span>
+1787- </div>
+1788- <div className="text-left">
+--
+1795- <div className="flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl lg:rounded-2xl bg-card border border-transparent shadow-soft group hover:border-primary/30 transition-all duration-500">
+1796- <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shrink-0">
+1797: <span className="material-icons text-primary text-base lg:text-2xl">schedule</span>
+1798- </div>
+1799- <div className="text-left">
+--
+1857- { name: 'VIP Lounge', view: 'lounge' }
+1858- ].map(li => (
+1859: <li key={li.name}><button onClick={() => handleNavigate(li.view)} className="hover:text-primary transition-colors flex items-center gap-2 uppercase tracking-widest text-[10px]">{li.name}</button></li>
+1860- ))}
+1861- </ul>
+--
+1866- <ul className="space-y-3 text-muted-foreground text-[10px] font-bold uppercase tracking-widest">
+1867- {['About Us', 'Careers', 'Investor Relations', 'Press & Media', 'Contact Support'].map(li => (
+1868: <li key={li}><a className="hover:text-primary transition-colors flex items-center gap-2" href="#">{li}</a></li>
+1869- ))}
+1870- </ul>
+--
+1887- <p>© {new Date().getFullYear()} Orient Global Services Ltd. All rights reserved.</p>
+1888- <div className="flex gap-6 flex-wrap justify-center">
+1889: <a className="hover:text-primary transition-colors" href="#">Terms of Service</a>
+1890: <a className="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+1891: <a className="hover:text-primary transition-colors" href="#">Cookie Policy</a>
+1892: <a className="hover:text-primary transition-colors" href="#">Accessibility</a>
+1893- </div>
+1894- </div>
+--
+1974- {isTyping && (<div className="flex justify-start"><div className="/10 bg-background p-5 rounded-[2rem] rounded-bl-none flex gap-1.5 shadow-md"><span className="w-2 h-2 bg-primary rounded-full animate-bounce" /><span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" /><span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" /></div></div>)}
+1975- </div>
+1976: <div className="p-6 bg-background border-t border-transparent"><div className="flex gap-4 items-center bg-card px-6 py-4 rounded-[2rem] border border-transparent focus-within:border-primary/50 transition-all shadow-inner"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Take me to the bakery..." className="bg-transparent border-none focus:ring-0 text-foreground text-sm flex-1 placeholder:text-foreground/80 font-bold" /><button onClick={handleSend} className="text-primary hover:text-orange-500 transition-colors"><span className="material-icons font-black">send</span></button></div></div>
+1977- </motion.div>
+1978- )}
+--
+2025- <div className="flex gap-4 pt-4">
+2026- <button type="button" onClick={onCancel} className="flex-1 py-4 rounded-2xl border border-transparent text-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-muted transition-all">Cancel</button>
+2027: <button type="submit" className="flex-1 py-4 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">Login</button>
+2028- </div>
+2029- </form>
+--
+2057- key={div}
+2058- onClick={() => setActiveTab(div)}
+2059: className={`w-full text-left px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-between ${activeTab === div ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-surface text-muted-foreground hover:bg-muted border border-transparent'}`}
+2060- >
+2061- {div}
+--
+2068- <div className="rounded-[3rem] p-8 md:p-12 border border-transparent shadow-2xl bg-surface/60 backdrop-blur-xl">
+2069- <div className="flex items-center gap-4 mb-8">
+2070: <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+2071- <span className="material-icons text-2xl">settings_applications</span>
+2072- </div>
+--
+2105- <div className="pt-8 border-t border-transparent flex justify-end gap-4">
+2106- <button className="px-8 py-4 rounded-2xl border border-transparent text-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-muted transition-all">Discard Changes</button>
+2107: <button className="px-8 py-4 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-xs hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center gap-2">
+2108- <span className="material-icons text-sm">save</span>
+2109- Save Configuration

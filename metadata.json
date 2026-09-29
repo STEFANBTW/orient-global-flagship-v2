@@ -1,0 +1,8 @@
+{
+  "name": "Remix Orient Global Flagship",
+  "description": "A mission-critical luxury flagship destination for Orient Global in Jos, featuring an immersive liquid-glass aesthetic and institutional-grade trust standards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

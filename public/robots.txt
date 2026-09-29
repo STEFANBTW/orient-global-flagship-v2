@@ -1,0 +1,46 @@
+# robots.txt for Orient Global Flagship
+# Welcoming all major search engines and generative AI agents
+
+User-agent: *
+Allow: /
+
+# OpenAI / ChatGPT
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+
+# Anthropic / Claude
+User-agent: ClaudeBot
+Allow: /
+User-agent: anthropic-ai
+Allow: /
+
+# Google Gemini & Extended AI Crawlers
+User-agent: Google-Extended
+Allow: /
+User-agent: Googlebot
+Allow: /
+
+# Bing / Copilot
+User-agent: bingbot
+Allow: /
+
+# Meta AI
+User-agent: FacebookBot
+Allow: /
+
+# Emerging AI Documentation Standard
+# Read /llms.txt for structured machine-readable site index
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+Sitemap: https://orientglobalflagship.com/sitemap.xml

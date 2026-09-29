@@ -1,0 +1,133 @@
+{
+  "project_identity": {
+    "name": "Orient Global Dining & Games Command Center",
+    "version": "1.0.0",
+    "aesthetic_profile": "Cinematic / Glassmorphism / Dark Mode / High-Performance UI",
+    "target_platform": "Full-Stack React + Node.js (Express) + WebSocket for real-time approvals"
+  },
+  "user_roles": {
+    "admin_staff": {
+      "permissions": [
+        "Draft menu updates (Restaurant)",
+        "Update table availability (Restaurant)",
+        "Post tournament announcements (Games)",
+        "Update hardware inventory status (Games)",
+        "Draft promotional banners for both divisions"
+      ],
+      "constraints": "Cannot publish price changes, hero content, or critical system settings without HOD approval."
+    },
+    "admin_hod": {
+      "permissions": [
+        "All Staff permissions",
+        "Access to 'Dining & Games Approval Hub'",
+        "Final authority on Menu pricing and Sommelier selections",
+        "Approval for high-stakes Gaming Tournaments",
+        "Override authority for all live content"
+      ],
+      "approval_logic": "Must provide a 'Reason for Declination' if a proposal is rejected, visible to the proposing staff member."
+    }
+  },
+  "division_data_models": {
+    "restaurant_dining": {
+      "menu_management": {
+        "categories": ["Traditional", "Continental", "Wine List", "Desserts"],
+        "items": [
+          {
+            "id": "UUID",
+            "name": "String",
+            "category": "Enum",
+            "price": "Number",
+            "description": "Text",
+            "ingredients": "Array of Strings",
+            "is_available": "Boolean",
+            "is_chef_special": "Boolean",
+            "image_url": "URL"
+          }
+        ]
+      },
+      "sommelier_selection": {
+        "featured_wines": [
+          {
+            "name": "String",
+            "year": "Number",
+            "region": "String",
+            "tasting_notes": "Text",
+            "pairing_suggestions": "Array of Strings",
+            "price_per_glass": "Number",
+            "price_per_bottle": "Number"
+          }
+        ]
+      },
+      "reservations_control": {
+        "time_slots": "Array of Objects {time, capacity, current_bookings}",
+        "blackout_dates": "Array of Dates",
+        "private_dining_availability": "Boolean"
+      },
+      "delivery_settings": {
+        "is_active": "Boolean",
+        "delivery_radius_km": "Number",
+        "min_order_value": "Number",
+        "estimated_time_mins": "Number"
+      }
+    },
+    "games_arena": {
+      "tournament_manager": {
+        "active_tournaments": [
+          {
+            "id": "UUID",
+            "game_title": "Enum [FIFA, CODM, Apex, etc.]",
+            "prize_pool": "String",
+            "entry_fee": "Number",
+            "start_date": "Timestamp",
+            "max_participants": "Number",
+            "current_registrations": "Number",
+            "rules_text": "Markdown/Text"
+          }
+        ]
+      },
+      "hardware_inventory": {
+        "stations": [
+          {
+            "id": "String (e.g., POD-01)",
+            "type": "Enum [PS5, PC, VR, Sim-Rig]",
+            "specs": "Text",
+            "status": "Enum [Available, Maintenance, Occupied]",
+            "hourly_rate": "Number"
+          }
+        ]
+      },
+      "vr_frontier_config": {
+        "featured_experiences": [
+          {
+            "title": "String",
+            "difficulty": "Enum [Easy, Medium, Hard]",
+            "duration_mins": "Number",
+            "description": "Text",
+            "image_url": "URL"
+          }
+        ]
+      },
+      "cyber_odyssey_settings": {
+        "story_chapters": "Array of Objects {title, unlock_status, teaser_text}",
+        "leaderboard_reset_cycle": "Enum [Weekly, Monthly]"
+      }
+    }
+  },
+  "approval_workflow_mechanism": {
+    "states": [
+      "DRAFT_STAGED",
+      "PENDING_HOD_REVIEW",
+      "LIVE_PUBLISHED",
+      "REJECTED_NEEDS_REVISION"
+    ],
+    "transaction_log": {
+      "timestamp": "DateTime",
+      "staff_id": "UserRef",
+      "division": "Enum [Dining, Games]",
+      "change_summary": "String",
+      "diff_data": "Object {before, after}",
+      "hod_notes": "String (Required for Rejection)"
+    }
+  },
+  "ai_builder_master_prompt": "Build a high-performance, dual-role administrative dashboard for 'Orient Global Dining' and 'Orient Global Games'. The UI must feature a 'Cinematic Glassmorphism' aesthetic (deep black backgrounds, vibrant neon accents, 30px blur, 1px white/5 borders).\n\n### MODULE 1: THE DINING COMMAND (HOD ONLY)\n- A real-time 'Menu Approval Queue' for new dishes and price adjustments.\n- A 'Sommelier Dashboard' to update wine selections and pairing notes.\n- Action buttons: [Approve & Sync to Site] and [Decline with Reason].\n\n### MODULE 2: THE ARENA COMMAND (HOD ONLY)\n- A 'Tournament Sanctioning' view where HOD reviews prize pools and schedules before they go live.\n- A 'Hardware Health' monitor showing the status of all gaming pods and rigs.\n\n### MODULE 3: OPERATIONAL INPUT (STAFF & HOD)\n- A 'Menu Editor' for the Restaurant with drag-and-drop categorization.\n- A 'Tournament Draft' tool for Games staff to propose new events.\n- A 'Hardware Status' toggle for immediate maintenance flagging (Bypasses approval).\n\n### MODULE 4: RESERVATIONS & LOGISTICS\n- A calendar-based view for Restaurant reservations and Gaming pod bookings.\n- A 'Delivery Toggle' to instantly enable/disable online ordering based on kitchen capacity.\n\n### TECHNICAL REQUIREMENTS:\n- React frontend with Tailwind CSS.\n- Use 'Framer Motion' for smooth layout transitions between 'Dining' and 'Games' tabs.\n- Implement a 'Live Preview' window that renders the actual site components with the proposed data.\n- The 'admin_staff' view must show a clear timeline of their proposals and HOD feedback."
+}
