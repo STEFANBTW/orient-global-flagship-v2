@@ -114,17 +114,17 @@ export async function synthesizeUnifiedAudio(
     pitch?: string;
   } = {}
 ): Promise<{ buffer: Buffer; contentType: string; engineUsed: string }> {
-  const isNigerianVoice = options.voice && (
-    options.voice.toLowerCase().includes('ezinne') ||
-    options.voice.toLowerCase().includes('abeo') ||
-    options.voice.toLowerCase().includes('en-ng')
-  );
+  const requestedVoice = options.voice || DEFAULT_VOICE;
+  const isNigerianVoice = 
+    requestedVoice.toLowerCase().includes('ezinne') ||
+    requestedVoice.toLowerCase().includes('abeo') ||
+    requestedVoice.toLowerCase().includes('en-ng');
 
-  const engine = (options.engine || (isNigerianVoice ? 'edge' : 'qwen')).toLowerCase();
+  const engine = (options.engine && options.engine !== 'auto') ? options.engine.toLowerCase() : 'edge';
 
-  // If engine is 'edge' or a Nigerian voice is requested, use Edge-TTS with Microsoft Neural Ezinne/Abeo
+  // Default: use Edge-TTS with Microsoft Neural Ezinne/Abeo for authentic Nigerian accent
   if (engine === 'edge' || isNigerianVoice) {
-    const buffer = await synthesizeSpeech(text, options.voice || DEFAULT_VOICE, options);
+    const buffer = await synthesizeSpeech(text, requestedVoice, options);
     return {
       buffer,
       contentType: 'audio/mpeg',
@@ -132,7 +132,7 @@ export async function synthesizeUnifiedAudio(
     };
   }
 
-  // Default: Use Qwen3-TTS with automatic resilient fallback to Edge-TTS
+  // Explicit Qwen3-TTS request with automatic resilient fallback to Edge-TTS
   const voice = options.voice || DEFAULT_QWEN_VOICE;
   const res = await synthesizeSpeechWithResilience(text, voice, options.language);
   return {
@@ -167,8 +167,8 @@ export default async function handler(req: any, res: any) {
     }
 
     const text = body?.text || req.query?.text;
-    const voice = body?.voice || req.query?.voice;
-    const engine = body?.engine || req.query?.engine || 'qwen';
+    const voice = body?.voice || req.query?.voice || DEFAULT_VOICE;
+    const engine = body?.engine || req.query?.engine || 'edge';
     const language = body?.language || req.query?.language || 'English / 英文';
 
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -215,8 +215,8 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
     const text = data?.text;
-    const voice = data?.voice;
-    const engine = data?.engine || 'qwen';
+    const voice = data?.voice || DEFAULT_VOICE;
+    const engine = data?.engine || 'edge';
     const language = data?.language || 'English / 英文';
 
     if (!text) {

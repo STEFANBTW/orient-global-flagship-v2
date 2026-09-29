@@ -2034,6 +2034,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentView, setCurrentView, setDinin
     };
   }>>([]);
   const [input, setInput] = useState('');
+  const [liveTranscript, setLiveTranscript] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isVoiceOutputEnabled, setIsVoiceOutputEnabled] = useState(true);
@@ -2049,6 +2050,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentView, setCurrentView, setDinin
   const voiceSilenceTimerRef = useRef<any>(null);
   const voiceTranscriptRef = useRef<string>('');
   const voiceDispatchedRef = useRef<boolean>(false);
+  const isSubmittingRef = useRef<boolean>(false);
+  const lastSentTextRef = useRef<string>('');
+  const lastSentTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -2079,10 +2083,17 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentView, setCurrentView, setDinin
     }
     if (recognitionRef.current) {
       try {
-        recognitionRef.current.stop();
+        const rec = recognitionRef.current;
+        rec.onstart = null;
+        rec.onresult = null;
+        rec.onerror = null;
+        rec.onend = null;
+        rec.abort();
       } catch (e) {}
+      recognitionRef.current = null;
     }
     setIsRecording(false);
+    setLiveTranscript('');
   };
 
   const handleCloseModal = () => {
@@ -2322,11 +2333,24 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentView, setCurrentView, setDinin
   };
 
   const handleSend = async (overrideText?: string) => {
-    if (isTyping) return;
     const textToSend = typeof overrideText === 'string' ? overrideText : input;
-    if (!textToSend.trim() && attachedImages.length === 0) return;
-    
-    const userMsg = textToSend;
+    const trimmed = textToSend.trim();
+    if (!trimmed && attachedImages.length === 0) return;
+
+    // Strict synchronous lock to prevent parallel execution
+    if (isSubmittingRef.current) return;
+
+    // Deduplication: prevent identical message sent twice within 2 seconds
+    const now = Date.now();
+    if (trimmed && trimmed === lastSentTextRef.current && (now - lastSentTimeRef.current) < 2000) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    lastSentTextRef.current = trimmed;
+    lastSentTimeRef.current = now;
+
+    const userMsg = trimmed;
     const currentImages = [...attachedImages];
     
     setMessages(prev => [...prev, { 
@@ -2341,6 +2365,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentView, setCurrentView, setDinin
     setIsTyping(true);
 
     let handled = false;
+    try {
 
     // 1. Primary: Send request to /api/chat (Vercel Serverless / Express dev route)
     try {
@@ -2494,7 +2519,10 @@ Use navigateToSection when user wants to see sections.`,
       setMessages(prev => [...prev, { id: `bot-${Date.now()}`, role: 'bot', text: errMsg }]);
       speakText(errMsg);
     }
-    setIsTyping(false);
+    } finally {
+      setIsTyping(false);
+      isSubmittingRef.current = false;
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2511,11 +2539,12 @@ Use navigateToSection when user wants to see sections.`,
   };
 
   const handleFinishVoiceInput = () => {
-    const textToSend = voiceTranscriptRef.current.trim() || input.trim();
+    if (voiceDispatchedRef.current) return;
+    const textToSend = voiceTranscriptRef.current.trim();
+    voiceDispatchedRef.current = true;
     stopVoiceInput();
-    if (textToSend && !voiceDispatchedRef.current) {
-      voiceDispatchedRef.current = true;
-      setInput('');
+
+    if (textToSend) {
       handleSend(textToSend);
     }
   };
@@ -2535,28 +2564,27 @@ Use navigateToSection when user wants to see sections.`,
 
     // Stop speaking immediately when user activates mic
     stopSpeaking();
+    stopVoiceInput();
+
     voiceTranscriptRef.current = '';
     voiceDispatchedRef.current = false;
-    if (voiceSilenceTimerRef.current) {
-      clearTimeout(voiceSilenceTimerRef.current);
-      voiceSilenceTimerRef.current = null;
-    }
+    setLiveTranscript('');
 
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
-      recognition.interimResults = true; // Provides instant, real-time transcription as the user speaks!
-      recognition.continuous = false;    // Ends naturally when speaker finishes
+      recognition.interimResults = true;
+      recognition.continuous = true; // Keeps listening through natural pauses
       recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
 
       const finishAndDispatch = () => {
         if (voiceDispatchedRef.current) return;
-        const text = (voiceTranscriptRef.current || input).trim();
+        const text = voiceTranscriptRef.current.trim();
+        voiceDispatchedRef.current = true;
+        stopVoiceInput();
+
         if (text) {
-          voiceDispatchedRef.current = true;
-          stopVoiceInput();
-          setInput('');
           handleSend(text);
         }
       };
@@ -2568,54 +2596,45 @@ Use navigateToSection when user wants to see sections.`,
 
       recognition.onend = () => {
         setIsRecording(false);
-        if (voiceSilenceTimerRef.current) {
-          clearTimeout(voiceSilenceTimerRef.current);
-          voiceSilenceTimerRef.current = null;
-        }
-        // Send final accumulated transcript once
-        if (!voiceDispatchedRef.current && (voiceTranscriptRef.current || input).trim()) {
+        if (!voiceDispatchedRef.current && voiceTranscriptRef.current.trim()) {
           finishAndDispatch();
         }
       };
 
       recognition.onerror = (e: any) => {
         console.warn('Speech recognition error:', e);
-        setIsRecording(false);
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          stopVoiceInput();
+        }
       };
 
       recognition.onresult = (event: any) => {
-        let interimText = '';
-        let finalText = '';
+        let fullTranscript = '';
 
         for (let i = 0; i < event.results.length; ++i) {
-          const res = event.results[i];
-          if (res.isFinal) {
-            finalText += res[0].transcript + ' ';
-          } else {
-            interimText += res[0].transcript;
-          }
+          fullTranscript += event.results[i][0].transcript + ' ';
         }
 
-        const fullText = (finalText + interimText).trim();
-        if (fullText) {
-          voiceTranscriptRef.current = fullText;
-          setInput(fullText); // Real-time live transcript visual feedback!
+        const cleanSpoken = fullTranscript.trim();
+        if (cleanSpoken) {
+          voiceTranscriptRef.current = cleanSpoken;
+          setLiveTranscript(cleanSpoken);
         }
 
         // Reset silence timer on every new speech chunk
         if (voiceSilenceTimerRef.current) {
           clearTimeout(voiceSilenceTimerRef.current);
         }
-        // After 1.2s of silence, automatically send the complete sentence
+        // After 1.5s of silence, automatically send the complete sentence
         voiceSilenceTimerRef.current = setTimeout(() => {
           finishAndDispatch();
-        }, 1200);
+        }, 1500);
       };
 
       recognition.start();
     } catch (err) {
       console.warn('Failed to start speech recognition:', err);
-      setIsRecording(false);
+      stopVoiceInput();
     }
   };
 
@@ -2812,7 +2831,7 @@ Use navigateToSection when user wants to see sections.`,
                       <span className='ai-chat-listening-label'>Listening to your voice...</span>
                     </div>
                     <div className="text-xs text-center text-primary/90 font-medium max-w-[85%] truncate px-2 min-h-[1.25rem] italic">
-                      {input ? `“${input}”` : ''}
+                      {liveTranscript ? `“${liveTranscript}”` : ''}
                     </div>
                     <button 
                       onClick={stopVoiceInput}
