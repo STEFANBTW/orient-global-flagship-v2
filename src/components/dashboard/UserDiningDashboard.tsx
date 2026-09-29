@@ -526,7 +526,7 @@ export default function UserDiningDashboard() {
                       isCooking ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
                       'bg-muted text-muted-foreground'
                     }`}>
-                      {isInTransit ? '🚚 In Transit' :
+                      {isInTransit ? 'In Transit' :
                        isReady ? (isDelivery ? 'Meal Ready (Preparing Dispatch)' : 'Ready for Pickup') :
                        isWarning ? '10-Min Warning Alert' :
                        isCooking ? 'Preparing in Kitchen' :
@@ -608,7 +608,7 @@ export default function UserDiningDashboard() {
                           try {
                             await orderService.customerConfirmReceived(order.id);
                             toast({
-                              title: "Receipt Confirmed! 👍",
+                              title: "Receipt Confirmed!",
                               description: "You confirmed receipt of your order. The chef can now finish the order.",
                             });
                             loadOrders();
@@ -1159,7 +1159,7 @@ export default function UserDiningDashboard() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Destination:</span>
                   <span className="font-semibold text-foreground capitalize">
-                    {selectedOrder.destination === 'dine-in' ? `🍽️ Dine-In (${selectedOrder.seatNumber || selectedOrder.tableNumber || 'Table'})` : (selectedOrder.deliveryMethod === 'delivery' ? '🚚 Delivery' : '🏪 Pickup')}
+                    {selectedOrder.destination === 'dine-in' ? `Dine-In (${selectedOrder.seatNumber || selectedOrder.tableNumber || 'Table'})` : (selectedOrder.deliveryMethod === 'delivery' ? 'Delivery' : 'Pickup')}
                   </span>
                 </div>
                 {selectedOrder.destination === 'takeaway' && selectedOrder.deliveryMethod === 'delivery' && (

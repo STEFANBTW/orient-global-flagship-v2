@@ -102,7 +102,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setDevicePermissionStatus(perm);
       if (perm === 'granted') {
         try {
-          new Notification('Orient Global Notifications Enabled 🔔', {
+          new Notification('Orient Global Notifications Enabled', {
             body: 'You will now receive order updates & kitchen countdown alerts on this device.',
             icon: '/favicon.ico',
           });

@@ -147,7 +147,7 @@ export default function OrderDetailsModal({
                 <MapPin className="w-3.5 h-3.5 text-primary" /> Destination & Delivery Routing
               </span>
               <Badge variant="outline" className="text-xs font-semibold capitalize bg-background border-border/40">
-                {order.destination === 'dine-in' ? '🍽️ Dine-In' : '🛍️ Takeaway'}
+                {order.destination === 'dine-in' ? 'Dine-In' : 'Takeaway'}
               </Badge>
             </div>
 
@@ -189,7 +189,7 @@ export default function OrderDetailsModal({
                       <Package className="w-3.5 h-3.5 text-muted-foreground" /> Delivery Method
                     </span>
                     <Badge className={`text-xs font-bold ${order.deliveryMethod === 'delivery' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                      {order.deliveryMethod === 'delivery' ? '🚚 Home / Office Delivery' : '🏪 Counter Pickup'}
+                      {order.deliveryMethod === 'delivery' ? 'Home / Office Delivery' : 'Counter Pickup'}
                     </Badge>
                   </div>
 
@@ -286,7 +286,7 @@ export default function OrderDetailsModal({
                   <span>Delivery Status:</span>
                 </div>
                 <span className="font-bold">
-                  {order.customerReceivedAt ? '✅ Customer Confirmed Receipt' : '🚚 Courier In Transit'}
+                  {order.customerReceivedAt ? 'Customer Confirmed Receipt' : 'Courier In Transit'}
                 </span>
               </div>
             )}
@@ -382,14 +382,14 @@ export default function OrderDetailsModal({
                     <div className="min-w-0">
                       <p className="font-bold text-foreground truncate">{item.name}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {item.division ? <span className="capitalize">{item.division}</span> : 'Orient'} • {item.category || 'Item'}
+                        {item.division ? <span className="capitalize">{item.division}</span> : 'Orient'} | {item.category || 'Item'}
                       </p>
                     </div>
                   </div>
 
                   <div className="text-right shrink-0">
                     <span className="font-mono text-muted-foreground text-[11px]">
-                      {item.quantity} × ₦{item.price || 10}
+                      {item.quantity} x ₦{item.price || 10}
                     </span>
                     <p className="font-mono font-bold text-foreground text-xs">
                       ₦{(item.price || 10) * item.quantity}

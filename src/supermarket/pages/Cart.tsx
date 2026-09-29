@@ -121,7 +121,7 @@ const Cart: React.FC<CartProps> = ({ onNavigate }) => {
  </div>
  )}
  <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl max-w-md mx-auto text-xs text-amber-600 dark:text-amber-400">
- <p className="font-bold text-sm mb-1">⏳ Waiting for Chef Confirmation</p>
+ <p className="font-bold text-sm mb-1">Waiting for Chef Confirmation</p>
  <p>Your order has been safely sent to the backend. Stock will auto-decrement once the chef starts cooking, and you will receive a 10-minute warning alert before completion!</p>
  </div>
  <div className="flex justify-center gap-3 pt-2">

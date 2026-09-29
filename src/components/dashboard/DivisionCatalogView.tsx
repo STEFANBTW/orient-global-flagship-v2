@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { cmsApi } from '@/services/cmsApi';
 import { orderService, CustomerOrder, playAlertSound, getDisplayStatus, isDeliveryOrder } from '@/services/orderService';
 import { ProductItem } from '@/data/productsCatalog';
@@ -601,7 +601,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     return orders.reduce((sum, ord) => sum + ord.totalAmount, 0);
   }, [orders, manualMetrics.revenue]);
 
-  // ──ÔöÇ Analytics graph state ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // Analytics graph state
   const [analyticsMetric, setAnalyticsMetric] = React.useState<'orders' | 'revenue'>('orders');
   const [isMetricDropdownOpen, setIsMetricDropdownOpen] = React.useState(false);
   const [analyticsPeriod, setAnalyticsPeriod] = React.useState<'day' | 'week' | 'month' | 'year'>('week');
@@ -655,7 +655,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     return weeks;
   };
 
-  // ── Compute chart data from live divisionOrders ────────────────────
+  // Compute chart data from live divisionOrders
   const analyticsChartData = React.useMemo(() => {
     // 1. DAY VIEW: 24 Hours (12am .. 11pm)
     if (analyticsPeriod === 'day') {
@@ -978,7 +978,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                               >
                                 <span>{w.label}</span>
                                 <span className="opacity-70 font-normal text-[10px]">
-                                  {w.start.getDate()} {w.start.toLocaleString('default', { month: 'short' })} – {w.end.getDate()} {w.end.toLocaleString('default', { month: 'short' })}
+                                  {w.start.getDate()} {w.start.toLocaleString('default', { month: 'short' })} - {w.end.getDate()} {w.end.toLocaleString('default', { month: 'short' })}
                                 </span>
                               </button>
                             );
@@ -1256,7 +1256,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                         <span className="text-xs font-mono font-bold text-foreground">#{order.orderId || order.id}</span>
                         <p className="text-xs font-semibold text-foreground mt-0.5 truncate">{order.customerName}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {order.customerPhone} • {order.destination === 'dine-in' ? `Dine-In (${order.seatNumber || order.tableNumber || 'Table'})` : (order.deliveryMethod === 'delivery' ? `Delivery: ${order.deliveryAddress || order.shippingAddress || 'Address'}` : 'Pickup')}
+                          {order.customerPhone} | {order.destination === 'dine-in' ? `Dine-In (${order.seatNumber || order.tableNumber || 'Table'})` : (order.deliveryMethod === 'delivery' ? `Delivery: ${order.deliveryAddress || order.shippingAddress || 'Address'}` : 'Pickup')}
                         </p>
                       </div>
 

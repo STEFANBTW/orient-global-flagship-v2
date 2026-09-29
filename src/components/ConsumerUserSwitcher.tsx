@@ -231,10 +231,10 @@ export function ConsumerUserSwitcher() {
                             'bg-orange-400 text-white'
                           }`}
                         >
-                          {isReady ? '🎉 Ready for Pickup!' :
-                           isWarning ? '⚠️ 10-Min Warning Alert!' :
-                           isPreparing ? '👨‍🍳 Preparing in Kitchen' :
-                           '⏳ Waiting for Chef Confirmation'}
+                          {isReady ? 'Ready for Pickup!' :
+                           isWarning ? '10-Min Warning Alert!' :
+                           isPreparing ? 'Preparing in Kitchen' :
+                           'Waiting for Chef Confirmation'}
                         </Badge>
                       </div>
 

@@ -144,7 +144,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ orders }) => {
                 <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
                   isDelivery ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-muted text-muted-foreground'
                 }`}>
-                  {isDelivery ? '🚚 Home Delivery' : selectedOrder.orderType === 'dine-in' ? '🍽️ Dine-In' : '🛍️ Counter Pickup'}
+                  {isDelivery ? 'Home Delivery' : selectedOrder.orderType === 'dine-in' ? 'Dine-In' : 'Counter Pickup'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
                   selectedDisplayStatus === 'Pending' ? 'bg-amber-500/10 text-amber-600' :

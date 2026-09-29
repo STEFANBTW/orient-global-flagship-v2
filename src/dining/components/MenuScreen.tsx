@@ -17,37 +17,37 @@ const DINING_CATEGORIES: DiningCategoryMeta[] = [
     name: "Proteins & Grills",
     count: 4,
     tagline: "Charcoal Seared & Pepper Glazed",
-    icon: "🔥"
+    icon: ""
   },
   {
     name: "The Rice Core",
     count: 4,
     tagline: "Woodfire-Smoked & Steamed",
-    icon: "🍚"
+    icon: ""
   },
   {
     name: "Soups & Natural Swallows",
     count: 6,
     tagline: "Heritage Broths & Elastic Doughs",
-    icon: "🍲"
+    icon: ""
   },
   {
     name: "Yam & Pasta",
     count: 3,
     tagline: "Highland Tubers & Comfort Classics",
-    icon: "🍠"
+    icon: ""
   },
   {
     name: "Starters & Sides",
     count: 3,
     tagline: "Aromatic Infusions & Accompaniments",
-    icon: "🌶️"
+    icon: ""
   },
   {
     name: "Drinks & Cellar",
     count: 13,
     tagline: "AURA Sommelier & Cold Infusions",
-    icon: "🍷"
+    icon: ""
   }
 ];
 
@@ -241,7 +241,7 @@ const MenuScreen: React.FC = () => {
       }
       return [...prev, { product, quantity: 1 }];
     });
-    showToast(`Added ${product.name} • ₦10 • 11 mins`);
+    showToast(`Added ${product.name} | ₦10 | 11 mins`);
   };
 
   const handleUpdateQuantity = (productId: string, delta: number) => {
@@ -1078,8 +1078,8 @@ const MenuScreen: React.FC = () => {
               <div className="min-w-0">
                 <p className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-primary">Restaurant Order Tray</p>
                 <p className="text-xs sm:text-sm font-bold text-white truncate">
-                  <span className="hidden sm:inline">₦{totalTrayAmount.toLocaleString()} • 11 Mins Kitchen Preparation</span>
-                  <span className="sm:hidden">₦{totalTrayAmount.toLocaleString()} • 11m Prep</span>
+                  <span className="hidden sm:inline">₦{totalTrayAmount.toLocaleString()} | 11 Mins Kitchen Preparation</span>
+                  <span className="sm:hidden">₦{totalTrayAmount.toLocaleString()} | 11m Prep</span>
                 </p>
               </div>
             </div>
@@ -1238,7 +1238,7 @@ const MenuScreen: React.FC = () => {
                       {isSelectedOutOfStock ? "block" : "add"}
                     </span>
                     <span>
-                      {isSelectedOutOfStock ? "Out of Stock • Cannot Order" : "Add to Order • ₦10"}
+                      {isSelectedOutOfStock ? "Out of Stock | Cannot Order" : "Add to Order | ₦10"}
                     </span>
                   </button>
                 );

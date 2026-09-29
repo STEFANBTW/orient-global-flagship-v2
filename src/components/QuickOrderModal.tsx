@@ -477,10 +477,10 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
                           </Badge>
                         </div>
                         <h3 className="text-xl font-extrabold text-foreground mt-1">
-                          {activeOrder.status === 'awaiting_chef' && '⏳ Waiting for Chef Confirmation'}
-                          {activeOrder.status === 'preparing' && '👨‍🍳 Kitchen is Preparing Your Meal'}
-                          {activeOrder.status === 'ten_min_warning' && '⏱️ 10 Minutes Remaining — Get Ready!'}
-                          {activeOrder.status === 'ready' && '🎉 Order Ready for Pickup / Table Service!'}
+                          {activeOrder.status === 'awaiting_chef' && 'Waiting for Chef Confirmation'}
+                          {activeOrder.status === 'preparing' && 'Kitchen is Preparing Your Meal'}
+                          {activeOrder.status === 'ten_min_warning' && '10 Minutes Remaining - Get Ready!'}
+                          {activeOrder.status === 'ready' && 'Order Ready for Pickup / Table Service!'}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {activeOrder.status === 'awaiting_chef' && 'Order safely recorded in Firestore backend. Stock will deduct once chef taps "Start".'}
@@ -552,7 +552,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
                   <div className="bg-card p-4 rounded-xl border border-primary/30 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase text-primary font-mono">
-                        🛠️ Instant Verification & Chef Testing Actions:
+                        Instant Verification & Chef Testing Actions:
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 pt-1">

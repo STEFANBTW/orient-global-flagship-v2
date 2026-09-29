@@ -263,11 +263,11 @@ export function ProductEditorModal({
         await cmsApi.updateProduct(productToEdit.id, payload);
         const updated = { ...productToEdit, ...payload } as ProductItem;
         onProductSaved(updated);
-        toast({ title: 'Item Saved! ✅', description: `"${updated.name}" has been updated.` });
+        toast({ title: 'Item Saved!', description: `"${updated.name}" has been updated.` });
       } else {
         const newProduct = await cmsApi.createProduct(payload);
         onProductSaved(newProduct as ProductItem);
-        toast({ title: 'New Item Created! 🎉', description: `"${payload.name}" has been added to ${division} division.` });
+        toast({ title: 'New Item Created!', description: `"${payload.name}" has been added to ${division} division.` });
       }
       onClose();
     } catch (err) {
@@ -284,7 +284,7 @@ export function ProductEditorModal({
     try {
       await cmsApi.deleteProduct(productToEdit.id);
       onProductDeleted?.(productToEdit.id);
-      toast({ title: 'Item Deleted 🗑️', description: `"${productToEdit.name}" was removed from the database.` });
+      toast({ title: 'Item Deleted', description: `"${productToEdit.name}" was removed from the database.` });
       onClose();
     } catch (err) {
       toast({ title: 'Delete Failed', description: 'Could not remove product from database.', variant: 'destructive' });
@@ -315,7 +315,7 @@ export function ProductEditorModal({
             </Badge>
           </div>
           <DialogDescription className="text-xs text-muted-foreground mt-1">
-            {isEditing ? `ID: ${productToEdit?.id} · Created: ${productToEdit?.createdAt || 'N/A'}` : 'Configure catalog item details, pricing, and discovery settings.'}
+            {isEditing ? `ID: ${productToEdit?.id} - Created: ${productToEdit?.createdAt || 'N/A'}` : 'Configure catalog item details, pricing, and discovery settings.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -424,7 +424,7 @@ export function ProductEditorModal({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Low-Stock Alert Threshold</Label>
-                <Input type="number" min={0} value={minStockThreshold} onChange={(e) => setMinStockThreshold(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))} placeholder="e.g. 3 (alert when stock ≤ this)" className={inputClass} />
+                <Input type="number" min={0} value={minStockThreshold} onChange={(e) => setMinStockThreshold(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))} placeholder="e.g. 3 (alert when stock <= this)" className={inputClass} />
                 <p className="text-[10px] text-muted-foreground">Chef gets alerted before stock hits zero.</p>
               </div>
             </div>
@@ -439,7 +439,7 @@ export function ProductEditorModal({
                   <Label className="text-xs font-semibold">Prep Time (Minutes)</Label>
                   <div className="flex items-center gap-1.5">
                     <Input type="number" min={1} max={180} value={prepTimeMinutes} onChange={(e) => setPrepTimeMinutes(Math.max(1, parseInt(e.target.value) || 11))} className={inputClass + " font-mono font-bold w-24"} />
-                    <span className="text-xs text-muted-foreground">mins · countdown timer fires on chef confirmation</span>
+                    <span className="text-xs text-muted-foreground">mins - countdown timer fires on chef confirmation</span>
                   </div>
                 </div>
               </div>
@@ -559,7 +559,7 @@ export function ProductEditorModal({
               <div className="space-y-1.5">
                 {videos.map((vid, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-background text-xs">
-                    <span className="truncate max-w-[85%] font-mono text-[11px] text-muted-foreground">🎥 {vid.startsWith('data:') ? 'Uploaded local video file' : vid}</span>
+                    <span className="truncate max-w-[85%] font-mono text-[11px] text-muted-foreground">{vid.startsWith('data:') ? 'Uploaded local video file' : vid}</span>
                     <button type="button" onClick={() => handleRemoveVideo(idx)} className="p-1 text-muted-foreground hover:text-red-600 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

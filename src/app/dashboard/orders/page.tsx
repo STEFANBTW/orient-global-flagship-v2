@@ -51,7 +51,7 @@ export default function OrdersDashboardPage() {
     try {
       await orderService.confirmAndStartOrder(orderId, 11);
       addNotification({
-        title: '👨🍳 Order Confirmed & Started!',
+        title: 'Order Confirmed & Started!',
         message: `Order #${orderId} is now preparing (11 min timer). Stock auto-decremented!`,
         type: 'success'
       });
@@ -67,7 +67,7 @@ export default function OrdersDashboardPage() {
     setIsProcessing(orderId);
     try {
       await orderService.markOrderReady(orderId);
-      addNotification({ title: '✅ Order Ready!', message: `Order #${orderId} marked ready for pickup.`, type: 'success' });
+      addNotification({ title: 'Order Ready!', message: `Order #${orderId} marked ready for pickup.`, type: 'success' });
     } catch (e: any) {
       addNotification({ title: 'Error', message: e.message, type: 'error' });
     } finally {
@@ -81,7 +81,7 @@ export default function OrdersDashboardPage() {
     try {
       await orderService.updateOrderStatus(orderId, 'completed');
       addNotification({
-        title: '🏆 Order Completed!',
+        title: 'Order Completed!',
         message: `Order #${orderId} concluded and moved to Completed.`,
         type: 'success'
       });

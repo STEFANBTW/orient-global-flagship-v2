@@ -19,12 +19,12 @@ export const NotificationToggleButton: React.FC<NotificationToggleButtonProps> =
     const enabled = await toggleNotifications();
     if (enabled) {
       toast({
-        title: 'Notifications Active 🔔',
+        title: 'Notifications Active',
         description: 'You will receive real-time order alerts and countdown notifications.',
       });
     } else {
       toast({
-        title: 'Notifications Muted 🔕',
+        title: 'Notifications Muted',
         description: 'Desktop alerts are turned off. You can re-enable anytime.',
       });
     }

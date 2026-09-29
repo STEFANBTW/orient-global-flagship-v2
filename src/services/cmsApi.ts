@@ -101,6 +101,31 @@ const DIVISIONS: Division[] = [
  { id: "div_lounge", name: "Lounge", slug: "lounge", theme_config: { archetype: "Prestige / Immersive Media" }, active_status: true }
 ];
 
+
+function sanitizeProduct(p: any): any {
+  if (!p) return p;
+  const cleanStr = (s: any) => {
+    if (typeof s !== 'string') return s;
+    return s
+      .replace(/â€”/g, ' - ')
+      .replace(/Ã¢â€šÂ¦/g, '₦')
+      .replace(/├â┬ó├óÔé¼┼í├é┬ª/g, '₦')
+      .replace(/curaÃ§ao/g, 'curacao')
+      .replace(/-196Â°C/g, '-196 C')
+      .replace(/-196°C/g, '-196 C')
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1FA00}-\u{1FAFF}]/gu, '');
+  };
+  return {
+    ...p,
+    name: cleanStr(p.name),
+    description: cleanStr(p.description),
+    category: cleanStr(p.category),
+    ingredients: cleanStr(p.ingredients),
+    unit: cleanStr(p.unit),
+    tags: Array.isArray(p.tags) ? p.tags.map(cleanStr) : p.tags
+  };
+}
+
 export const cmsApi = {
  // Public
  getDivisionContent: async (slug: string) => {
@@ -351,7 +376,8 @@ export const cmsApi = {
       }
 
       try {
-        safeStorage.setItem("orient_products_cache", JSON.stringify(products));
+        products = products.map(sanitizeProduct);
+      safeStorage.setItem("orient_products_cache", JSON.stringify(products));
       } catch (e) {}
 
       return { products };

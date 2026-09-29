@@ -390,7 +390,7 @@ export const orderService = {
       orderId,
       type: 'order_placed',
       recipient: 'user',
-      title: 'Order Sent to Kitchen 🍳',
+      title: 'Order Sent to Kitchen',
       message: 'Your order has been successfully sent to the kitchen.',
       read: false,
       createdAt: nowIso
@@ -403,7 +403,7 @@ export const orderService = {
       orderId,
       type: 'order_placed',
       recipient: 'cms',
-      title: '🔔 New Order Incoming (Pending)',
+      title: 'New Order Incoming (Pending)',
       message: `Order #${orderId} from ${newOrder.customerName} (${newOrder.tableNumber}) needs chef confirmation. Total: ₦${newOrder.totalAmount?.toLocaleString() || 0}`,
       read: false,
       createdAt: nowIso
@@ -478,7 +478,7 @@ export const orderService = {
       orderId,
       type: 'order_confirmed',
       recipient: 'user',
-      title: '👨‍🍳 Order Confirmed by Chef',
+      title: 'Order Confirmed by Chef',
       message: `Your order has been confirmed by the chef and will be ready in ${prepDuration} minutes.`,
       read: false,
       createdAt: nowIso
@@ -536,7 +536,7 @@ export const orderService = {
       orderId,
       type: 'ten_min_warning',
       recipient: 'user',
-      title: '⏱️ 10 Minutes Remaining',
+      title: '10 Minutes Remaining',
       message: 'Your meal will be ready in 10 minutes.',
       read: false,
       createdAt: nowIso
@@ -590,7 +590,7 @@ export const orderService = {
       orderId,
       type: 'five_min_warning',
       recipient: 'user',
-      title: '⚡ 5 Minutes Remaining',
+      title: '5 Minutes Remaining',
       message: 'Your meal will be ready in 5 minutes.',
       read: false,
       createdAt: nowIso
@@ -652,7 +652,7 @@ export const orderService = {
       orderId,
       type: 'order_ready',
       recipient: 'user',
-      title: '🎉 Meal Ready!',
+      title: 'Meal Ready!',
       message: 'Your meal is ready.',
       read: false,
       createdAt: nowIso
@@ -719,7 +719,7 @@ export const orderService = {
         orderId,
         type: 'info',
         recipient: 'user',
-        title: 'Order Completed ✅',
+        title: 'Order Completed',
         message: 'Thank you for patronizing us. This order is finished.',
         read: false,
         createdAt: nowIso
@@ -783,7 +783,7 @@ export const orderService = {
       orderId,
       type: 'order_in_transit',
       recipient: 'user',
-      title: '🚚 Order In Transit',
+      title: 'Order In Transit',
       message: 'Your order is on the way! Please tap "Received" when your food arrives.',
       read: false,
       createdAt: nowIso
@@ -795,7 +795,7 @@ export const orderService = {
       orderId,
       type: 'order_in_transit',
       recipient: 'cms',
-      title: '🚚 Order In Transit',
+      title: 'Order In Transit',
       message: `Order #${orderId} is dispatched and in transit to customer.`,
       read: false,
       createdAt: nowIso
@@ -843,7 +843,7 @@ export const orderService = {
       orderId,
       type: 'order_received',
       recipient: 'cms',
-      title: '📦 Order Received by Customer',
+      title: 'Order Received by Customer',
       message: `Customer confirmed receipt of Order #${orderId}. You can now finish and confirm payment.`,
       read: false,
       createdAt: nowIso
@@ -855,7 +855,7 @@ export const orderService = {
       orderId,
       type: 'order_received',
       recipient: 'user',
-      title: 'Receipt Confirmed 👍',
+      title: 'Receipt Confirmed',
       message: 'You marked Order #' + orderId + ' as received. Thank you!',
       read: false,
       createdAt: nowIso
