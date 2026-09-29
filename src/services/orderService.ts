@@ -201,7 +201,10 @@ export interface CustomerOrder {
   status: OrderStatus;
   prepDurationMinutes: number; // e.g. 25
   timerEndsAt?: number | null; // epoch ms timestamp
+  timerStartedAt?: string | null;
+  timerEndedAt?: string | null;
   chefConfirmedAt?: string | null;
+  completedAt?: string | null;
   tenMinAlertSent: boolean;
   fiveMinAlertSent: boolean;
   createdAt: string;
@@ -217,6 +220,7 @@ export interface AppNotification {
   message: string;
   read: boolean;
   createdAt: string;
+  division?: string;
 }
 
 // Safe local storage abstraction
@@ -388,6 +392,7 @@ export const orderService = {
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
+      division: newOrder.division || 'dining',
       type: 'order_placed',
       recipient: 'user',
       title: 'Order Sent to Kitchen',
@@ -401,6 +406,7 @@ export const orderService = {
     const cmsNotif: AppNotification = {
       id: `NOTIF-C-${Date.now()}`,
       orderId,
+      division: newOrder.division || 'dining',
       type: 'order_placed',
       recipient: 'cms',
       title: 'New Order Incoming (Pending)',
@@ -476,6 +482,7 @@ export const orderService = {
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_confirmed',
       recipient: 'user',
       title: 'Order Confirmed by Chef',
@@ -488,6 +495,7 @@ export const orderService = {
     const cmsNotif: AppNotification = {
       id: `NOTIF-C-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_confirmed',
       recipient: 'cms',
       title: 'Cooking Started',
@@ -534,6 +542,7 @@ export const orderService = {
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
+      division: order.division || 'dining',
       type: 'ten_min_warning',
       recipient: 'user',
       title: '10 Minutes Remaining',
@@ -546,6 +555,7 @@ export const orderService = {
     const cmsNotif: AppNotification = {
       id: `NOTIF-C-${Date.now()}`,
       orderId,
+      division: order.division || 'dining',
       type: 'ten_min_warning',
       recipient: 'cms',
       title: '10m Warning Sent',
@@ -588,6 +598,7 @@ export const orderService = {
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
+      division: order.division || 'dining',
       type: 'five_min_warning',
       recipient: 'user',
       title: '5 Minutes Remaining',
@@ -600,6 +611,7 @@ export const orderService = {
     const cmsNotif: AppNotification = {
       id: `NOTIF-C-${Date.now()}`,
       orderId,
+      division: order.division || 'dining',
       type: 'five_min_warning',
       recipient: 'cms',
       title: '5m Warning Sent',
@@ -650,6 +662,7 @@ export const orderService = {
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_ready',
       recipient: 'user',
       title: 'Meal Ready!',
@@ -662,6 +675,7 @@ export const orderService = {
     const cmsNotif: AppNotification = {
       id: `NOTIF-C-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_ready',
       recipient: 'cms',
       title: 'Order Ready',
@@ -717,6 +731,7 @@ export const orderService = {
       const userNotif: AppNotification = {
         id: `NOTIF-U-${Date.now()}`,
         orderId,
+        division: order.division || 'dining',
         type: 'info',
         recipient: 'user',
         title: 'Order Completed',
@@ -729,6 +744,7 @@ export const orderService = {
       const cmsNotif: AppNotification = {
         id: `NOTIF-C-${Date.now()}`,
         orderId,
+        division: order.division || 'dining',
         type: 'info',
         recipient: 'cms',
         title: 'Order Completed',
@@ -738,6 +754,35 @@ export const orderService = {
       };
       await orderService.sendNotification(cmsNotif);
       playAlertSound('ready');
+    }
+
+    if (status === 'cancelled') {
+      const userNotif: AppNotification = {
+        id: `NOTIF-U-${Date.now()}`,
+        orderId,
+        division: order.division || 'dining',
+        type: 'order_cancelled',
+        recipient: 'user',
+        title: 'Order Cancelled',
+        message: `Order #${orderId} was cancelled.`,
+        read: false,
+        createdAt: nowIso
+      };
+      await orderService.sendNotification(userNotif);
+
+      const cmsNotif: AppNotification = {
+        id: `NOTIF-C-${Date.now()}`,
+        orderId,
+        division: order.division || 'dining',
+        type: 'order_cancelled',
+        recipient: 'cms',
+        title: 'Order Cancelled',
+        message: `Order #${orderId} has been cancelled.`,
+        read: false,
+        createdAt: nowIso
+      };
+      await orderService.sendNotification(cmsNotif);
+      playAlertSound('warning');
     }
 
     return updatedOrder;
@@ -781,6 +826,7 @@ export const orderService = {
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_in_transit',
       recipient: 'user',
       title: 'Order In Transit',
@@ -793,6 +839,7 @@ export const orderService = {
     const cmsNotif: AppNotification = {
       id: `NOTIF-C-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_in_transit',
       recipient: 'cms',
       title: 'Order In Transit',
@@ -841,6 +888,7 @@ export const orderService = {
     const cmsNotif: AppNotification = {
       id: `NOTIF-C-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_received',
       recipient: 'cms',
       title: 'Order Received by Customer',
@@ -853,6 +901,7 @@ export const orderService = {
     const userNotif: AppNotification = {
       id: `NOTIF-U-${Date.now()}`,
       orderId,
+      division: updatedOrder.division || 'dining',
       type: 'order_received',
       recipient: 'user',
       title: 'Receipt Confirmed',
@@ -884,6 +933,10 @@ export const orderService = {
    * Delete Order permanently
    */
   deleteOrder: async (orderId: string): Promise<void> => {
+    const orderToDelete = ordersCache.find(o => o.id === orderId || o.orderId === orderId);
+    const div = orderToDelete?.division || 'dining';
+    const nowIso = new Date().toISOString();
+
     try {
       const docRef = doc(db, 'orders', orderId);
       await deleteDoc(docRef);
@@ -894,6 +947,20 @@ export const orderService = {
     try {
       safeStorage.setItem('orient_orders_cache', JSON.stringify(ordersCache));
     } catch (e) {}
+
+    const cmsNotif: AppNotification = {
+      id: `NOTIF-C-${Date.now()}`,
+      orderId,
+      division: div,
+      type: 'order_cancelled',
+      recipient: 'cms',
+      title: 'Order Cancelled / Deleted',
+      message: `Order #${orderId} was removed from the active queue.`,
+      read: false,
+      createdAt: nowIso
+    };
+    await orderService.sendNotification(cmsNotif);
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('orient_orders_changed'));
     }

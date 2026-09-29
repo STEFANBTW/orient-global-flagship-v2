@@ -187,7 +187,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
   }
 
   return (
-    <div className="admin-dashboard min-h-screen w-full bg-background font-display text-foreground flex flex-col overflow-x-hidden">
+    <div className="admin-dashboard min-h-screen w-full bg-background font-display text-foreground flex flex-col overflow-x-clip">
       {/* ========================================================================= */}
       {/* UNIFIED SINGLE COMPACT TOP BAR                                            */}
       {/* ========================================================================= */}
@@ -561,7 +561,7 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
       {/* ========================================================================= */}
       {/* MAIN CONTENT AREA                                                         */}
       {/* ========================================================================= */}
-      <main className="flex-1 p-3 sm:p-6 max-w-7xl w-full mx-auto flex flex-col justify-between overflow-x-hidden">
+      <main className="flex-1 p-3 sm:p-6 max-w-7xl w-full mx-auto flex flex-col justify-between overflow-x-clip">
         <div className="flex-1 w-full">
           <Outlet />
         </div>

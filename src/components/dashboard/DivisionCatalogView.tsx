@@ -1,7 +1,26 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { cmsApi } from '@/services/cmsApi';
-import { orderService, CustomerOrder, playAlertSound, getDisplayStatus, isDeliveryOrder } from '@/services/orderService';
+import { orderService, CustomerOrder, AppNotification, playAlertSound, getDisplayStatus, isDeliveryOrder } from '@/services/orderService';
 import { ProductItem } from '@/data/productsCatalog';
+
+const formatRelativeTime = (dateStr?: string): string => {
+  if (!dateStr) return 'Just now';
+  try {
+    const d = new Date(dateStr);
+    const diffMs = Date.now() - d.getTime();
+    if (isNaN(diffMs)) return 'Just now';
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour}h ago`;
+    const diffDays = Math.floor(diffHour / 24);
+    return `${diffDays}d ago`;
+  } catch (e) {
+    return 'Just now';
+  }
+};
 import { ProductEditorModal } from './ProductEditorModal';
 import OrderDetailsModal from './OrderDetailsModal';
 import GoogleSheetModal from './GoogleSheetModal';
@@ -175,6 +194,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [liveNotifications, setLiveNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -247,6 +267,65 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     window.addEventListener('orient_consumer_user_changed', handleUserChanged);
     return () => window.removeEventListener('orient_consumer_user_changed', handleUserChanged);
   }, []);
+
+  // Subscribe to Live Firestore Notifications & Activity Stream
+  useEffect(() => {
+    orderService.getNotifications().then(notifs => {
+      if (Array.isArray(notifs)) setLiveNotifications(notifs);
+    });
+
+    const unsubscribe = orderService.subscribeToNotifications(notifs => {
+      if (Array.isArray(notifs)) setLiveNotifications(notifs);
+    });
+
+    const handleNewNotif = (e: any) => {
+      if (e.detail) {
+        setLiveNotifications(prev => [e.detail, ...prev.filter(n => n.id !== e.detail.id)]);
+      }
+    };
+    window.addEventListener('orient_new_notification', handleNewNotif);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('orient_new_notification', handleNewNotif);
+    };
+  }, []);
+
+  // Filter notifications specifically for this division
+  const divisionNotifications = useMemo(() => {
+    const divKey = (divisionId || 'dining').toLowerCase();
+    return liveNotifications.filter(n => {
+      if (n.division) {
+        const nd = n.division.toLowerCase();
+        if (divKey === 'dining') return nd.includes('dining') || nd.includes('rest') || nd.includes('ozzie');
+        if (divKey === 'bakery') return nd.includes('bakery') || nd.includes('bake');
+        if (divKey === 'water') return nd.includes('water') || nd.includes('orville');
+        if (divKey === 'games') return nd.includes('game');
+        if (divKey === 'market') return nd.includes('market') || nd.includes('super');
+        if (divKey === 'lounge') return nd.includes('lounge');
+        return nd === divKey;
+      }
+      if (n.orderId) {
+        const matched = orders.find(o => o.id === n.orderId || o.orderId === n.orderId);
+        if (matched) {
+          const od = (matched.division || '').toLowerCase();
+          return od.includes(divKey) || (divKey === 'dining' && (od.includes('rest') || od.includes('dining')));
+        }
+      }
+      return true;
+    }).slice(0, 15);
+  }, [liveNotifications, divisionId, orders]);
+
+  const entriesTodayCount = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return divisionNotifications.filter(n => {
+      try {
+        return new Date(n.createdAt).toDateString() === todayStr;
+      } catch (e) {
+        return true;
+      }
+    }).length;
+  }, [divisionNotifications]);
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -1222,34 +1301,67 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
             </div>
           </div>
 
-          <div className="space-y-2.5">
-            <div className="p-3 rounded-xl bg-[#f8fafc] dark:bg-slate-800/50 flex items-start justify-between gap-3 text-xs">
-              <div>
-                <span className="font-semibold text-foreground block">Stock Replenished</span>
-                <span className="text-muted-foreground text-[11px] block mt-0.5">Added 12 units to current department inventory.</span>
+          <div className="space-y-2 flex-1 overflow-y-auto max-h-[260px] pr-1">
+            {divisionNotifications.length === 0 ? (
+              <div className="py-8 px-4 rounded-xl bg-[#f8fafc] dark:bg-slate-800/40 text-center text-muted-foreground my-auto">
+                <Bell className="w-5 h-5 mx-auto mb-1.5 opacity-30 text-muted-foreground" />
+                <p className="font-semibold text-xs text-foreground">No recent activity yet</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xs mx-auto">
+                  When orders are placed, confirmed, prepared, or updated in {config.name}, live operational status will stream here.
+                </p>
               </div>
-              <span className="text-[10px] text-muted-foreground font-mono shrink-0">8m ago</span>
-            </div>
+            ) : (
+              divisionNotifications.map((notif) => {
+                const isCancelled = notif.type === 'order_cancelled';
+                const isReady = notif.type === 'order_ready';
+                const isConfirmed = notif.type === 'order_confirmed';
+                const isPlaced = notif.type === 'order_placed';
+                const isReceived = notif.type === 'order_received';
 
-            <div className="p-3 rounded-xl bg-[#f8fafc] dark:bg-slate-800/50 flex items-start justify-between gap-3 text-xs">
-              <div>
-                <span className="font-semibold text-foreground block">Chef Confirmation Logged</span>
-                <span className="text-muted-foreground text-[11px] block mt-0.5">Order #ORD-102 confirmed and prep timer started.</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground font-mono shrink-0">18m ago</span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-[#f8fafc] dark:bg-slate-800/50 flex items-start justify-between gap-3 text-xs">
-              <div>
-                <span className="font-semibold text-foreground block">Sheet Catalog Synchronized</span>
-                <span className="text-muted-foreground text-[11px] block mt-0.5">Connected Google Sheet synchronized with catalog items.</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground font-mono shrink-0">42m ago</span>
-            </div>
+                return (
+                  <div 
+                    key={notif.id}
+                    className="p-3 rounded-xl bg-[#f8fafc] dark:bg-slate-800/50 flex items-start justify-between gap-3 text-xs border border-border/10 hover:border-border/30 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            isCancelled
+                              ? 'bg-red-500'
+                              : isReady
+                              ? 'bg-purple-500'
+                              : isConfirmed
+                              ? 'bg-orange-500'
+                              : isReceived
+                              ? 'bg-emerald-500'
+                              : isPlaced
+                              ? 'bg-amber-500'
+                              : 'bg-blue-500'
+                          }`}
+                        />
+                        <span className="font-semibold text-foreground truncate block">
+                          {notif.title}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground text-[11px] block mt-0.5 leading-relaxed line-clamp-2">
+                        {notif.message}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-mono shrink-0 pt-0.5">
+                      {formatRelativeTime(notif.createdAt)}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </div>
 
-          <div className="pt-2 border-t border-border/30 text-[11px] text-muted-foreground flex justify-end">
-            <span className="text-foreground font-semibold">4 Entries Today</span>
+          <div className="pt-2 border-t border-border/30 text-[11px] text-muted-foreground flex justify-between items-center">
+            <span className="text-[10px] text-muted-foreground font-mono">Live Activity Stream</span>
+            <span className="text-foreground font-semibold">
+              {entriesTodayCount} {entriesTodayCount === 1 ? 'Entry' : 'Entries'} Today
+            </span>
           </div>
         </div>
 
@@ -1630,9 +1742,10 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
       {/* 4. THIRD ROW: Inventory Grid & SKU Catalog */}
       <div className="space-y-4 pt-4 border-t border-border/30">
-        <div className="sticky top-[48px] sm:top-[50px] z-30 bg-background/95 backdrop-blur-md py-3 -mx-2 px-2 sm:-mx-4 sm:px-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-b border-border/20 shadow-2xs rounded-xl">
+        {/* Sticky & Spacious Filter Bar */}
+        <div className="sticky top-[48px] sm:top-[52px] z-30 bg-background/95 backdrop-blur-md py-4 px-3 sm:px-6 -mx-2 sm:-mx-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3.5 sm:gap-4 border-b border-border/30 shadow-xs rounded-2xl">
           {/* Dynamic Category Tabs with Category Icons on the LEFT hand side */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {config.categories.map(cat => {
               const count = cat === 'All' 
                 ? products.length 
@@ -1646,16 +1759,16 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                   key={cat}
                   id={`cat-filter-${cat.toLowerCase().replace(/\s+/g, '-')}`}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-200 flex items-center gap-2 border-none cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center gap-2 border-none cursor-pointer shadow-2xs ${
                     isSelected 
-                      ? 'bg-foreground text-background font-bold' 
-                      : 'bg-[#f8fafc] dark:bg-slate-800 text-muted-foreground hover:bg-slate-200/80 dark:hover:bg-slate-700/80 hover:text-foreground'
+                      ? 'bg-foreground text-background font-bold shadow-xs scale-[1.02]' 
+                      : 'bg-[#f8fafc] dark:bg-slate-800/80 text-muted-foreground hover:bg-slate-200/90 dark:hover:bg-slate-700/90 hover:text-foreground'
                   }`}
                 >
                   <CategoryIcon className={`w-3.5 h-3.5 ${isSelected ? 'text-background' : 'text-muted-foreground'}`} />
                   <span>{cat}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? 'bg-background/20 text-background' : 'bg-background text-muted-foreground'
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                    isSelected ? 'bg-background/25 text-background' : 'bg-background text-muted-foreground'
                   }`}>
                     {count}
                   </span>
@@ -1665,14 +1778,14 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
           </div>
 
           {/* Search Input */}
-          <div className="relative flex items-center w-full sm:w-72 shrink-0">
-            <Search className="w-4 h-4 absolute left-3 text-muted-foreground pointer-events-none z-10 shrink-0" />
+          <div className="relative flex items-center w-full sm:w-80 shrink-0">
+            <Search className="w-4 h-4 absolute left-3.5 text-muted-foreground pointer-events-none z-10 shrink-0" />
             <Input 
               id="input-search-division-products"
               placeholder={`Search ${config.name}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 text-xs h-9 bg-[#f8fafc] dark:bg-[#1a1a1a] border-none shadow-2xs focus-visible:ring-foreground w-full"
+              className="pl-10 text-xs h-10 bg-[#f8fafc] dark:bg-slate-800/80 border border-border/30 shadow-2xs focus-visible:ring-foreground rounded-xl w-full"
             />
           </div>
         </div>
