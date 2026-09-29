@@ -930,35 +930,32 @@ export const orderService = {
     try {
       const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        const list = snapshot.docs.map(d => {
-          const data = d.data();
-          return normalizeOrder({
-            ...data,
-            id: d.id,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
-            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt || new Date().toISOString()
-          });
+      const list = snapshot.docs.map(d => {
+        const data = d.data();
+        return normalizeOrder({
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt || new Date().toISOString()
         });
-        ordersCache = list;
-        try {
-          safeStorage.setItem('orient_orders_cache', JSON.stringify(list));
-        } catch (e) {}
-        return list;
-      }
+      });
+      ordersCache = list;
+      try {
+        safeStorage.setItem('orient_orders_cache', JSON.stringify(list));
+      } catch (e) {}
+      return list;
     } catch (err) {
-      console.warn("Fetching orders from Firestore failed, using cached:", err);
+      console.warn("Fetching orders from Firestore failed, using cached fallback:", err);
+      // Fallback to cache ONLY when Firestore network/offline failure occurs
+      try {
+        const raw = safeStorage.getItem('orient_orders_cache');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed.map(normalizeOrder);
+        }
+      } catch (e) {}
+      return ordersCache.map(normalizeOrder);
     }
-
-    // Fallback to cache
-    try {
-      const raw = safeStorage.getItem('orient_orders_cache');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed.map(normalizeOrder);
-      }
-    } catch (e) {}
-    return ordersCache.map(normalizeOrder);
   },
 
   getOrderById: async (orderId: string): Promise<CustomerOrder | null> => {

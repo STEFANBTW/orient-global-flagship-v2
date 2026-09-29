@@ -545,6 +545,28 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     }
   };
 
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData();
+      toast({
+        title: 'Live Data Refreshed',
+        description: 'Orders, inventory, and revenue synchronized from database.'
+      });
+    } catch (e) {
+      toast({
+        title: 'Refresh Error',
+        description: 'Could not refresh data from database.',
+        variant: 'destructive'
+      });
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
   // Manual metrics override state
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
   const [manualMetrics, setManualMetrics] = useState<{
@@ -577,29 +599,80 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     setIsMetricsModalOpen(false);
   };
 
-  // Calculated live statistics for this division (defaults to 0 for new site)
-  const totalDishesToday = useMemo(() => {
+  // Helper: check if a timestamp or date string is TODAY
+  const isToday = (dateValue: any) => {
+    if (!dateValue) return false;
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  };
+
+  // Real live orders created TODAY for this division (strictly from Firestore)
+  const todayDivisionOrders = useMemo(() => {
+    return divisionOrders.filter(o => {
+      const d = (o as any).placedDate || o.createdAt;
+      return isToday(d);
+    });
+  }, [divisionOrders]);
+
+  const totalOrdersToday = useMemo(() => {
     if (manualMetrics.dishesToday !== undefined) return manualMetrics.dishesToday;
-    return orders.reduce((sum, ord) => sum + ord.items.reduce((iSum, item) => iSum + item.quantity, 0), 0);
-  }, [orders, manualMetrics.dishesToday]);
+    return todayDivisionOrders.length;
+  }, [todayDivisionOrders, manualMetrics.dishesToday]);
 
-  const onlineOrdersCount = useMemo(() => {
-    if (manualMetrics.onlineOrders !== undefined) return manualMetrics.onlineOrders;
-    return orders.filter(o => o.shippingAddress && o.shippingAddress !== 'In-Store Walk-in').length;
-  }, [orders, manualMetrics.onlineOrders]);
+  const todayDineInOrders = useMemo(() => {
+    return todayDivisionOrders.filter(o => o.destination === 'dine-in' || o.orderType === 'dine-in');
+  }, [todayDivisionOrders]);
 
-  const walkInOrdersCount = useMemo(() => {
-    if (manualMetrics.walkInOrders !== undefined) return manualMetrics.walkInOrders;
-    return orders.filter(o => o.shippingAddress === 'In-Store Walk-in').length;
-  }, [orders, manualMetrics.walkInOrders]);
+  const todayTakeawayOrders = useMemo(() => {
+    return todayDivisionOrders.filter(o => o.destination === 'takeaway' || o.orderType === 'takeaway');
+  }, [todayDivisionOrders]);
 
-  const takeawayCount = useMemo(() => Math.round(totalDishesToday * 0.38), [totalDishesToday]);
-  const dineInCount = useMemo(() => totalDishesToday - takeawayCount, [totalDishesToday, takeawayCount]);
+  const todayPickupOrders = useMemo(() => {
+    return todayDivisionOrders.filter(
+      o => o.deliveryMethod === 'pickup' || ((o.destination === 'takeaway' || o.orderType === 'takeaway') && o.deliveryMethod !== 'delivery')
+    );
+  }, [todayDivisionOrders]);
+
+  const todayDeliveryOrders = useMemo(() => {
+    return todayDivisionOrders.filter(o => o.deliveryMethod === 'delivery');
+  }, [todayDivisionOrders]);
 
   const todayRevenue = useMemo(() => {
     if (manualMetrics.revenue !== undefined) return manualMetrics.revenue;
-    return orders.reduce((sum, ord) => sum + ord.totalAmount, 0);
-  }, [orders, manualMetrics.revenue]);
+    return todayDivisionOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }, [todayDivisionOrders, manualMetrics.revenue]);
+
+  const todayDineInRevenue = useMemo(() => {
+    return todayDineInOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }, [todayDineInOrders]);
+
+  const todayTakeawayRevenue = useMemo(() => {
+    return todayTakeawayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }, [todayTakeawayOrders]);
+
+  const todayPickupRevenue = useMemo(() => {
+    return todayPickupOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }, [todayPickupOrders]);
+
+  const todayDeliveryRevenue = useMemo(() => {
+    return todayDeliveryOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }, [todayDeliveryOrders]);
+
+  const onlineOrdersCount = useMemo(() => {
+    if (manualMetrics.onlineOrders !== undefined) return manualMetrics.onlineOrders;
+    return todayDivisionOrders.filter(o => o.shippingAddress && o.shippingAddress !== 'In-Store Walk-in').length;
+  }, [todayDivisionOrders, manualMetrics.onlineOrders]);
+
+  const walkInOrdersCount = useMemo(() => {
+    if (manualMetrics.walkInOrders !== undefined) return manualMetrics.walkInOrders;
+    return todayDivisionOrders.filter(o => o.shippingAddress === 'In-Store Walk-in').length;
+  }, [todayDivisionOrders, manualMetrics.walkInOrders]);
 
   // Analytics graph state
   const [analyticsMetric, setAnalyticsMetric] = React.useState<'orders' | 'revenue'>('orders');
@@ -744,6 +817,18 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
           <Button
             size="sm"
             variant="outline"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="text-xs font-semibold gap-1.5 border-border/60 hover:bg-muted shrink-0 cursor-pointer shadow-2xs"
+            title="Refresh live data from database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => setIsMetricsModalOpen(true)}
             className="text-xs font-bold gap-1.5 border-border/60 hover:bg-muted shrink-0 cursor-pointer"
           >
@@ -770,9 +855,9 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
           <div className="p-4 rounded-2xl bg-card shadow-xs flex flex-col justify-between space-y-3 border border-border/10">
             <div className="flex items-center justify-between pb-1.5 border-b border-border/30">
               <div>
-                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">Total Orders (Today)</span>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">Total Orders</span>
                 <span className="text-2xl font-extrabold text-foreground font-mono mt-0.5 block">
-                  {totalDishesToday} <span className="text-xs font-normal text-muted-foreground">orders</span>
+                  {totalOrdersToday} <span className="text-xs font-normal text-muted-foreground">orders</span>
                 </span>
               </div>
               <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800 text-foreground">
@@ -780,21 +865,21 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 pt-0.5">
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground font-medium">Dine-in</span>
-                <span className="text-sm font-bold font-mono text-foreground">{dineInCount}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Dine-in</span>
+                <span className="text-sm font-bold font-mono text-foreground">{todayDineInOrders.length}</span>
               </div>
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground font-medium">Takeaway</span>
-                <span className="text-sm font-bold font-mono text-foreground">{takeawayCount}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Takeaway</span>
+                <span className="text-sm font-bold font-mono text-foreground">{todayTakeawayOrders.length}</span>
               </div>
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground font-medium">Pickup</span>
-                <span className="text-sm font-bold font-mono text-foreground">{Math.floor(takeawayCount * 0.4)}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Pickup</span>
+                <span className="text-sm font-bold font-mono text-foreground">{todayPickupOrders.length}</span>
               </div>
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground font-medium">Delivery</span>
-                <span className="text-sm font-bold font-mono text-foreground">{Math.floor(takeawayCount * 0.6)}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Delivery</span>
+                <span className="text-sm font-bold font-mono text-foreground">{todayDeliveryOrders.length}</span>
               </div>
             </div>
           </div>
@@ -803,7 +888,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
           <div className="p-4 rounded-2xl bg-card shadow-xs flex flex-col justify-between space-y-3 border border-border/10">
             <div className="flex items-center justify-between pb-1.5 border-b border-border/30">
               <div>
-                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">Total Revenue (Today)</span>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">Total Revenue</span>
                 <span className="text-2xl font-extrabold text-foreground font-mono mt-0.5 block">
                   ₦{todayRevenue.toLocaleString()}
                 </span>
@@ -813,21 +898,21 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 pt-0.5">
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
-                <span className="text-[10px] text-muted-foreground font-medium">Dine-in</span>
-                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.6).toLocaleString()}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Dine-in</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{todayDineInRevenue.toLocaleString()}</span>
               </div>
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
-                <span className="text-[10px] text-muted-foreground font-medium">Takeaway</span>
-                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.4).toLocaleString()}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Takeaway</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{todayTakeawayRevenue.toLocaleString()}</span>
               </div>
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
-                <span className="text-[10px] text-muted-foreground font-medium">Pickup</span>
-                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.15).toLocaleString()}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Pickup</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{todayPickupRevenue.toLocaleString()}</span>
               </div>
-              <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
-                <span className="text-[10px] text-muted-foreground font-medium">Delivery</span>
-                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.25).toLocaleString()}</span>
+              <div className="p-2.5 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium">Delivery</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{todayDeliveryRevenue.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -1049,23 +1134,29 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
             )}
 
             {/* Recharts Area Chart */}
-            <div className="h-[120px] w-full pt-1">
+            <div className="h-[150px] w-full pt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={analyticsChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                <AreaChart data={analyticsChartData} margin={{ top: 8, right: 6, left: 0, bottom: 2 }}>
                   <defs>
                     <linearGradient id="box3Gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.35}/>
                       <stop offset="95%" stopColor="#f97316" stopOpacity={0.0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: 'currentColor' }} className="text-muted-foreground" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.12} />
+                  <XAxis
+                    dataKey="label"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: 'currentColor' }}
+                    className="text-muted-foreground font-medium"
+                  />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 9, fill: 'currentColor' }}
-                    className="text-muted-foreground"
-                    width={analyticsMetric === 'revenue' ? 38 : 22}
+                    tick={{ fontSize: 11, fill: 'currentColor' }}
+                    className="text-muted-foreground font-medium"
+                    width={analyticsMetric === 'revenue' ? 44 : 26}
                     tickFormatter={(val) =>
                       analyticsMetric === 'revenue'
                         ? `₦${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`
@@ -1078,9 +1169,9 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                         const item = payload[0].payload;
                         const val = item.value as number;
                         return (
-                          <div className="bg-slate-900 text-white px-2.5 py-1.5 rounded-xl text-[10px] shadow-lg font-mono">
-                            <div className="text-slate-400 mb-0.5">{item.fullDate || item.label}</div>
-                            <div className="font-bold">
+                          <div className="bg-slate-900 text-white px-3 py-2 rounded-xl text-xs shadow-xl font-mono border border-slate-700">
+                            <div className="text-slate-400 text-[11px] mb-0.5">{item.fullDate || item.label}</div>
+                            <div className="font-bold text-sm">
                               {analyticsMetric === 'revenue' ? `₦${val.toLocaleString()}` : `${val} orders`}
                             </div>
                           </div>
@@ -1089,7 +1180,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                       return null;
                     }}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#f97316" strokeWidth={2} fillOpacity={1} fill="url(#box3Gradient)" />
+                  <Area type="monotone" dataKey="value" stroke="#f97316" strokeWidth={2.5} fillOpacity={1} fill="url(#box3Gradient)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1878,7 +1969,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
               <input 
                 name="dishesToday"
                 type="number" 
-                defaultValue={manualMetrics.dishesToday ?? totalDishesToday}
+                defaultValue={manualMetrics.dishesToday ?? totalOrdersToday}
                 min="0"
                 className="w-full h-10 px-3 rounded-xl border border-border/60 bg-transparent text-foreground text-sm font-mono font-bold"
                 placeholder="0"
@@ -2025,6 +2116,8 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
       <GoogleSheetModal
         isOpen={isSheetsModalOpen}
         onClose={() => setIsSheetsModalOpen(false)}
+        divisionId={divisionId}
+        divisionName={config.name}
       />
     </div>
   );
