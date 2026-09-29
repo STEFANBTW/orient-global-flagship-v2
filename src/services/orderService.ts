@@ -219,6 +219,8 @@ export interface AppNotification {
   title: string;
   message: string;
   read: boolean;
+  status?: 'attended' | 'unattended' | 'in_progress';
+  category?: 'inventory' | 'staff' | 'finance' | 'system' | 'orders';
   createdAt: string;
   division?: string;
 }
@@ -237,6 +239,13 @@ const safeStorage = {
     try {
       if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         localStorage.setItem(key, val);
+      }
+    } catch (e) {}
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
       }
     } catch (e) {}
   }
@@ -1135,6 +1144,114 @@ export const orderService = {
     } catch (e) {
       callback(notificationsCache);
       return () => {};
+    }
+  },
+
+  /**
+   * Clear All Notifications permanently from Firestore and local cache
+   */
+  clearAllNotifications: async (): Promise<void> => {
+    try {
+      const q = query(collection(db, 'notifications'));
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      snap.docs.forEach(docSnap => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+    } catch (e) {
+      console.warn("Could not delete notifications from Firestore:", e);
+    }
+
+    notificationsCache = [];
+    try {
+      safeStorage.removeItem('orient_notifications_cache');
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orient_notifications_cleared'));
+    }
+  },
+
+  /**
+   * Mark single notification as read in Firestore and local state
+   */
+  markNotificationRead: async (notifId: string): Promise<void> => {
+    notificationsCache = notificationsCache.map(n => n.id === notifId ? { ...n, read: true, status: 'attended' } : n);
+    try {
+      safeStorage.setItem('orient_notifications_cache', JSON.stringify(notificationsCache));
+    } catch (e) {}
+
+    try {
+      const docRef = doc(db, 'notifications', notifId);
+      await updateDoc(docRef, { read: true, status: 'attended' });
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orient_notification_updated', { detail: { id: notifId, read: true } }));
+    }
+  },
+
+  /**
+   * Mark all notifications as read in Firestore and local state
+   */
+  markAllNotificationsRead: async (): Promise<void> => {
+    notificationsCache = notificationsCache.map(n => ({ ...n, read: true, status: 'attended' }));
+    try {
+      safeStorage.setItem('orient_notifications_cache', JSON.stringify(notificationsCache));
+    } catch (e) {}
+
+    try {
+      const q = query(collection(db, 'notifications'));
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      snap.docs.forEach(docSnap => {
+        batch.update(docSnap.ref, { read: true, status: 'attended' });
+      });
+      await batch.commit();
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orient_all_notifications_read'));
+    }
+  },
+
+  /**
+   * Update notification status ('attended' | 'unattended' | 'in_progress')
+   */
+  updateNotificationStatus: async (notifId: string, status: 'attended' | 'unattended' | 'in_progress'): Promise<void> => {
+    const isRead = status === 'attended';
+    notificationsCache = notificationsCache.map(n => n.id === notifId ? { ...n, status, read: isRead || n.read } : n);
+    try {
+      safeStorage.setItem('orient_notifications_cache', JSON.stringify(notificationsCache));
+    } catch (e) {}
+
+    try {
+      const docRef = doc(db, 'notifications', notifId);
+      await updateDoc(docRef, { status, read: isRead });
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orient_notification_updated', { detail: { id: notifId, status } }));
+    }
+  },
+
+  /**
+   * Delete single notification permanently
+   */
+  deleteNotification: async (notifId: string): Promise<void> => {
+    notificationsCache = notificationsCache.filter(n => n.id !== notifId);
+    try {
+      safeStorage.setItem('orient_notifications_cache', JSON.stringify(notificationsCache));
+    } catch (e) {}
+
+    try {
+      const docRef = doc(db, 'notifications', notifId);
+      await deleteDoc(docRef);
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orient_notification_deleted', { detail: { id: notifId } }));
     }
   }
 };

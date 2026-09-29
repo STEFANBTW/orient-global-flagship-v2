@@ -148,6 +148,8 @@ export interface RoleContextType {
  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
  markNotificationRead: (id: string) => void;
  updateNotificationStatus: (id: string, status: 'attended' | 'unattended' | 'in_progress') => void;
+ clearAllNotifications: () => Promise<void>;
+ deleteNotification: (id: string) => Promise<void>;
  activeDivisionView: DivisionId;
  setActiveDivisionView: (division: DivisionId) => void;
  activeModule: string;
@@ -207,16 +209,28 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     const unsub = orderService.subscribeToNotifications((notifs) => {
       const mapped = notifs.map(n => ({
         id: n.id,
+        userId: (n as any).userId || (n as any).recipient || 'system',
         title: n.title || "Alert",
         message: n.message || "You have a new update",
         type: (n.type as any) || "info",
         timestamp: n.createdAt || new Date().toISOString(),
-        read: false,
-        division: n.recipient === "user" ? "dining" : "system"
+        read: n.read ?? false,
+        status: n.status || (n.read ? 'attended' : 'unattended'),
+        division: n.division || (n.recipient === "user" ? "dining" : "system"),
+        category: n.category || 'system'
       }));
       setNotifications(mapped as any[]);
     });
-    return () => unsub();
+
+    const handleCleared = () => {
+      setNotifications([]);
+    };
+    window.addEventListener('orient_notifications_cleared', handleCleared);
+
+    return () => {
+      unsub();
+      window.removeEventListener('orient_notifications_cleared', handleCleared);
+    };
   }, []);
 
 
@@ -403,11 +417,23 @@ export function RoleProvider({ children }: { children: ReactNode }) {
  };
 
  const markNotificationRead = (id: string) => {
- setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+   setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true, status: 'attended' } : n));
+   orderService.markNotificationRead(id).catch(console.warn);
  };
 
  const updateNotificationStatus = (id: string, status: 'attended' | 'unattended' | 'in_progress') => {
- setNotifications(prev => prev.map(n => n.id === id ? { ...n, status, read: true } : n));
+   setNotifications(prev => prev.map(n => n.id === id ? { ...n, status, read: status === 'attended' || n.read } : n));
+   orderService.updateNotificationStatus(id, status).catch(console.warn);
+ };
+
+ const clearAllNotifications = async () => {
+   setNotifications([]);
+   await orderService.clearAllNotifications();
+ };
+
+ const deleteNotification = async (id: string) => {
+   setNotifications(prev => prev.filter(n => n.id !== id));
+   await orderService.deleteNotification(id).catch(console.warn);
  };
 
  const updateRequestStatus = async (id: string, status: 'approved' | 'declined', reason?: string) => {
@@ -459,7 +485,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 
   return (
  <RoleContext.Provider value={{ 
- currentUser, setCurrentUser, loginWithGoogle, loginWithEmail, signupWithEmail, logout, isAuthReady, requests, auditLogs, notifications, createRequest, addAuditLog, updateRequestStatus, addNotification, markNotificationRead, updateNotificationStatus,
+ currentUser, setCurrentUser, loginWithGoogle, loginWithEmail, signupWithEmail, logout, isAuthReady, requests, auditLogs, notifications, createRequest, addAuditLog, updateRequestStatus, addNotification, markNotificationRead, updateNotificationStatus, clearAllNotifications, deleteNotification,
  activeDivisionView, setActiveDivisionView, activeModule, setActiveModule, canExecuteLocally,
  diningMenu, loungeMenu, labDrinks, vipBookings, waterLogs, skus,
  tournaments, hardwareRigs, sommelierList

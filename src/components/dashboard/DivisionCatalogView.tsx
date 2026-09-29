@@ -285,11 +285,34 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     };
     window.addEventListener('orient_new_notification', handleNewNotif);
 
+    const handleCleared = () => {
+      setLiveNotifications([]);
+    };
+    window.addEventListener('orient_notifications_cleared', handleCleared);
+
     return () => {
       unsubscribe();
       window.removeEventListener('orient_new_notification', handleNewNotif);
+      window.removeEventListener('orient_notifications_cleared', handleCleared);
     };
   }, []);
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await orderService.clearAllNotifications();
+      setLiveNotifications([]);
+      toast({
+        title: 'Notifications Cleared',
+        description: 'All operational activity logs have been cleared.'
+      });
+    } catch (e) {
+      toast({
+        title: 'Error',
+        description: 'Could not clear notifications.',
+        variant: 'destructive'
+      });
+    }
+  };
 
   // Filter notifications specifically for this division
   const divisionNotifications = useMemo(() => {
@@ -1299,6 +1322,18 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                 <p className="text-[11px] text-muted-foreground">Live operational log for {config.name}</p>
               </div>
             </div>
+            {divisionNotifications.length > 0 && (
+              <button
+                type="button"
+                id="btn-clear-notifications-box"
+                onClick={handleClearAllNotifications}
+                className="text-[11px] font-semibold text-muted-foreground hover:text-red-500 hover:bg-red-500/10 px-2.5 py-1 rounded-xl transition-colors border border-border/30 hover:border-red-500/30 flex items-center gap-1 cursor-pointer"
+                title="Clear all notifications"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
 
           <div className="space-y-2 flex-1 overflow-y-auto max-h-[260px] pr-1">
@@ -1742,8 +1777,8 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
       {/* 4. THIRD ROW: Inventory Grid & SKU Catalog */}
       <div className="space-y-4 pt-4 border-t border-border/30">
-        {/* Sticky & Spacious Filter Bar */}
-        <div className="sticky top-[48px] sm:top-[52px] z-30 bg-background/95 backdrop-blur-md py-4 px-3 sm:px-6 -mx-2 sm:-mx-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3.5 sm:gap-4 border-b border-border/30 shadow-xs rounded-2xl">
+        {/* Sticky & Spacious Filter Bar with Transparent Navbar Styling */}
+        <div className="sticky top-[48px] sm:top-[52px] z-30 bg-background/80 backdrop-blur-md py-3.5 px-3 sm:px-6 -mx-2 sm:-mx-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3.5 sm:gap-4 border-b border-border/20 shadow-2xs rounded-2xl">
           {/* Dynamic Category Tabs with Category Icons on the LEFT hand side */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {config.categories.map(cat => {
