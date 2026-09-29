@@ -94,7 +94,7 @@ const DIVISION_CONFIGS: Record<string, DivisionConfig> = {
     name: 'Bakery & Pastries',
     subtitle: 'Fresh Breads, Croissants, Artisan Cakes & Pastries',
     tagline: 'Artisan bakehouse offering daily oven-fresh breads, viennoiserie, and celebration cakes.',
-    icon: '🥖',
+    icon: '',
     categories: ['All', 'Bread', 'Pastries', 'Cakes', 'Artisan Specials', 'Savory Bakes']
   },
   dining: {
@@ -102,7 +102,7 @@ const DIVISION_CONFIGS: Record<string, DivisionConfig> = {
     name: 'Dining & Restaurant',
     subtitle: 'Local Heritage, Nigerian Classics & Artisanal Dining',
     tagline: 'Authentic Nigerian dining featuring grilled proteins, smoky jollof, slow-simmered soups, and natural swallows.',
-    icon: '🍽️',
+    icon: '',
     categories: ['All', 'Proteins & Grills', 'The Rice Core', 'Soups & Natural Swallows', 'Yam & Pasta', 'Starters & Sides', 'Drinks & Cellar']
   },
   market: {
@@ -110,7 +110,7 @@ const DIVISION_CONFIGS: Record<string, DivisionConfig> = {
     name: 'Supermarket & Groceries',
     subtitle: 'Fresh Produce, Pantry Staples, Dairy & Household',
     tagline: 'Complete grocery market offering premium ingredients, staples, snacks, and chilled provisions.',
-    icon: '🛒',
+    icon: '',
     categories: ['All', 'Pantry', 'Produce', 'Dairy & Eggs', 'Snacks', 'Beverages', 'Household']
   },
   games: {
@@ -118,7 +118,7 @@ const DIVISION_CONFIGS: Record<string, DivisionConfig> = {
     name: 'Arcade & Gaming Arena',
     subtitle: 'Hourly Passes, VR Experiences, Consoles & Table Games',
     tagline: 'Interactive entertainment center featuring virtual reality, console arenas, arcade coins, and billiards.',
-    icon: '🎮',
+    icon: '',
     categories: ['All', 'Hourly Passes', 'VR Experiences', 'Console Gaming', 'Arcade Coins', 'Table Games']
   },
   lounge: {
@@ -126,7 +126,7 @@ const DIVISION_CONFIGS: Record<string, DivisionConfig> = {
     name: 'Lounge & Cocktail Bar',
     subtitle: 'Signature Cocktails, Fine Wines, Spirits & Tapas',
     tagline: 'Relaxed evening sanctuary with handcrafted cocktails, cellar wines, and curated light fare.',
-    icon: '🍸',
+    icon: '',
     categories: ['All', 'Cocktails', 'Wine & Champagne', 'Spirits', 'Small Plates']
   },
   water: {
@@ -134,7 +134,7 @@ const DIVISION_CONFIGS: Record<string, DivisionConfig> = {
     name: 'Pure Table Water',
     subtitle: 'Spring Water Bottles, Refill Dispensers & Bulk Packs',
     tagline: 'Multi-stage reverse osmosis water in premium portable bottles and commercial dispensers.',
-    icon: '💧',
+    icon: '',
     categories: ['All', 'Bottled Water', 'Water Dispensers', 'Bulk Packs', 'Accessories']
   }
 };
@@ -368,7 +368,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
   const handleExportCSV = () => {
     sheetsSync.exportToCSV(products, `orient_${divisionId}_catalog.csv`);
     toast({
-      title: 'Catalog Exported! 📊',
+      title: 'Catalog Exported!',
       description: `Downloaded ${products.length} ${config.name} items formatted for Excel and Google Sheets.`,
     });
   };
@@ -406,7 +406,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
         }
 
         toast({
-          title: 'Import Complete! 🎉',
+          title: 'Import Complete!',
           description: `Successfully synchronized ${parsed.length} items from sheet.`,
         });
         loadData();
@@ -452,8 +452,8 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
       });
 
       toast({
-        title: 'Order Placed! 🛒',
-        description: `Order #${placed.id} placed for ${orderQuantity}x ${orderingItem.name} at ├â┬ó├óÔé¼┼í├é┬ª10 each (Total: ├â┬ó├óÔé¼┼í├é┬ª${placed.totalAmount}). Status: Waiting for Chef. Stock is NOT decremented yet.`,
+        title: 'Order Placed!',
+        description: `Order #${placed.id} placed for ${orderQuantity}x ${orderingItem.name} at ₦10 each (Total: ₦${placed.totalAmount}). Status: Waiting for Chef. Stock is NOT decremented yet.`,
       });
 
       setOrderingItem(null);
@@ -475,7 +475,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     try {
       await orderService.confirmAndStartOrder(orderId, 11);
       toast({
-        title: '👨‍🍳 Chef Confirmed & Started!',
+        title: 'Chef Confirmed & Started!',
         description: `Order #${orderId} is now preparing! Countdown timer running. Stock has auto-decremented.`,
       });
       loadData();
@@ -493,7 +493,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     try {
       await orderService.sendTenMinuteWarning(orderId);
       toast({
-        title: '⚠️ 10-Minute Warning Dispatched!',
+        title: '10-Minute Warning Dispatched!',
         description: `Sent alert to customer for Order #${orderId}: '10 minutes left until ready!'`,
       });
       const freshOrders = await orderService.getOrders();
@@ -512,7 +512,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     try {
       await orderService.markOrderReady(orderId);
       toast({
-        title: '🎉 Order Marked Ready!',
+        title: 'Order Marked Ready!',
         description: `Order #${orderId} is ready for customer pickup!`,
       });
       const freshOrders = await orderService.getOrders();
@@ -531,7 +531,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     try {
       await orderService.markOrderInTransit(orderId);
       toast({
-        title: '🚚 Order Dispatched & In Transit!',
+        title: 'Order Dispatched & In Transit!',
         description: `Order #${orderId} has been marked In Transit. Customer will confirm receipt!`,
       });
       const freshOrders = await orderService.getOrders();
@@ -572,7 +572,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     setManualMetrics(updates);
     try {
       localStorage.setItem(`orient_metrics_${divisionId}`, JSON.stringify(updates));
-      toast({ title: 'Metrics Updated! 📊', description: 'Dashboard live metrics updated successfully.' });
+      toast({ title: 'Metrics Updated!', description: 'Dashboard live metrics updated successfully.' });
     } catch (e) {}
     setIsMetricsModalOpen(false);
   };
@@ -601,7 +601,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
     return orders.reduce((sum, ord) => sum + ord.totalAmount, 0);
   }, [orders, manualMetrics.revenue]);
 
-  // ÔöÇÔöÇ Analytics graph state ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ──ÔöÇ Analytics graph state ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const [analyticsMetric, setAnalyticsMetric] = React.useState<'orders' | 'revenue'>('orders');
   const [isMetricDropdownOpen, setIsMetricDropdownOpen] = React.useState(false);
   const [analyticsPeriod, setAnalyticsPeriod] = React.useState<'day' | 'week' | 'month' | 'year'>('week');
@@ -734,7 +734,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
       {/* 1. Page Header (Clean title with direct link to public restaurant menu) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
         <div className="flex items-center gap-3">
-          <span className="text-2xl sm:text-3xl">{config.icon}</span>
+          {/* icon removed */}
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
             {config.name}
           </h1>
@@ -805,29 +805,29 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
               <div>
                 <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">Total Revenue (Today)</span>
                 <span className="text-2xl font-extrabold text-foreground font-mono mt-0.5 block">
-                  ├â┬ó├óÔé¼┼í├é┬ª{todayRevenue.toLocaleString()}
+                  ₦{todayRevenue.toLocaleString()}
                 </span>
               </div>
               <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800 text-foreground text-xl font-bold flex items-center justify-center min-w-9 h-9">
-                ├â┬ó├óÔé¼┼í├é┬ª
+                ₦
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 pt-0.5">
               <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
                 <span className="text-[10px] text-muted-foreground font-medium">Dine-in</span>
-                <span className="text-sm font-bold font-mono text-foreground">├â┬ó├óÔé¼┼í├é┬ª{Math.round(todayRevenue * 0.6).toLocaleString()}</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.6).toLocaleString()}</span>
               </div>
               <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
                 <span className="text-[10px] text-muted-foreground font-medium">Takeaway</span>
-                <span className="text-sm font-bold font-mono text-foreground">├â┬ó├óÔé¼┼í├é┬ª{Math.round(todayRevenue * 0.4).toLocaleString()}</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.4).toLocaleString()}</span>
               </div>
               <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
                 <span className="text-[10px] text-muted-foreground font-medium">Pickup</span>
-                <span className="text-sm font-bold font-mono text-foreground">├â┬ó├óÔé¼┼í├é┬ª{Math.round(todayRevenue * 0.15).toLocaleString()}</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.15).toLocaleString()}</span>
               </div>
               <div className="p-2 rounded-xl bg-[#f8fafc] dark:bg-slate-800/60 flex flex-col items-start justify-center">
                 <span className="text-[10px] text-muted-foreground font-medium">Delivery</span>
-                <span className="text-sm font-bold font-mono text-foreground">├â┬ó├óÔé¼┼í├é┬ª{Math.round(todayRevenue * 0.25).toLocaleString()}</span>
+                <span className="text-sm font-bold font-mono text-foreground">₦{Math.round(todayRevenue * 0.25).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -1256,7 +1256,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                         <span className="text-xs font-mono font-bold text-foreground">#{order.orderId || order.id}</span>
                         <p className="text-xs font-semibold text-foreground mt-0.5 truncate">{order.customerName}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {order.customerPhone} ├â┬ó├óÔÇÜ┬¼├é┬ó {order.destination === 'dine-in' ? `Dine-In (${order.seatNumber || order.tableNumber || 'Table'})` : (order.deliveryMethod === 'delivery' ? `Delivery: ${order.deliveryAddress || order.shippingAddress || 'Address'}` : 'Pickup')}
+                          {order.customerPhone} • {order.destination === 'dine-in' ? `Dine-In (${order.seatNumber || order.tableNumber || 'Table'})` : (order.deliveryMethod === 'delivery' ? `Delivery: ${order.deliveryAddress || order.shippingAddress || 'Address'}` : 'Pickup')}
                         </p>
                       </div>
 
@@ -1322,7 +1322,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                       {order.items.map((it, idx) => (
                         <div key={idx} className="flex justify-between items-center text-foreground font-medium text-[11px]">
                           <span>{it.quantity}x {it.name}</span>
-                          <span className="text-muted-foreground font-mono">├â┬ó├óÔé¼┼í├é┬ª{it.price * it.quantity}</span>
+                          <span className="text-muted-foreground font-mono">₦{it.price * it.quantity}</span>
                         </div>
                       ))}
                     </div>
@@ -1713,7 +1713,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                     {/* Last Thing at Bottom: Bold Price (50% bigger) */}
                     <div className="pt-2 border-t border-border/20 flex items-center justify-between">
                       <span className="text-xl font-extrabold text-foreground font-mono">
-                        ├â┬ó├óÔé¼┼í├é┬ª{item.price || 10}
+                        ₦{item.price || 10}
                       </span>
                       {isOutOfStock && (
                         <span className="text-[10px] font-semibold text-red-500 uppercase">
@@ -1754,7 +1754,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                 <div>
                   <h4 className="font-bold text-sm text-foreground">{orderingItem.name}</h4>
                   <Badge variant="outline" className="text-[10px] mt-0.5">{orderingItem.category}</Badge>
-                  <p className="text-xs font-semibold text-emerald-600 mt-1">├â┬ó├óÔé¼┼í├é┬ª{orderingItem.price || 10} each</p>
+                  <p className="text-xs font-semibold text-emerald-600 mt-1">₦{orderingItem.price || 10} each</p>
                 </div>
               </div>
 
@@ -1812,7 +1812,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
                     <Plus className="w-3.5 h-3.5" />
                   </Button>
                   <span className="text-xs text-muted-foreground ml-auto font-medium">
-                    Total: <span className="font-bold text-emerald-600 font-mono text-sm">├â┬ó├óÔé¼┼í├é┬ª{orderQuantity * (orderingItem.price || 10)}</span>
+                    Total: <span className="font-bold text-emerald-600 font-mono text-sm">₦{orderQuantity * (orderingItem.price || 10)}</span>
                   </span>
                 </div>
               </div>
@@ -1836,7 +1836,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
               disabled={submittingOrder}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5"
             >
-              {submittingOrder ? 'Placing Order...' : `Confirm Order (├â┬ó├óÔé¼┼í├é┬ª${orderQuantity * (orderingItem?.price || 10)})`}
+              {submittingOrder ? 'Placing Order...' : `Confirm Order (₦${orderQuantity * (orderingItem?.price || 10)})`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1887,7 +1887,7 @@ export default function DivisionCatalogView({ divisionId }: { divisionId: 'baker
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-foreground uppercase tracking-wider block">
-                Today's Sales Revenue (├â┬ó├óÔé¼┼í├é┬ª)
+                Today's Sales Revenue (₦)
               </label>
               <input 
                 name="revenue"
