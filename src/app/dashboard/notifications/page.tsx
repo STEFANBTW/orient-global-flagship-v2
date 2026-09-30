@@ -14,13 +14,12 @@ import {
   Check, 
   RotateCcw,
   Layers,
-  Trash2,
-  Calendar
+  Trash2
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { isNotificationForAdmin, isNotificationForUser } from '@/services/notificationService';
 
 const formatRelativeTime = (dateStr?: string): string => {
   if (!dateStr) return 'Just now';
@@ -43,12 +42,26 @@ const formatRelativeTime = (dateStr?: string): string => {
 
 export default function NotificationsPage() {
   const { 
+    currentUser,
     notifications, 
     markNotificationRead, 
     updateNotificationStatus, 
     clearAllNotifications, 
     deleteNotification 
   } = useRoles();
+
+  const isAdminMode = currentUser?.role === 'boss' || currentUser?.role === 'hod' || currentUser?.role === 'staff' || (typeof window !== 'undefined' && sessionStorage.getItem('orient_dashboard_mode') === 'admin');
+
+  // Strict separation: User sees ONLY user notifications; Admin sees ONLY admin notifications
+  const scopedNotifications = useMemo(() => {
+    return notifications.filter(n => {
+      if (isAdminMode) {
+        return isNotificationForAdmin(n as any);
+      } else {
+        return isNotificationForUser(n as any);
+      }
+    });
+  }, [notifications, isAdminMode]);
 
   const [statusFilter, setStatusFilter] = useState<'all' | 'attended' | 'unattended' | 'in_progress'>('all');
   const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
@@ -58,15 +71,15 @@ export default function NotificationsPage() {
   // Extract unique divisions from notifications
   const availableDivisions = useMemo(() => {
     const set = new Set<string>();
-    notifications.forEach(n => {
+    scopedNotifications.forEach(n => {
       if (n.division) set.add(n.division);
     });
     return Array.from(set);
-  }, [notifications]);
+  }, [scopedNotifications]);
 
   // Filtered notifications
   const filteredNotifications = useMemo(() => {
-    return notifications.filter(n => {
+    return scopedNotifications.filter(n => {
       const currentStatus = n.status || (n.read ? 'attended' : 'unattended');
       if (statusFilter !== 'all' && currentStatus !== statusFilter) return false;
       if (readFilter === 'read' && !n.read) return false;
@@ -82,27 +95,27 @@ export default function NotificationsPage() {
       }
       return true;
     });
-  }, [notifications, statusFilter, readFilter, divisionFilter, searchQuery]);
+  }, [scopedNotifications, statusFilter, readFilter, divisionFilter, searchQuery]);
 
   // Counts for quick metrics
   const counts = useMemo(() => {
     let attended = 0;
     let unattended = 0;
     let inProgress = 0;
-    notifications.forEach(n => {
+    scopedNotifications.forEach(n => {
       const s = n.status || (n.read ? 'attended' : 'unattended');
       if (s === 'attended') attended++;
       else if (s === 'in_progress') inProgress++;
       else unattended++;
     });
     return {
-      total: notifications.length,
+      total: scopedNotifications.length,
       attended,
       unattended,
       inProgress,
-      unread: notifications.filter(n => !n.read).length
+      unread: scopedNotifications.filter(n => !n.read).length
     };
-  }, [notifications]);
+  }, [scopedNotifications]);
 
   // Mark all as read
   const handleMarkAllAsRead = async () => {
@@ -110,12 +123,12 @@ export default function NotificationsPage() {
       if (orderService.markAllNotificationsRead) {
         await orderService.markAllNotificationsRead();
       }
-      notifications.forEach(n => {
+      scopedNotifications.forEach(n => {
         if (!n.read) markNotificationRead(n.id);
       });
       toast({
         title: 'All Marked as Read',
-        description: 'All system notifications have been marked as attended and read.'
+        description: 'All notifications have been marked as attended and read.'
       });
     } catch (e) {
       toast({
@@ -177,17 +190,9 @@ export default function NotificationsPage() {
             <Bell className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                Administrative Notifications History
-              </h1>
-              <Badge variant="outline" className="text-[10px] font-mono border-border/30 bg-muted/30">
-                Live Stream
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Complete operational audit trail of system alerts, order triggers, and task fulfillment statuses.
-            </p>
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+              {isAdminMode ? 'Administrative Notifications History' : 'User Notifications History'}
+            </h1>
           </div>
         </div>
 
@@ -208,7 +213,7 @@ export default function NotificationsPage() {
             variant="outline"
             size="sm"
             onClick={handleClearAll}
-            disabled={notifications.length === 0}
+            disabled={scopedNotifications.length === 0}
             className="text-xs h-8 gap-1.5 text-muted-foreground hover:text-red-500 hover:border-red-500/40 hover:bg-red-500/10 border-border/30 font-semibold rounded-xl transition-colors cursor-pointer"
             title="Purge all notifications from Firestore and local history"
           >
@@ -236,9 +241,8 @@ export default function NotificationsPage() {
           <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground mt-1 tracking-tight">
             {counts.total}
           </div>
-          <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-foreground/60 shrink-0" />
-            <span>All logged events</span>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            All logged events
           </div>
         </Card>
 
@@ -247,20 +251,19 @@ export default function NotificationsPage() {
           onClick={() => setStatusFilter('unattended')}
           className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
             statusFilter === 'unattended' 
-              ? 'border-amber-500/50 bg-amber-500/5' 
+              ? 'border-foreground/30 bg-muted/40' 
               : 'border-border/20 bg-card hover:border-border/40'
           }`}
         >
           <div className="text-[11px] font-semibold text-muted-foreground tracking-wide uppercase flex items-center justify-between">
             <span>Unattended</span>
-            <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+            <AlertCircle className="w-3.5 h-3.5 opacity-60" />
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-mono text-amber-500 mt-1 tracking-tight">
+          <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground mt-1 tracking-tight">
             {counts.unattended}
           </div>
-          <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-            <span>Requires review</span>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            Requires review
           </div>
         </Card>
 
@@ -269,20 +272,19 @@ export default function NotificationsPage() {
           onClick={() => setStatusFilter('in_progress')}
           className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
             statusFilter === 'in_progress' 
-              ? 'border-blue-500/50 bg-blue-500/5' 
+              ? 'border-foreground/30 bg-muted/40' 
               : 'border-border/20 bg-card hover:border-border/40'
           }`}
         >
           <div className="text-[11px] font-semibold text-muted-foreground tracking-wide uppercase flex items-center justify-between">
             <span>In Progress</span>
-            <Clock className="w-3.5 h-3.5 text-blue-500" />
+            <Clock className="w-3.5 h-3.5 opacity-60" />
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-mono text-blue-500 mt-1 tracking-tight">
+          <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground mt-1 tracking-tight">
             {counts.inProgress}
           </div>
-          <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-            <span>Being handled</span>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            Being handled
           </div>
         </Card>
 
@@ -291,20 +293,19 @@ export default function NotificationsPage() {
           onClick={() => setStatusFilter('attended')}
           className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
             statusFilter === 'attended' 
-              ? 'border-emerald-500/50 bg-emerald-500/5' 
+              ? 'border-foreground/30 bg-muted/40' 
               : 'border-border/20 bg-card hover:border-border/40'
           }`}
         >
           <div className="text-[11px] font-semibold text-muted-foreground tracking-wide uppercase flex items-center justify-between">
             <span>Resolved</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+            <CheckCircle2 className="w-3.5 h-3.5 opacity-60" />
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-mono text-emerald-500 mt-1 tracking-tight">
+          <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground mt-1 tracking-tight">
             {counts.attended}
           </div>
-          <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-            <span>Fulfilled / closed</span>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            Fulfilled / closed
           </div>
         </Card>
       </div>
@@ -331,37 +332,34 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={() => setStatusFilter('unattended')}
-              className={`text-xs px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 font-semibold cursor-pointer ${
+              className={`text-xs px-3 py-1.5 rounded-xl transition-colors font-semibold cursor-pointer ${
                 statusFilter === 'unattended'
-                  ? 'bg-amber-600 text-white shadow-2xs'
+                  ? 'bg-foreground text-background shadow-2xs'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               Unattended ({counts.unattended})
             </button>
             <button
               type="button"
               onClick={() => setStatusFilter('in_progress')}
-              className={`text-xs px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 font-semibold cursor-pointer ${
+              className={`text-xs px-3 py-1.5 rounded-xl transition-colors font-semibold cursor-pointer ${
                 statusFilter === 'in_progress'
-                  ? 'bg-blue-600 text-white shadow-2xs'
+                  ? 'bg-foreground text-background shadow-2xs'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
               In Progress ({counts.inProgress})
             </button>
             <button
               type="button"
               onClick={() => setStatusFilter('attended')}
-              className={`text-xs px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 font-semibold cursor-pointer ${
+              className={`text-xs px-3 py-1.5 rounded-xl transition-colors font-semibold cursor-pointer ${
                 statusFilter === 'attended'
-                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  ? 'bg-foreground text-background shadow-2xs'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               Attended ({counts.attended})
             </button>
           </div>

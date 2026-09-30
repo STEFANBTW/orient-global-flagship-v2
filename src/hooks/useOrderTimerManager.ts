@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { orderService, CustomerOrder } from '../services/orderService';
 import { useNotifications } from '../context/NotificationContext';
+import { 
+  triggerDeviceNotification, 
+  isNotificationTargetingCurrentDevice 
+} from '../services/notificationService';
 
 export function useOrderTimerManager() {
   const { addNotification } = useNotifications();
@@ -14,7 +18,25 @@ export function useOrderTimerManager() {
     const handleCustomNotif = (e: any) => {
       const notif = e.detail;
       if (notif) {
+        // Enforce recipient check: User notifications ONLY to User, Admin notifications ONLY to Admin
+        if (!isNotificationTargetingCurrentDevice(notif)) {
+          return;
+        }
+
+        // Trigger device notification via deduplicated trigger (fires ONCE per ID, replaces via tag)
+        triggerDeviceNotification({
+          id: notif.id,
+          title: notif.title,
+          body: notif.message,
+          recipient: notif.recipient,
+          userId: notif.userId
+        });
+
+        // Add in-app visual toast
         addNotification({
+          id: notif.id,
+          recipient: notif.recipient,
+          userId: notif.userId,
           title: notif.title,
           message: notif.message,
           type: notif.type === 'ten_min_warning' || notif.type === 'five_min_warning' ? 'warning' :

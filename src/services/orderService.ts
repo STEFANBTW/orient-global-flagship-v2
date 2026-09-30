@@ -214,8 +214,10 @@ export interface CustomerOrder {
 export interface AppNotification {
   id: string;
   orderId?: string;
+  userId?: string;
+  customerId?: string;
   type: 'order_placed' | 'order_confirmed' | 'ten_min_warning' | 'five_min_warning' | 'order_ready' | 'order_in_transit' | 'order_received' | 'order_cancelled' | 'info';
-  recipient: 'user' | 'cms' | 'all';
+  recipient: 'user' | 'cms' | 'admin' | 'all';
   title: string;
   message: string;
   read: boolean;
@@ -399,8 +401,9 @@ export const orderService = {
 
     // Dispatch Notification 1: User receives confirmation
     const userNotif: AppNotification = {
-      id: `NOTIF-U-${Date.now()}`,
+      id: `NOTIF-U-${orderId}-placed`,
       orderId,
+      userId: newOrder.userId || newOrder.customerId,
       division: newOrder.division || 'dining',
       type: 'order_placed',
       recipient: 'user',
@@ -413,7 +416,7 @@ export const orderService = {
 
     // Dispatch Notification 2: CMS receives alert
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-placed`,
       orderId,
       division: newOrder.division || 'dining',
       type: 'order_placed',
@@ -489,8 +492,9 @@ export const orderService = {
 
     // Dispatch Notifications
     const userNotif: AppNotification = {
-      id: `NOTIF-U-${Date.now()}`,
+      id: `NOTIF-U-${orderId}-confirmed`,
       orderId,
+      userId: updatedOrder.userId || updatedOrder.customerId,
       division: updatedOrder.division || 'dining',
       type: 'order_confirmed',
       recipient: 'user',
@@ -502,7 +506,7 @@ export const orderService = {
     await orderService.sendNotification(userNotif);
 
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-confirmed`,
       orderId,
       division: updatedOrder.division || 'dining',
       type: 'order_confirmed',
@@ -549,8 +553,9 @@ export const orderService = {
     } catch (e) {}
 
     const userNotif: AppNotification = {
-      id: `NOTIF-U-${Date.now()}`,
+      id: `NOTIF-U-${orderId}-10min`,
       orderId,
+      userId: order.userId || order.customerId,
       division: order.division || 'dining',
       type: 'ten_min_warning',
       recipient: 'user',
@@ -562,7 +567,7 @@ export const orderService = {
     await orderService.sendNotification(userNotif);
 
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-10min`,
       orderId,
       division: order.division || 'dining',
       type: 'ten_min_warning',
@@ -605,8 +610,9 @@ export const orderService = {
     } catch (e) {}
 
     const userNotif: AppNotification = {
-      id: `NOTIF-U-${Date.now()}`,
+      id: `NOTIF-U-${orderId}-5min`,
       orderId,
+      userId: order.userId || order.customerId,
       division: order.division || 'dining',
       type: 'five_min_warning',
       recipient: 'user',
@@ -618,7 +624,7 @@ export const orderService = {
     await orderService.sendNotification(userNotif);
 
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-5min`,
       orderId,
       division: order.division || 'dining',
       type: 'five_min_warning',
@@ -669,8 +675,9 @@ export const orderService = {
     }
 
     const userNotif: AppNotification = {
-      id: `NOTIF-U-${Date.now()}`,
+      id: `NOTIF-U-${orderId}-ready`,
       orderId,
+      userId: updatedOrder.userId || updatedOrder.customerId,
       division: updatedOrder.division || 'dining',
       type: 'order_ready',
       recipient: 'user',
@@ -682,7 +689,7 @@ export const orderService = {
     await orderService.sendNotification(userNotif);
 
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-ready`,
       orderId,
       division: updatedOrder.division || 'dining',
       type: 'order_ready',
@@ -738,8 +745,9 @@ export const orderService = {
 
     if (status === 'completed') {
       const userNotif: AppNotification = {
-        id: `NOTIF-U-${Date.now()}`,
+        id: `NOTIF-U-${orderId}-completed`,
         orderId,
+        userId: order.userId || order.customerId,
         division: order.division || 'dining',
         type: 'info',
         recipient: 'user',
@@ -751,7 +759,7 @@ export const orderService = {
       await orderService.sendNotification(userNotif);
 
       const cmsNotif: AppNotification = {
-        id: `NOTIF-C-${Date.now()}`,
+        id: `NOTIF-C-${orderId}-completed`,
         orderId,
         division: order.division || 'dining',
         type: 'info',
@@ -767,8 +775,9 @@ export const orderService = {
 
     if (status === 'cancelled') {
       const userNotif: AppNotification = {
-        id: `NOTIF-U-${Date.now()}`,
+        id: `NOTIF-U-${orderId}-cancelled`,
         orderId,
+        userId: order.userId || order.customerId,
         division: order.division || 'dining',
         type: 'order_cancelled',
         recipient: 'user',
@@ -780,7 +789,7 @@ export const orderService = {
       await orderService.sendNotification(userNotif);
 
       const cmsNotif: AppNotification = {
-        id: `NOTIF-C-${Date.now()}`,
+        id: `NOTIF-C-${orderId}-cancelled`,
         orderId,
         division: order.division || 'dining',
         type: 'order_cancelled',
@@ -833,8 +842,9 @@ export const orderService = {
     }
 
     const userNotif: AppNotification = {
-      id: `NOTIF-U-${Date.now()}`,
+      id: `NOTIF-U-${orderId}-transit`,
       orderId,
+      userId: updatedOrder.userId || updatedOrder.customerId,
       division: updatedOrder.division || 'dining',
       type: 'order_in_transit',
       recipient: 'user',
@@ -846,7 +856,7 @@ export const orderService = {
     await orderService.sendNotification(userNotif);
 
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-transit`,
       orderId,
       division: updatedOrder.division || 'dining',
       type: 'order_in_transit',
@@ -895,7 +905,7 @@ export const orderService = {
     } catch (e) {}
 
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-received`,
       orderId,
       division: updatedOrder.division || 'dining',
       type: 'order_received',
@@ -908,8 +918,9 @@ export const orderService = {
     await orderService.sendNotification(cmsNotif);
 
     const userNotif: AppNotification = {
-      id: `NOTIF-U-${Date.now()}`,
+      id: `NOTIF-U-${orderId}-received`,
       orderId,
+      userId: updatedOrder.userId || updatedOrder.customerId,
       division: updatedOrder.division || 'dining',
       type: 'order_received',
       recipient: 'user',
@@ -958,7 +969,7 @@ export const orderService = {
     } catch (e) {}
 
     const cmsNotif: AppNotification = {
-      id: `NOTIF-C-${Date.now()}`,
+      id: `NOTIF-C-${orderId}-deleted`,
       orderId,
       division: div,
       type: 'order_cancelled',

@@ -6,6 +6,7 @@ import { cmsApi } from '@/services/cmsApi';
 import { orderService } from '@/services/orderService';
 import { auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged, doc, getDoc, setDoc, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@/firebase';
 import { getActiveConsumerUser, setActiveConsumerUser, getActiveAdminUser, setActiveAdminUser } from '@/services/userService';
+import { triggerDeviceNotification, isNotificationTargetingCurrentDevice, isCurrentDeviceAdmin, isNotificationForAdmin, isNotificationForUser } from '@/services/notificationService';
 
 export type UserRole = 'boss' | 'hod' | 'staff' | 'customer';
 export type DivisionId = 'bakery' | 'dining' | 'games' | 'lounge' | 'market' | 'water' | 'global';
@@ -204,12 +205,25 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Subscribe to real-time notifications from Firestore
+  // Subscribe to real-time notifications from Firestore (strictly filtered by recipient)
   useEffect(() => {
     const unsub = orderService.subscribeToNotifications((notifs) => {
-      const mapped = notifs.map(n => ({
+      const isAdmin = isCurrentDeviceAdmin(currentUser?.role);
+
+      const filtered = notifs.filter(n => {
+        if (isAdmin) {
+          // Admin must NEVER see user-targeted notifications
+          return isNotificationForAdmin(n as any);
+        } else {
+          // User must NEVER see admin-targeted notifications
+          return isNotificationForUser(n as any);
+        }
+      });
+
+      const mapped = filtered.map(n => ({
         id: n.id,
         userId: (n as any).userId || (n as any).recipient || 'system',
+        recipient: n.recipient,
         title: n.title || "Alert",
         message: n.message || "You have a new update",
         type: (n.type as any) || "info",
@@ -231,7 +245,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       unsub();
       window.removeEventListener('orient_notifications_cleared', handleCleared);
     };
-  }, []);
+  }, [currentUser?.role]);
 
 
   // Synchronize state dynamically whenever active user changes anywhere in the app
@@ -379,41 +393,43 @@ export function RoleProvider({ children }: { children: ReactNode }) {
  setAuditLogs(prev => [newLog, ...prev]);
  };
 
- const sendDeviceNotification = (title: string, body: string) => {
-   if (typeof window !== 'undefined' && 'Notification' in window) {
-     if (Notification.permission === 'granted') {
-       try {
-         new Notification(title, { body, icon: '/favicon.ico' });
-       } catch (e) {
-         console.warn('Device notification error:', e);
-       }
-     } else if (Notification.permission !== 'denied') {
-       Notification.requestPermission().then(permission => {
-         if (permission === 'granted') {
-           try {
-             new Notification(title, { body, icon: '/favicon.ico' });
-           } catch (e) {
-             console.warn('Device notification error:', e);
-           }
-         }
-       });
-     }
+ const sendDeviceNotification = (title: string, body: string, id?: string, recipient?: string) => {
+   triggerDeviceNotification({
+     id,
+     title,
+     body,
+     recipient,
+     currentRole: currentUser?.role,
+     currentUserId: currentUser?.id
+   });
+ };
+
+ const addNotification = (notif: Omit<Notification, 'id' | 'timestamp' | 'read'> & { recipient?: string }) => {
+   const id = `NOTIF-${Math.floor(Math.random() * 100000)}`;
+   const newNotif: Notification = {
+     ...notif,
+     id,
+     timestamp: new Date().toISOString(),
+     read: false,
+   };
+
+   const notifRecipient = (notif.recipient || (notif.userId?.includes('admin') ? 'admin' : 'all')).toLowerCase();
+   const isAdmin = currentUser?.role === 'boss' || currentUser?.role === 'hod' || currentUser?.role === 'staff' || (typeof window !== 'undefined' && sessionStorage.getItem('orient_dashboard_mode') === 'admin');
+
+   if (notifRecipient === 'admin' || notifRecipient === 'cms') {
+     if (!isAdmin) return;
+   } else if (notifRecipient === 'user' || notifRecipient === 'customer') {
+     if (isAdmin) return;
    }
- };
 
- const addNotification = (notif: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
- const newNotif: Notification = {
- ...notif,
- id: `NOTIF-${Math.floor(Math.random() * 10000)}`,
- timestamp: new Date().toISOString(),
- read: false,
- };
- setNotifications(prev => [newNotif, ...prev]);
+   setNotifications(prev => [newNotif, ...prev]);
 
- sendDeviceNotification(
-   notif.message || 'Orient Global Notification',
-   notif.division ? `Division: ${notif.division}` : 'Orient Global System Update'
- );
+   sendDeviceNotification(
+     notif.message || 'Orient Global Notification',
+     notif.division ? `Division: ${notif.division}` : 'Orient Global System Update',
+     id,
+     notifRecipient
+   );
  };
 
  const markNotificationRead = (id: string) => {

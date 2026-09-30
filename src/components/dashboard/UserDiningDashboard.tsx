@@ -41,6 +41,7 @@ import { INITIAL_PRODUCTS_CATALOG, ProductItem } from '@/data/productsCatalog';
 import { cmsApi } from '@/services/cmsApi';
 import { OrderTracker } from './OrderTracker';
 import { NotificationToggleButton } from '@/components/common/NotificationToggleButton';
+import { isNotificationForUser } from '@/services/notificationService';
 
 interface TableReservation {
   id: string;
@@ -58,6 +59,11 @@ export default function UserDiningDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser, notifications, markNotificationRead } = useRoles();
+
+  // Strictly isolate user notifications so admin notices never display on dining dashboard
+  const userNotifications = useMemo(() => {
+    return notifications.filter(n => isNotificationForUser(n as any));
+  }, [notifications]);
 
   const handleGoToRestaurantMenu = () => {
     // Dispatch global event to navigate App.tsx to the public Restaurant Menu page
@@ -708,7 +714,7 @@ export default function UserDiningDashboard() {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Notifications ({notifications.length})
+                Notifications ({userNotifications.length})
               </button>
             </div>
           </div>
@@ -940,14 +946,14 @@ export default function UserDiningDashboard() {
                 <span className="text-xs text-muted-foreground">
                   System alerts, kitchen prep updates, and account activity
                 </span>
-                {notifications.some(n => !n.read) && (
+                {userNotifications.some(n => !n.read) && (
                   <Badge variant="outline" className="text-xs font-mono border-none text-muted-foreground bg-muted">
-                    {notifications.filter(n => !n.read).length} Unread
+                    {userNotifications.filter(n => !n.read).length} Unread
                   </Badge>
                 )}
               </div>
 
-              {notifications.length === 0 ? (
+              {userNotifications.length === 0 ? (
                 <div className="text-center py-12 bg-muted/20 rounded-2xl p-6 border-none">
                   <Bell className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
                   <p className="text-sm font-semibold text-foreground">No news from the chef yet</p>
@@ -957,7 +963,7 @@ export default function UserDiningDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {notifications.map((notif) => (
+                  {userNotifications.map((notif) => (
                     <div
                       key={notif.id}
                       onClick={() => markNotificationRead(notif.id)}

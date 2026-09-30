@@ -2322,6 +2322,12 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentView, setCurrentView, setDinin
       }]);
 
       speakText(confirmMsg);
+
+      try {
+        sessionStorage.setItem('orient_dashboard_mode', 'customer');
+      } catch (err) {}
+      window.dispatchEvent(new CustomEvent('orient:navigate', { detail: { view: 'dashboard', route: '/dashboard/dining' } }));
+      window.dispatchEvent(new CustomEvent('orient:navigate-route', { detail: '/dashboard/dining' }));
     } catch (err: any) {
       console.error('Failed to place order:', err);
       const errMsg = 'I apologize, but there was an issue sending your order to the kitchen. Please try again momentarily.';
@@ -3216,24 +3222,33 @@ const App: React.FC = () => {
  const [cmsContent, setCmsContent] = useState<any>({});
  const [isGlobalOrderOpen, setIsGlobalOrderOpen] = useState(false);
 
- useEffect(() => {
-   const handleDiningNav = (e: any) => {
-     const id = e.detail?.sectionId;
-     if (id === 'dining-reservations' || id === 'dining-floor-plan') {
-       setDiningView('reservations');
-     } else if (id === 'dining-delivery') {
-       setDiningView('delivery');
-     } else if (id === 'dining-about') {
-       setDiningView('about');
-     } else if (id === 'dining-dashboard') {
- setCurrentView('dashboard');
-     } else {
-       setDiningView('menu');
-     }
-   };
-   window.addEventListener('orient:navigate-dining', handleDiningNav);
-   return () => window.removeEventListener('orient:navigate-dining', handleDiningNav);
- }, []);
+ const [dashboardInitialRoute, setDashboardInitialRoute] = useState<string>('/dashboard/dining');
+
+  useEffect(() => {
+    const handleDiningNav = (e: any) => {
+      const id = e.detail?.sectionId;
+      const view = e.detail?.view;
+      const route = e.detail?.route;
+      if (id === 'dining-reservations' || id === 'dining-floor-plan' || view === 'reservations') {
+        setDiningView('reservations');
+      } else if (id === 'dining-delivery' || view === 'delivery') {
+        setDiningView('delivery');
+      } else if (id === 'dining-about' || view === 'about') {
+        setDiningView('about');
+      } else if (id === 'dining-dashboard' || view === 'dashboard' || route === '/dashboard/dining') {
+        try {
+          sessionStorage.setItem('orient_dashboard_mode', 'customer');
+        } catch (err) {}
+        setDashboardInitialRoute('/dashboard/dining');
+        setCurrentView('dashboard');
+        window.dispatchEvent(new CustomEvent('orient:navigate-route', { detail: '/dashboard/dining' }));
+      } else {
+        setDiningView('menu');
+      }
+    };
+    window.addEventListener('orient:navigate-dining', handleDiningNav);
+    return () => window.removeEventListener('orient:navigate-dining', handleDiningNav);
+  }, []);
 
  // Global kitchen order timer & 10-minute warning dispatch
  useOrderTimerManager();
@@ -3295,7 +3310,38 @@ const App: React.FC = () => {
     const handleCustomNav = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
-        setCurrentView(customEvent.detail);
+        const detail = customEvent.detail;
+        if (typeof detail === 'string') {
+          if (detail === 'dashboard/dining' || detail === 'dining-dashboard' || detail === '/dashboard/dining') {
+            try {
+              sessionStorage.setItem('orient_dashboard_mode', 'customer');
+            } catch (err) {}
+            setDashboardInitialRoute('/dashboard/dining');
+            setCurrentView('dashboard');
+            window.dispatchEvent(new CustomEvent('orient:navigate-route', { detail: '/dashboard/dining' }));
+          } else if (detail === 'dashboard') {
+            try {
+              sessionStorage.setItem('orient_dashboard_mode', 'customer');
+            } catch (err) {}
+            setDashboardInitialRoute('/dashboard/dining');
+            setCurrentView('dashboard');
+            window.dispatchEvent(new CustomEvent('orient:navigate-route', { detail: '/dashboard/dining' }));
+          } else {
+            setCurrentView(detail as any);
+          }
+        } else if (typeof detail === 'object') {
+          if (detail.view === 'dashboard' || detail.route?.startsWith('/dashboard')) {
+            try {
+              sessionStorage.setItem('orient_dashboard_mode', 'customer');
+            } catch (err) {}
+            const targetRoute = detail.route || detail.subRoute || '/dashboard/dining';
+            setDashboardInitialRoute(targetRoute);
+            setCurrentView('dashboard');
+            window.dispatchEvent(new CustomEvent('orient:navigate-route', { detail: targetRoute }));
+          } else if (detail.view) {
+            setCurrentView(detail.view);
+          }
+        }
         const container = document.getElementById('main-scroll-container');
         if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -3439,8 +3485,8 @@ const App: React.FC = () => {
  </>
  )}
  {(currentView === 'login' || currentView === 'admin' || currentView === 'dashboard') && (
- <StudioApp onCancel={() => setCurrentView('home')} initialRoute={currentView === 'admin' ? '/admin-login' : currentView === 'dashboard' ? '/dashboard' : '/login'} />
- )}
+  <StudioApp key={currentView === 'dashboard' ? `dashboard-${dashboardInitialRoute}` : currentView} onCancel={() => setCurrentView('home')} initialRoute={currentView === 'admin' ? '/admin-login' : currentView === 'dashboard' ? dashboardInitialRoute : '/login'} />
+)}
  {currentView === 'bakery' && (
  <div className="relative">
  <Navbar setCurrentView={setCurrentView} scrolled={scrolled} navHidden={navHidden} isSubpage skipAnimation pageType="hero" heroId="hero-bakery" setDiningView={setDiningView} />
