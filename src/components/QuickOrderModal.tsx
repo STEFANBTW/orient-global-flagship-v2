@@ -177,12 +177,26 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({ isOpen, onClos
       setActiveOrder(order);
       setActiveTab('tracking');
       setCart([]);
+      onClose();
       onOrderPlaced?.();
       addNotification({
         title: "Order Placed! (₦10/item)",
         message: `Order #${order.id} sent to the chef! Awaiting confirmation.`,
         type: "success"
       });
+
+      try {
+        sessionStorage.setItem('orient_dashboard_mode', 'customer');
+      } catch (err) {}
+      window.dispatchEvent(new CustomEvent('orient:navigate-dining', { 
+        detail: { view: 'dashboard', sectionId: 'dining-dashboard', route: '/dashboard/dining' } 
+      }));
+      window.dispatchEvent(new CustomEvent('orient:navigate', { 
+        detail: { view: 'dashboard', route: '/dashboard/dining' } 
+      }));
+      window.dispatchEvent(new CustomEvent('orient:navigate-route', { 
+        detail: '/dashboard/dining' 
+      }));
     } catch (e: any) {
       addNotification({
         title: "Order Placement Error",

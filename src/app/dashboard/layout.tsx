@@ -39,6 +39,7 @@ import { useRoles } from '@/context/role-context';
 import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
 import { getActiveConsumerUser, getActiveAdminUser, updateActiveConsumerUserDetails, AppUser } from '@/services/userService';
+import { isNotificationForAdmin, isNotificationForUser } from '@/services/notificationService';
 import { Toaster } from '@/components/ui/toaster';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -160,8 +161,17 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
   const [headerSearch, setHeaderSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Unread notification count
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Filter notifications strictly: Admin sees ONLY admin notifications, User sees ONLY user notifications
+  const visibleNotifications = notifications.filter(n => {
+    if (isAdminMode) {
+      return isNotificationForAdmin(n as any);
+    } else {
+      return isNotificationForUser(n as any);
+    }
+  });
+
+  // Unread notification count based on recipient targeting
+  const unreadCount = visibleNotifications.filter(n => !n.read).length;
 
   // Manual refresh animation & dispatch
   const handleRefresh = () => {
@@ -399,12 +409,12 @@ export default function DashboardLayout({ onCancel }: { onCancel?: () => void })
                 </div>
 
                 <ScrollArea className="h-[280px]">
-                  {notifications.length === 0 ? (
+                  {visibleNotifications.length === 0 ? (
                     <div className="p-6 text-center text-xs text-muted-foreground">
                       No notifications recorded
                     </div>
                   ) : (
-                    notifications.slice(0, 6).map((notif) => (
+                    visibleNotifications.slice(0, 6).map((notif) => (
                       <DropdownMenuItem
                         key={notif.id}
                         onClick={() => markNotificationRead(notif.id)}

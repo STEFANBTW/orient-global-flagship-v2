@@ -65,6 +65,14 @@ export const DiningNav: React.FC<{ navHidden: boolean, currentView: DiningView, 
 export const DiningApp: React.FC<{ currentView: DiningView; setView?: (v: DiningView) => void }> = ({ currentView, setView }) => {
   useEffect(() => {
     const handleNavEvent = (e: any) => {
+      if (e.detail?.view === 'dashboard' || e.detail?.sectionId === 'dining-dashboard') {
+        try {
+          sessionStorage.setItem('orient_dashboard_mode', 'customer');
+        } catch (err) {}
+        window.dispatchEvent(new CustomEvent('orient:navigate', { detail: { view: 'dashboard', route: '/dashboard/dining' } }));
+        window.dispatchEvent(new CustomEvent('orient:navigate-route', { detail: '/dashboard/dining' }));
+        return;
+      }
       if (e.detail?.view && setView) {
         setView(e.detail.view);
       }

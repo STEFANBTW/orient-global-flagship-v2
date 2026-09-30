@@ -47,14 +47,18 @@ const Cart: React.FC<CartProps> = ({ onNavigate }) => {
  })),
  prepDurationMinutes: 25
  });
- 
- setPlacedOrderId(order.id);
- setOrderSuccess(true);
- clearCart();
- toast({
- title: "Order Placed Successfully! (₦10/item)",
- description: `Order #${order.id} sent to kitchen. Awaiting chef confirmation!`,
- });
+  setPlacedOrderId(order.id);
+  setOrderSuccess(true);
+  clearCart();
+  try {
+    sessionStorage.setItem('orient_dashboard_mode', 'customer');
+  } catch (e) {}
+  toast({
+    title: "Order Placed Successfully! (₦10/item)",
+    description: `Order #${order.id} sent to kitchen. Awaiting chef confirmation!`,
+  });
+  window.dispatchEvent(new CustomEvent('orient:navigate', { detail: { view: 'dashboard', route: '/dashboard/dining' } }));
+  window.dispatchEvent(new CustomEvent('orient:navigate-route', { detail: '/dashboard/dining' }));
  } catch (error: any) {
  toast({
  title: "Order Failed",

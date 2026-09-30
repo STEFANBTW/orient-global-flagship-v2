@@ -374,8 +374,21 @@ export const UnifiedCheckout: React.FC<UnifiedCheckoutProps> = ({
   };
 
   const handleNavigateToDashboard = () => {
-    if (onNavigateToDashboard) onNavigateToDashboard();
-    else window.dispatchEvent(new CustomEvent('orient:navigate-dining', { detail: { view: 'dashboard' } }));
+    try {
+      sessionStorage.setItem('orient_dashboard_mode', 'customer');
+    } catch (e) {}
+    if (onNavigateToDashboard) {
+      onNavigateToDashboard();
+    }
+    window.dispatchEvent(new CustomEvent('orient:navigate-dining', { 
+      detail: { view: 'dashboard', sectionId: 'dining-dashboard', route: '/dashboard/dining' } 
+    }));
+    window.dispatchEvent(new CustomEvent('orient:navigate', { 
+      detail: { view: 'dashboard', route: '/dashboard/dining' } 
+    }));
+    window.dispatchEvent(new CustomEvent('orient:navigate-route', { 
+      detail: '/dashboard/dining' 
+    }));
     document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

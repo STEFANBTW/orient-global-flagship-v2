@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { 
+  triggerDeviceNotification, 
+  isNotificationTargetingCurrentDevice,
+  isCurrentDeviceAdmin 
+} from '../services/notificationService';
 
 export interface Notification {
   id: string;
@@ -8,16 +13,19 @@ export interface Notification {
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
   timestamp: string;
+  recipient?: 'user' | 'cms' | 'admin' | 'all' | string;
+  userId?: string;
 }
 
 interface NotificationContextType {
   notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void;
+  addNotification: (notification: Omit<Notification, 'id' | 'timestamp'> & { id?: string }) => void;
   removeNotification: (id: string) => void;
   requestDevicePermission: () => Promise<boolean>;
   devicePermissionStatus: NotificationPermission | 'unsupported';
   isNotificationsEnabled: boolean;
   toggleNotifications: () => Promise<boolean>;
+  fireDeviceNotification: (title: string, body: string, id?: string, recipient?: string, userId?: string) => boolean;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -36,12 +44,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {}
     return true;
   });
-  // Track notification IDs we have already shown a device alert for (prevents duplicate popups on refresh)
-  const seenNotifIds = useRef<Set<string>>(new Set());
+
   // Track when this session started so we don't re-alert old notifications
   const sessionStartMs = useRef<number>(Date.now());
 
-  // Auto-request device notification permission on first load
+  // Auto-request device notification permission on first load if not decided
   useEffect(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission === 'default') {
@@ -51,7 +58,25 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Subscribe to Firestore notifications collection — fires on every device that is open
+  const fireDeviceNotification = (
+    title: string, 
+    body: string, 
+    id?: string, 
+    recipient?: string, 
+    userId?: string
+  ): boolean => {
+    return triggerDeviceNotification({
+      id,
+      title,
+      body,
+      recipient,
+      userId,
+      isNotificationsEnabled
+    });
+  };
+
+  // Subscribe to Firestore notifications collection — fires once per unique doc,
+  // strictly filtered by recipient targeting (User vs Admin) and globally deduplicated by ID.
   useEffect(() => {
     try {
       const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
@@ -66,10 +91,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                 ? new Date(data.createdAt).getTime()
                 : Date.now();
 
-            // Only show device notification for new docs (arrived after session start)
-            if (!seenNotifIds.current.has(id) && createdAtMs > sessionStartMs.current - 5000) {
-              seenNotifIds.current.add(id);
-              fireDeviceNotification(data.title || 'Orient Global', data.message || '');
+            // Only consider recent docs (arrived within last 15 seconds or during this active session)
+            if (createdAtMs > sessionStartMs.current - 15000) {
+              fireDeviceNotification(
+                data.title || 'Orient Global',
+                data.message || '',
+                id,
+                data.recipient,
+                data.userId || data.customerId
+              );
             }
           }
         });
@@ -78,19 +108,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       console.warn('Firestore notification listener error:', e);
     }
-  }, []);
-
-  const fireDeviceNotification = (title: string, body: string) => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (!isNotificationsEnabled) return;
-    if (Notification.permission === 'granted') {
-      try {
-        new Notification(title, { body, icon: '/favicon.ico' });
-      } catch (e) {
-        console.warn('Device notification error:', e);
-      }
-    }
-  };
+  }, [isNotificationsEnabled]);
 
   const requestDevicePermission = async (): Promise<boolean> => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -103,8 +121,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       if (perm === 'granted') {
         try {
           new Notification('Orient Global Notifications Enabled', {
-            body: 'You will now receive order updates & kitchen countdown alerts on this device.',
+            body: 'You will now receive order updates & kitchen alerts on this device.',
             icon: '/favicon.ico',
+            tag: 'permission-granted'
           });
         } catch (err) {
           console.warn('Notification error:', err);
@@ -136,16 +155,20 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp'>) => {
+  // Add an in-app visual toast banner (does NOT trigger duplicate device popups)
+  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp'> & { id?: string }) => {
+    // Check recipient targeting for in-app toast
+    if (notification.recipient && !isNotificationTargetingCurrentDevice({ recipient: notification.recipient, userId: notification.userId })) {
+      return;
+    }
+
+    const notifId = notification.id || `TOAST-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const newNotification: Notification = {
       ...notification,
-      id: Date.now().toString(),
+      id: notifId,
       timestamp: new Date().toISOString(),
     };
     setNotifications((prev) => [...prev, newNotification]);
-
-    // Also trigger device notification for in-app addNotification calls
-    fireDeviceNotification(notification.title || 'Orient Global', notification.message);
 
     setTimeout(() => removeNotification(newNotification.id), 6000);
   };
@@ -162,10 +185,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       requestDevicePermission,
       devicePermissionStatus,
       isNotificationsEnabled,
-      toggleNotifications
+      toggleNotifications,
+      fireDeviceNotification
     }}>
       {children}
-      {/* Toast overlay */}
+      {/* In-app Toast overlay */}
       <div className="fixed bottom-4 right-4 z-[9999] space-y-2 max-w-sm w-full pointer-events-none">
         {notifications.map((n) => (
           <div
